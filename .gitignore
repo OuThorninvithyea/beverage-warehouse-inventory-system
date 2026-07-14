@@ -1,0 +1,32 @@
+# macOS
+.DS_Store
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# IDE files
+.idea/
+.vscode/
+
+# Temporary and generated files
+tmp/
+temp/
+*.log
+coverage/
+dist/
+build/
+
+# Go
+bin/
+vendor/
+
+# Node/Vue
+node_modules/
+.vite/
+
+# Local reference documents that are not project deliverables
+/IOU.com Document - Puth Monisela.pdf
+/POSManagement - Chilean Ramech.pdf
+/Software Project Proposal Format.pdf

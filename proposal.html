@@ -1,0 +1,1486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Software Project Proposal — Beverage Warehouse Inventory Management System</title>
+<style>
+  :root {
+    --bg: #0d1117; --surface: #161b22; --border: #30363d;
+    --text: #c9d1d9; --muted: #8b949e; --accent: #58a6ff;
+    --green: #3fb950; --orange: #d2991d; --red: #f85149;
+    --purple: #a371f7; --pink: #f778ba;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.7; min-height: 100vh;
+  }
+
+  /* ── Tabs ── */
+  .tab-bar {
+    display: flex; gap: 0; background: var(--surface);
+    border-bottom: 2px solid var(--border);
+    position: sticky; top: 0; z-index: 100;
+    overflow-x: auto;
+  }
+  .tab-btn {
+    padding: 0.85rem 1.25rem; background: none; border: none; color: var(--muted);
+    font-size: 0.85rem; font-weight: 600; cursor: pointer;
+    border-bottom: 3px solid transparent; white-space: nowrap;
+    transition: color 0.2s, border-color 0.2s;
+    font-family: inherit;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-btn.yours { color: var(--green); }
+  .tab-btn.yours.active { color: var(--green); border-bottom-color: var(--green); }
+
+  .tab-content { display: none; max-width: 1100px; margin: 0 auto; padding: 2rem; }
+  .tab-content.active { display: block; }
+
+  /* ── Typography ── */
+  h1 { font-size: 2rem; color: #f0f6fc; margin-bottom: 0.5rem; }
+  h2 { font-size: 1.5rem; color: #f0f6fc; margin-top: 2.5rem; margin-bottom: 1rem; padding-bottom: 0.3rem; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 1.2rem; color: #f0f6fc; margin-top: 1.5rem; margin-bottom: 0.5rem; }
+  h4 { font-size: 1.05rem; color: var(--accent); margin-top: 1.2rem; margin-bottom: 0.4rem; }
+  p { margin-bottom: 0.8rem; }
+  strong { color: #f0f6fc; }
+
+  /* ── Cover Page ── */
+  .cover {
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    text-align: center; min-height: 85vh; padding: 3rem 2rem;
+    background: linear-gradient(135deg, var(--surface) 0%, #0d2137 100%);
+    border-radius: 12px; margin-bottom: 2rem;
+    border: 1px solid var(--border);
+  }
+  .cover .icon { font-size: 4rem; margin-bottom: 1.5rem; }
+  .cover h1 { font-size: 2.5rem; border: none; margin-bottom: 1rem; }
+  .cover .subtitle { color: var(--muted); font-size: 1.1rem; margin-bottom: 2rem; }
+  .cover .meta { color: var(--muted); font-size: 0.9rem; line-height: 1.8; }
+  .cover .meta span { color: var(--accent); }
+
+  /* ── Tables ── */
+  table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; font-size: 0.9rem; }
+  th, td { border: 1px solid var(--border); padding: 0.5rem 0.75rem; text-align: left; vertical-align: top; }
+  th { background: var(--surface); font-weight: 600; color: #f0f6fc; }
+  tr:nth-child(even) td { background: rgba(255,255,255,0.01); }
+
+  /* ── Code / Pre ── */
+  code {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 4px;
+    padding: 0.15em 0.4em; font-size: 0.9em; color: var(--orange);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+  pre {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; margin-bottom: 1rem;
+    font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.85rem; line-height: 1.5;
+  }
+
+  /* ── Blocks ── */
+  .block {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 1.25rem; margin-bottom: 1rem;
+  }
+  .block h4 { margin-top: 0; }
+
+  .milestone {
+    background: rgba(63,185,80,0.08); border-left: 3px solid var(--green);
+    padding: 0.5rem 1rem; margin-top: 0.75rem; border-radius: 0 6px 6px 0; font-size: 0.9rem;
+  }
+  .milestone strong { color: var(--green); }
+
+  .summary {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 1.25rem; margin-bottom: 2rem;
+  }
+  .summary p { margin-bottom: 0.3rem; }
+  .summary p:last-child { margin-bottom: 0; }
+
+  hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+
+  /* ── Tags ── */
+  .tag {
+    display: inline-block; padding: 0.1em 0.5em; border-radius: 3px;
+    font-size: 0.78rem; font-weight: 500; margin: 0.1rem;
+  }
+  .tag-a { background: rgba(248,81,73,0.15); color: var(--red); }
+  .tag-m { background: rgba(210,153,29,0.15); color: var(--orange); }
+  .tag-p { background: rgba(88,166,255,0.15); color: var(--accent); }
+  .tag-v { background: rgba(139,148,158,0.15); color: var(--muted); }
+  .tag-public { background: rgba(63,185,80,0.15); color: var(--green); }
+  .tag-auth { background: rgba(167,113,247,0.15); color: var(--purple); }
+
+  /* ── Print ── */
+  @media print {
+    .tab-bar { display: none; }
+    .tab-content { display: block !important; break-inside: avoid; padding: 1rem 0; }
+    body { background: white; color: #000; }
+    .cover, .block, .summary, pre, table { background: #f8f8f8; border-color: #ccc; }
+    h1, h2, h3, h4, strong { color: #000; }
+    .milestone { background: #e8f5e9; border-left-color: #4caf50; }
+    .cover { background: #f0f4f8; }
+    .page-break { page-break-before: always; }
+  }
+
+  /* ── Utility ── */
+  .toc { margin-bottom: 2rem; }
+  .toc ol { padding-left: 1.5rem; }
+  .toc li { margin-bottom: 0.2rem; }
+  .page-break { margin-top: 3rem; border-top: 1px dashed var(--border); padding-top: 1rem; }
+</style>
+</head>
+<body>
+
+<!-- ═══ TAB BAR ═══ -->
+<nav class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('tab-template')">📋 Template</button>
+  <button class="tab-btn" onclick="switchTab('tab-iou')">💸 IOU.com</button>
+  <button class="tab-btn" onclick="switchTab('tab-pos')">🔧 AutoParts POS</button>
+  <button class="tab-btn yours" onclick="switchTab('tab-warehouse')">🥤 Beverage Warehouse</button>
+</nav>
+
+<script>
+function switchTab(id) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelector(`[onclick="switchTab('${id}')"]`).classList.add('active');
+  window.scrollTo(0,0);
+}
+</script>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- TAB 1: TEMPLATE -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="tab-content active" id="tab-template">
+
+<div class="cover">
+  <div class="icon">📋</div>
+  <h1>Software Project Proposal Format</h1>
+  <p class="subtitle">Standard Template for Student Software Projects</p>
+  <div class="meta">
+    <p>[Project Title Here]</p>
+    <p>School/Institution Name</p>
+    <p>Course/Instructor Name</p>
+    <p>Date of Submission</p>
+  </div>
+</div>
+
+<div class="page-break"></div>
+<h2>Table of Contents</h2>
+<div class="toc"><ol>
+  <li>Project Overview</li>
+  <li>Background / Introduction</li>
+  <li>Goals and Objectives</li>
+  <li>Our Service</li>
+  <li>Project Scope</li>
+  <li>Software Requirements</li>
+  <li>Technology Stack</li>
+  <li>System Architecture / Design</li>
+  <li>Features &amp; Screenshots (Optional)</li>
+  <li>Work Plan / Timeline</li>
+  <li>Budget and Resources</li>
+  <li>Risk Management</li>
+  <li>Expected Output / Deliverables</li>
+  <li>Conclusion</li>
+  <li>Meet Our Team</li>
+  <li>Attachments / Annexes</li>
+</ol></div>
+
+<div class="page-break"></div>
+<h2>1. Project Overview</h2>
+<div class="block">
+  <p><strong>Content:</strong></p>
+  <ul>
+    <li>A brief summary of the project (2–3 paragraphs)</li>
+    <li>What the software does and the problem it solves</li>
+    <li>Type of users (e.g., students, businesses, teachers)</li>
+  </ul>
+  <p><strong>Purpose:</strong> Gives readers a quick understanding of the software's function and value.</p>
+</div>
+
+<div class="page-break"></div>
+<h2>2. Background / Introduction</h2>
+<div class="block">
+  <p><strong>Content:</strong></p>
+  <ul>
+    <li><strong>Problem Statement:</strong> What is the current issue or gap?</li>
+    <li><strong>Need for the Software:</strong> Why is this project important?</li>
+    <li><strong>Target Users:</strong> Who will use the software? (demographics, needs)</li>
+  </ul>
+  <p><strong>Purpose:</strong> Sets the context and explains why this project is necessary.</p>
+</div>
+
+<div class="page-break"></div>
+<h2>3. Goals and Objectives</h2>
+<div class="block">
+  <p><strong>Content:</strong></p>
+  <ul>
+    <li>Clear, measurable goals the project will achieve</li>
+    <li>Example: <em>"To develop a mobile app that helps users manage their daily expenses effectively."</em></li>
+  </ul>
+  <p><strong>Purpose:</strong> Shows the intended impact and purpose of the software.</p>
+</div>
+
+<div class="page-break"></div>
+<h2>4. Our Service</h2>
+<div class="block">
+  <p><strong>Content:</strong></p>
+  <ul>
+    <li>What service or functionality your software provides</li>
+    <li>Short description of how it will benefit users</li>
+  </ul>
+  <p><strong>Optional:</strong> Include mockup images or screenshots if available.</p>
+</div>
+
+<div class="page-break"></div>
+<h2>5. Project Scope</h2>
+<div class="block">
+  <p><strong>Inclusions:</strong> Main features/modules (e.g., login system, dashboard, reporting)</p>
+  <p><strong>Exclusions:</strong> What is NOT part of the project (e.g., hardware integration)</p>
+  <p><strong>Purpose:</strong> Clarifies boundaries to manage expectations.</p>
+</div>
+
+<div class="page-break"></div>
+<h2>6. Software Requirements</h2>
+<div class="block">
+  <p><strong>a. Functional Requirements:</strong> Features and actions the software must perform (e.g., user registration, search function)</p>
+  <p><strong>b. Non-Functional Requirements:</strong> Quality aspects like performance, security, usability, responsiveness, and scalability</p>
+  <p><strong>Purpose:</strong> Defines how the software should behave and perform.</p>
+</div>
+
+<div class="page-break"></div>
+<h2>7. Technology Stack</h2>
+<div class="block">
+  <ul>
+    <li>Programming Languages (e.g., JavaScript, Python)</li>
+    <li>Frameworks (e.g., Django, React)</li>
+    <li>Database (e.g., MySQL, Firebase)</li>
+    <li>Platforms (e.g., Web, Android, iOS)</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>8. System Architecture / Design</h2>
+<div class="block">
+  <ul>
+    <li>System architecture diagram (e.g., client-server model, data flow diagram)</li>
+    <li>ER Diagram for database (if needed)</li>
+    <li>Explanation of how parts interact (modules, APIs)</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>9. Features &amp; Screenshots (Optional)</h2>
+<div class="block">
+  <ul>
+    <li>Visual mockups, wireframes, or early screenshots</li>
+    <li>Feature descriptions</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>10. Work Plan / Timeline</h2>
+<div class="block">
+  <ul>
+    <li>Gantt Chart or milestone table</li>
+    <li>Phases: Planning → Design → Development → Testing → Deployment</li>
+    <li>Estimated time for each phase</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>11. Budget and Resources</h2>
+<div class="block">
+  <ul>
+    <li>Estimated budget (hardware, software, licenses, cloud services)</li>
+    <li>Manpower or external support costs</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>12. Risk Management</h2>
+<div class="block">
+  <ul>
+    <li>List of possible risks (technical issues, deadline delays)</li>
+    <li>Mitigation strategies (backup plans, alternative tools)</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>13. Expected Output / Deliverables</h2>
+<div class="block">
+  <ul>
+    <li>List of final outputs (e.g., software, user manual, source code, presentations)</li>
+    <li>Version or scope of delivery</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>14. Conclusion</h2>
+<div class="block">
+  <ul>
+    <li>Summary of the project's potential impact and success</li>
+    <li>Final thoughts or future development ideas</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>15. Meet Our Team</h2>
+<div class="block">
+  <ul>
+    <li>Professional photo of each member</li>
+    <li>Name, role (e.g., Project Manager, Developer), and contact info (email, LinkedIn)</li>
+    <li>Quotes — personalizes the proposal and gives credit to the contributors</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>16. Attachments / Annexes (Optional but recommended)</h2>
+<div class="block">
+  <ul>
+    <li>Blueprints (optional)</li>
+    <li>Photos of similar projects</li>
+    <li>Product/material samples (Optional)</li>
+    <li>Certifications or licenses / Permit &amp; legal requirements</li>
+  </ul>
+</div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- TAB 2: IOU.COM -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="tab-content" id="tab-iou">
+
+<div class="cover">
+  <div class="icon">💸</div>
+  <h1>IOU.com</h1>
+  <p class="subtitle">Simplified Debt Management Platform for Informal Financial Agreements</p>
+  <div class="meta">
+    <p><span>School:</span> Limkokwing University</p>
+    <p><span>Course:</span> Software Project Management</p>
+    <p><span>Instructor:</span> Mr. Carlos JR.</p>
+    <p><span>Date:</span> [Date]</p>
+  </div>
+</div>
+
+<div class="page-break"></div>
+<h2>Table of Contents</h2>
+<div class="toc"><ol>
+  <li>Project Overview</li>
+  <li>Background / Introduction</li>
+  <li>Goals and Objectives</li>
+  <li>Our Service</li>
+  <li>Project Scope</li>
+  <li>Software Requirements</li>
+  <li>Technology Stack</li>
+  <li>System Architecture / Design</li>
+  <li>Work Plan / Timeline</li>
+  <li>Budget and Resources</li>
+  <li>Risk Management</li>
+  <li>Expected Output / Deliverables</li>
+  <li>Conclusion</li>
+  <li>Meet Our Team</li>
+</ol></div>
+
+<div class="page-break"></div>
+<h2>1. Project Overview</h2>
+<div class="block">
+  <p>The IOU.com platform is a web application designed to streamline the management of informal debts and loans between individuals, such as friends, family, and colleagues. In many communities, people regularly lend and borrow money for various purposes — from splitting dinner bills to covering emergency expenses — without using formal banking channels.</p>
+  <p>Currently, tracking these informal financial agreements is done through memory, scattered notes, or spreadsheets, leading to forgotten debts, misunderstandings, and strained relationships. IOU.com solves this problem by providing a centralized, simple platform where users can create, track, and manage their informal financial obligations.</p>
+  <p>The platform enables users to add debt entries, specify borrowers and lenders, track payment progress, and maintain a clear history of all financial interactions. It is designed for general individuals, micro-businesses, and anyone who engages in informal lending activities.</p>
+</div>
+
+<div class="page-break"></div>
+<h2>2. Background / Introduction</h2>
+<div class="block">
+  <h4>Problem Statement</h4>
+  <p>Informal lending is common in personal finance, but there is no reliable tool to track, manage, and settle these transactions effectively. People often rely on memory, text messages, or paper notes, which are unreliable and can lead to disputes, forgotten debts, and damaged relationships.</p>
+  <h4>Need for the Software</h4>
+  <p>The software addresses the gap by providing a reliable, transparent tool for recording informal debts, reducing misunderstandings, and promoting accountability between lenders and borrowers. By simplifying debt tracking, it encourages financial responsibility and trust in personal relationships.</p>
+  <h4>Target Users</h4>
+  <ul>
+    <li>Friends and family members who frequently lend/borrow money</li>
+    <li>Roommates managing shared expenses</li>
+    <li>Micro-businesses tracking customer credit</li>
+    <li>Anyone who wants better control over informal financial agreements</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>3. Goals and Objectives</h2>
+<div class="block">
+  <p><strong>Goal:</strong> To develop a web platform that simplifies the tracking and management of informal debts between individuals.</p>
+  <p><strong>Objectives:</strong></p>
+  <ul>
+    <li>Build a secure user registration and authentication system (JWT-based login)</li>
+    <li>Allow users to add, edit, delete, and track debt entries</li>
+    <li>Provide a dashboard showing total outstanding debt, settled debts, and debtor profiles</li>
+    <li>Mark debts as partially or fully paid with automatic status updates</li>
+    <li>Generate simple financial summaries for users to review their lending/borrowing activity</li>
+    <li>Achieve user satisfaction rate of over 85% through ease of use and clear interface design</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>4. Our Service</h2>
+<div class="block">
+  <p>IOU.com provides the following core services to its users:</p>
+  <ul>
+    <li><strong>Debt Recording:</strong> Users can create new debt entries with details such as debtor name, amount, date, and optional due date</li>
+    <li><strong>Debt Tracking:</strong> A dashboard view allows users to see all active and settled debts at a glance</li>
+    <li><strong>Payment Management:</strong> Users can mark debts as partially or fully paid, automatically updating the remaining balance</li>
+    <li><strong>Debtor Profiles:</strong> View debtor contact information, full debt history, and outstanding balances</li>
+    <li><strong>Search &amp; Filter:</strong> Quickly search and filter debt records by name, amount, or status</li>
+    <li><strong>Basic Analytics:</strong> Total lent, total recovered, number of active debtors, and settled history</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>5. Project Scope</h2>
+<div class="block">
+  <h4>Inclusions (What the system will provide)</h4>
+  <ul>
+    <li>User registration with email verification</li>
+    <li>JWT-based authentication and password reset</li>
+    <li>Full CRUD operations for debt entries</li>
+    <li>Dashboard with overview of outstanding and settled debts</li>
+    <li>Debtor management with profiles and contact information</li>
+    <li>Debt status tracking (active, partially paid, fully paid)</li>
+    <li>Search and filter functionality</li>
+    <li>Hosting on Render with MongoDB Atlas</li>
+  </ul>
+  <h4>Exclusions (Not included in this version)</h4>
+  <ul>
+    <li>Automated payment reminders (email/SMS) — planned for Phase 2</li>
+    <li>Integration with payment platforms (Venmo, PayPal)</li>
+    <li>Group debt management (splitting bills among groups)</li>
+    <li>Native mobile apps (iOS/Android)</li>
+    <li>Multi-language support</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>6. Software Requirements</h2>
+<div class="block">
+  <h4>Functional Requirements</h4>
+  <ul>
+    <li>User Registration &amp; Authentication (email-based)</li>
+    <li>Debt CRUD (create, read, update, delete debt entries)</li>
+    <li>Dashboard showing active debts, settled debts, and summaries</li>
+    <li>Debtor management with profiles and history</li>
+    <li>Debt status tracking (active, partially paid, fully paid)</li>
+    <li>Search and filter debt records</li>
+    <li>Password reset functionality</li>
+    <li>Secure API endpoints with JWT token authorization</li>
+  </ul>
+  <h4>Non-Functional Requirements</h4>
+  <ul>
+    <li><strong>Performance:</strong> API response time under 500ms for 95% of requests</li>
+    <li><strong>Security:</strong> JWT token expiration, bcrypt password hashing, HTTPS enforcement</li>
+    <li><strong>Usability:</strong> Clean, intuitive UI suitable for non-technical users</li>
+    <li><strong>Scalability:</strong> MongoDB sharding strategy planned for horizontal scaling</li>
+    <li><strong>Reliability:</strong> 99% uptime target for core services</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>7. Technology Stack</h2>
+<div class="block">
+  <table>
+    <tr><th>Category</th><th>Technology</th><th>Purpose</th></tr>
+    <tr><td>Frontend</td><td>React.js + ShadCN UI</td><td>User interface and components</td></tr>
+    <tr><td>Backend</td><td>Node.js + Express.js</td><td>REST API and business logic</td></tr>
+    <tr><td>Database</td><td>MongoDB (Atlas)</td><td>Document-based data storage</td></tr>
+    <tr><td>Authentication</td><td>JWT + bcrypt</td><td>Token-based authentication</td></tr>
+    <tr><td>Deployment</td><td>Render</td><td>Cloud hosting platform</td></tr>
+    <tr><td>Version Control</td><td>Git + GitHub</td><td>Source code management</td></tr>
+    <tr><td>Platform</td><td>Web (responsive)</td><td>Desktop + mobile web</td></tr>
+  </table>
+</div>
+
+<div class="page-break"></div>
+<h2>8. System Architecture / Design</h2>
+<div class="block">
+  <h4>Architecture: 3-Tier MERN Stack</h4>
+  <p><strong>Presentation Layer:</strong> React.js frontend communicating with backend via REST APIs</p>
+  <p><strong>Business Logic Layer:</strong> Node.js/Express.js server handling authentication, debt operations, and data validation</p>
+  <p><strong>Data Layer:</strong> MongoDB Atlas providing document-based storage for users, debts, and debtor information</p>
+
+  <h4>Data Flow</h4>
+  <p>Client (React.js) → HTTP Request → Express.js Server (JWT validation → business logic) → MongoDB Atlas → Response → Client</p>
+
+  <h4>ERD Overview</h4>
+  <pre>users      — _id, email, password_hash, name, created_at
+debts      — _id, creditor_id, debtor_id, amount, description, due_date, status, created_at
+debtors    — _id, user_id, name, email, phone, notes</pre>
+</div>
+
+<div class="page-break"></div>
+<h2>9. Work Plan / Timeline</h2>
+<div class="block">
+  <table>
+    <tr><th>Phase</th><th>Activities</th><th>Duration</th></tr>
+    <tr><td>Phase 1: Research</td><td>Technology research, competitor analysis, requirements gathering</td><td>2 weeks</td></tr>
+    <tr><td>Phase 2: Design</td><td>UI/UX design, system architecture, database schema</td><td>2 weeks</td></tr>
+    <tr><td>Phase 3: Backend</td><td>API development, authentication, database integration</td><td>3 weeks</td></tr>
+    <tr><td>Phase 4: Frontend</td><td>React development, API integration, responsive design</td><td>3 weeks</td></tr>
+    <tr><td>Phase 5: Testing</td><td>Unit testing, user acceptance testing (10-15 users)</td><td>2 weeks</td></tr>
+    <tr><td>Phase 6: Deployment</td><td>Render deployment, monitoring setup, documentation</td><td>1 week</td></tr>
+  </table>
+  <p><strong>Total Estimated Duration:</strong> 13 weeks</p>
+</div>
+
+<div class="page-break"></div>
+<h2>10. Budget and Resources</h2>
+<div class="block">
+  <h4>Estimated Budget</h4>
+  <table>
+    <tr><th>Category</th><th>Description</th><th>Cost</th></tr>
+    <tr><td>Domain</td><td>Cloudflare Registrar</td><td>$9.77/year</td></tr>
+    <tr><td>Hosting</td><td>Render (backend + frontend)</td><td>Free tier</td></tr>
+    <tr><td>Database</td><td>MongoDB Atlas (shared cluster)</td><td>Free tier</td></tr>
+    <tr><td>Development Tools</td><td>VS Code, Git, Postman</td><td>Free</td></tr>
+    <tr><td>Labor</td><td>Student team (3 members)</td><td>Unpaid</td></tr>
+    <tr><td><strong>Total</strong></td><td></td><td><strong>$9.77/year</strong></td></tr>
+  </table>
+  <h4>Monthly Operating Costs (Post-Launch)</h4>
+  <table>
+    <tr><td>MongoDB Atlas (upgraded tier if needed)</td><td>$57/month</td></tr>
+    <tr><td>Render upgraded plans (if needed)</td><td>$25/month</td></tr>
+    <tr><td>Domain renewal</td><td>$0.81/month</td></tr>
+    <tr><td><strong>Total Monthly:</strong></td><td><strong>$82.81/month</strong></td></tr>
+  </table>
+</div>
+
+<div class="page-break"></div>
+<h2>11. Risk Management</h2>
+<div class="block">
+  <table>
+    <tr><th>Risk</th><th>Probability</th><th>Impact</th><th>Mitigation</th></tr>
+    <tr>
+      <td>Database scalability — MongoDB performance degrades as user base grows</td>
+      <td>Medium</td><td>High</td>
+      <td>Implement database indexing; monitor Atlas metrics; plan for sharding</td>
+    </tr>
+    <tr>
+      <td>Security vulnerabilities — unauthorized access to debt information</td>
+      <td>Medium</td><td>High</td>
+      <td>JWT token expiration; bcrypt hashing; input validation; HTTPS enforcement; monthly security reviews</td>
+    </tr>
+    <tr>
+      <td>Scope creep — feature additions beyond MVP</td>
+      <td>High</td><td>Medium</td>
+      <td>Maintain strict feature freeze after design phase; weekly sprint reviews</td>
+    </tr>
+    <tr>
+      <td>Technology learning curve — delays due to unfamiliarity with MERN stack</td>
+      <td>Medium</td><td>Medium</td>
+      <td>Allocate first 2 weeks for technology research and proof-of-concept; pair programming</td>
+    </tr>
+    <tr>
+      <td>User experience issues — poor UI leading to abandonment</td>
+      <td>Medium</td><td>High</td>
+      <td>Conduct user testing with 10-15 target users during design phase</td>
+    </tr>
+    <tr>
+      <td>Competition from established apps</td>
+      <td>Low</td><td>Medium</td>
+      <td>Focus on simplicity and informal debt focus; quarterly competitor analysis</td>
+    </tr>
+  </table>
+</div>
+
+<div class="page-break"></div>
+<h2>12. Expected Output / Deliverables</h2>
+<div class="block">
+  <h4>MVP Deliverables</h4>
+  <p><strong>Core Web Application:</strong> IOU.com Web Platform — fully functional debt tracking application including:</p>
+  <ul>
+    <li>User Registration &amp; Authentication System (email verification, JWT tokens, password reset)</li>
+    <li>Debt Management Interface (add, edit, mark paid, delete debts)</li>
+    <li>Dashboard &amp; Reporting (total outstanding, settled history, basic statistics)</li>
+    <li>Debtor Management (contact info, debtor profiles, search &amp; filter)</li>
+  </ul>
+  <p><strong>Technical Documentation:</strong></p>
+  <ul>
+    <li>API Documentation — complete REST API reference</li>
+    <li>Database Schema Documentation — MongoDB collection structures</li>
+    <li>Deployment Guide — production deployment on Render</li>
+  </ul>
+  <p><strong>User-Facing Documentation:</strong></p>
+  <ul>
+    <li>User Manual — comprehensive guide with screenshots</li>
+    <li>Quick Start Guide — 5-minute tutorial for new users</li>
+  </ul>
+  <p><strong>Quality Assurance:</strong></p>
+  <ul>
+    <li>Test Suite — unit tests for critical backend functions</li>
+    <li>User Acceptance Testing Report — results from beta testing</li>
+  </ul>
+  <p><strong>Project Management:</strong></p>
+  <ul>
+    <li>Final Project Report — development process, budget comparison, lessons learned</li>
+    <li>Phase 2 Feature Roadmap — future enhancements</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>13. Conclusion</h2>
+<div class="block">
+  <p>IOU.com is poised to significantly impact how individuals and micro-businesses manage informal financial agreements. By providing a simple, secure, and accessible platform, it will reduce the common stresses of forgotten loans and awkward payment reminders, fostering healthier financial relationships.</p>
+  <p>Achieving our goals for user adoption, debt resolution rates, and user satisfaction will demonstrate the tangible success of this application in streamlining personal finance and improving financial clarity for our target users.</p>
+  <p><strong>Future Development:</strong></p>
+  <ul>
+    <li>Automated Payment Reminders (email, SMS)</li>
+    <li>Integration with payment platforms (Venmo, PayPal)</li>
+    <li>Advanced reporting and financial insights</li>
+    <li>Group debt management (roommates, travel companions)</li>
+    <li>Native mobile apps (iOS, Android)</li>
+    <li>Educational resources for informal lending best practices</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>14. Meet Our Team</h2>
+<div class="block">
+  <table>
+    <tr>
+      <td><strong>Sok Virak</strong><br>Lead Developer</td>
+      <td>Full-stack development, Problem-Solving, Architecture<br><em>"Passionate about creating technology that makes a real difference in people's financial lives."</em></td>
+    </tr>
+    <tr>
+      <td><strong>Chea Bunthay</strong><br>Frontend Developer &amp; UI/UX Designer</td>
+      <td>React.js, mobile development, user experience design<br><em>"Dedicated to crafting intuitive interfaces that make complex financial concepts accessible to everyone."</em></td>
+    </tr>
+    <tr>
+      <td><strong>Puth Monisela</strong><br>Project Manager</td>
+      <td>Management, Architecture, Communications<br><em>"Committed to building secure, scalable systems that users can trust with their most sensitive financial information."</em></td>
+    </tr>
+  </table>
+</div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- TAB 3: AUTOPARTS POS -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="tab-content" id="tab-pos">
+
+<div class="cover">
+  <div class="icon">🔧</div>
+  <h1>AutoParts POS System</h1>
+  <p class="subtitle">Point-of-Sale Software for Automotive Parts Retail Businesses</p>
+  <div class="meta">
+    <p><span>School:</span> Limkokwing University</p>
+    <p><span>Course:</span> Software Project Management</p>
+    <p><span>Instructor:</span> Mr. Carlos JR.</p>
+    <p><span>Team:</span> Ramech Chilean, Sambathlong Piya, Phin Samaivironath, Sopha Nara</p>
+  </div>
+</div>
+
+<div class="page-break"></div>
+<h2>Table of Contents</h2>
+<div class="toc"><ol>
+  <li>Project Overview</li><li>Introduction</li><li>Goals and Objectives</li>
+  <li>Our Service</li><li>Project Scope</li><li>Software Requirements</li>
+  <li>Technology Stack</li><li>System Architecture / Design</li>
+  <li>Work Plan / Timeline</li><li>Budget and Resources</li>
+  <li>Risk Management</li><li>Expected Output / Deliverables</li><li>Conclusion</li>
+</ol></div>
+
+<div class="page-break"></div>
+<h2>1. Project Overview</h2>
+<div class="block">
+  <p>The AutoParts POS System is a Point-of-Sale software solution designed specifically for small to medium-sized automotive parts businesses. The goal of this system is to simplify and digitize the process of handling sales transactions, tracking inventory, managing customers, and generating financial and stock reports.</p>
+  <p>Many car parts shops currently rely on handwritten receipts or outdated tools like spreadsheets, which can result in errors, inefficiencies, and slow service. This project aims to solve that gap by offering an all-in-one, intuitive system tailored to the automotive retail environment.</p>
+  <p>The system will allow staff to quickly process sales, update stock levels automatically, and retrieve product information with ease. It includes a secure login system for role-based access (admin vs cashier), real-time inventory tracking, and the ability to generate transaction and performance reports for management.</p>
+  <p>The web app is intended for users such as store owners, sales clerks, and inventory managers in automotive parts retail. With a user-friendly interface and efficient workflow, even non-technical users can operate it with minimal training.</p>
+</div>
+
+<div class="page-break"></div>
+<h2>2. Introduction</h2>
+<div class="block">
+  <h4>Problem Statement</h4>
+  <p>In the automotive parts retail industry, many businesses still rely on manual processes or outdated software to handle their day-to-day operations. This results in several recurring issues such as inaccurate stock counts, misplaced receipts, slow transaction times, human errors in calculations, and difficulty generating reports.</p>
+  <p>Moreover, auto parts stores often have complex inventories with thousands of SKUs, varying by vehicle models, brands, and part specifications. Keeping track of these manually can be both time-consuming and error-prone.</p>
+  <h4>Need for the Software</h4>
+  <p>There is a growing need for an affordable, efficient, and easy-to-use Point-of-Sale POS system specifically designed for the car parts retail industry. The AutoParts POS System addresses this need by providing a tailored solution that simplifies the sales process, automates inventory tracking, and supports business decision-making through insightful reports.</p>
+  <h4>Target Users</h4>
+  <ul>
+    <li>Car parts store owners who want better control and visibility of their business operations</li>
+    <li>Cashiers and sales staff who need to quickly process transactions and check stock availability</li>
+    <li>Inventory managers responsible for tracking product levels and ordering new stock</li>
+    <li>Technicians or service advisors who frequently need to look up parts and pricing</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>3. Goals and Objectives</h2>
+<div class="block">
+  <p><strong>Goal:</strong> To develop a Point-of-Sale system that simplifies transactions and automates inventory management for car parts stores.</p>
+  <p><strong>Objectives:</strong></p>
+  <ul>
+    <li>Build a secure login and role-based access system</li>
+    <li>Allow users to process sales in under 30 seconds</li>
+    <li>Automatically update inventory records with each transaction</li>
+    <li>Generate daily, weekly, and monthly sales reports</li>
+    <li>Support a product database with at least 500 car parts</li>
+    <li>Provide a user-friendly interface that requires minimal training</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>4. Our Service</h2>
+<div class="block">
+  <ul>
+    <li><strong>Sales Transaction Processing:</strong> Fast and accurate interface to record sales, calculate totals, apply discounts, and generate receipts</li>
+    <li><strong>Inventory Management:</strong> Automatic inventory updates after each transaction, with stock level tracking, low-stock alerts, and manual adjustments</li>
+    <li><strong>Product Catalog Management:</strong> Ability to store and manage a wide range of car parts with details like part number, description, brand, model compatibility, and price</li>
+    <li><strong>User Access Control:</strong> Secure login system with distinct roles (Admin and Cashier), ensuring data protection and proper user permissions</li>
+    <li><strong>Customer Management:</strong> Maintain a simple database of regular customers, including contact info and purchase history</li>
+    <li><strong>Report Generation:</strong> Generate daily, weekly, and monthly reports for sales, revenue, inventory status, and best-selling items</li>
+    <li><strong>Receipts and Documentation:</strong> Generate and print sales receipts, with options to export reports to PDF</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>5. Project Scope</h2>
+<div class="block">
+  <h4>Inclusions</h4>
+  <ul>
+    <li><strong>Sales Module:</strong> Virtual cart, calculate totals, apply discounts, process payments</li>
+    <li><strong>Inventory Management:</strong> Auto-update quantities after sales, manual restocking and adjustment</li>
+    <li><strong>Product Catalog:</strong> Part numbers, categories, vehicle compatibility, brands, prices, quantities</li>
+    <li><strong>User Management:</strong> Role-based login for Admin and Cashier accounts</li>
+    <li><strong>Customer Tracking:</strong> Basic customer information storage to track frequent buyers</li>
+    <li><strong>Reports:</strong> Sales reports, inventory summaries, product performance analysis</li>
+    <li><strong>Receipt Generation:</strong> Automatically create and print receipts for each transaction</li>
+    <li><strong>Search:</strong> Quick search for products by name, part number, or category</li>
+  </ul>
+  <h4>Exclusions</h4>
+  <ul>
+    <li>Online E-commerce Integration — no web store</li>
+    <li>Hardware Integration — no native barcode scanner or receipt printer support (may be added later)</li>
+    <li>Multi-Branch Support — single-store operation only</li>
+    <li>Advanced Accounting Features — basic sales tracking only</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>6. Software Requirements</h2>
+<div class="block">
+  <h4>Functional Requirements</h4>
+  <ul>
+    <li>User Authentication: Secure login with Admin/Cashier access levels</li>
+    <li>Product Management: Add, edit, search, and delete product records (car parts)</li>
+    <li>Sales Processing: Record transactions, apply discounts, calculate change, generate receipts</li>
+    <li>Inventory Control: Update stock levels automatically</li>
+    <li>Customer Management: Simple customer list with contact details and purchase history</li>
+    <li>Report Generation: Daily/weekly/monthly reports on sales, inventory, top-selling products</li>
+    <li>Search Functionality: By part number, name, or category</li>
+    <li>Backup/Export: Export data for backup or external analysis</li>
+  </ul>
+  <h4>Non-Functional Requirements</h4>
+  <ul>
+    <li><strong>Usability:</strong> Clean, intuitive interface for non-technical users</li>
+    <li><strong>Performance:</strong> Response time under 2 seconds for search and checkout</li>
+    <li><strong>Security:</strong> Encrypted login credentials and access control</li>
+    <li><strong>Scalability:</strong> Future expansion (mobile version, online sync)</li>
+    <li><strong>Portability:</strong> Runs on standard Windows environments</li>
+    <li><strong>Reliability:</strong> Operate without crashing during extended business hours</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>7. Technology Stack</h2>
+<div class="block">
+  <table>
+    <tr><th>Category</th><th>Technology</th></tr>
+    <tr><td>Programming Language</td><td>Java</td></tr>
+    <tr><td>UI Framework</td><td>Java Swing</td></tr>
+    <tr><td>Database</td><td>MySQL (primary), SQLite (fallback)</td></tr>
+    <tr><td>Platform</td><td>Desktop (Windows), optional Android app</td></tr>
+    <tr><td>Version Control</td><td>Git, GitHub</td></tr>
+  </table>
+  <p>Java is used as the primary programming language for the AutoParts POS System. Java Swing provides a lightweight, flexible GUI framework for building interactive desktop applications. MySQL is chosen for its reliability, scalability, and robust community support.</p>
+</div>
+
+<div class="page-break"></div>
+<h2>8. System Architecture / Design</h2>
+<div class="block">
+  <h4>Architecture: 3-Tier</h4>
+  <p><strong>Presentation Layer (UI):</strong> Java Swing graphical user interface through which users interact with the system</p>
+  <p><strong>Business Logic Layer:</strong> Core functionality — processes user commands, performs validations, manages business rules, coordinates between UI and data layer</p>
+  <p><strong>Data Layer:</strong> MySQL database handling data storage, retrieval, updates, and persistence</p>
+
+  <h4>ERD Overview</h4>
+  <pre>Users       — id, username, password_hash, role (admin/cashier), name
+Products    — id, part_number, name, category, brand, model_compat, price, qty
+Sales       — id, timestamp, cashier_id, total_amount, discount
+Sale_Items  — id, sale_id, product_id, qty, unit_price
+Inventory   — id, product_id, qty_change, type (in/out), reference, timestamp
+Customers   — id, name, phone, email, address</pre>
+
+  <h4>Data Flow</h4>
+  <p><strong>Sales Module:</strong> Cashier initiates sale → selects products → enters quantities → processes payment → system logs transaction and updates inventory</p>
+  <p><strong>Report Generation:</strong> System queries Sales and Inventory tables → aggregates data → generates daily/weekly/monthly summaries</p>
+</div>
+
+<div class="page-break"></div>
+<h2>9. Work Plan / Timeline</h2>
+<div class="block">
+  <table>
+    <tr><th>Phase</th><th>Activities</th><th>Duration</th></tr>
+    <tr><td>Phase 1: Planning</td><td>Requirements gathering, system specification, project charter</td><td>2 weeks</td></tr>
+    <tr><td>Phase 2: Design</td><td>UI wireframes, ERD, system architecture, database schema</td><td>3 weeks</td></tr>
+    <tr><td>Phase 3: Development</td><td>Backend (Java + MySQL), Frontend (Swing UI), integration</td><td>6 weeks</td></tr>
+    <tr><td>Phase 4: Testing</td><td>Unit testing, integration testing, UAT</td><td>2 weeks</td></tr>
+    <tr><td>Phase 5: Deployment</td><td>Packaging, documentation, training</td><td>1 week</td></tr>
+  </table>
+  <p><strong>Total Estimated Duration:</strong> 14 weeks</p>
+</div>
+
+<div class="page-break"></div>
+<h2>10. Budget and Resources</h2>
+<div class="block">
+  <table>
+    <tr><th>Category</th><th>Description</th><th>Cost</th></tr>
+    <tr><td>Development Tools</td><td>Java SDK, GitHub</td><td>Free</td></tr>
+    <tr><td>Domain</td><td>Cloudflare Registrar</td><td>$9.77/year</td></tr>
+    <tr><td>Server Hosting</td><td>Cloudflare</td><td>Free (Free plan)</td></tr>
+    <tr><td>Labor</td><td>In-house (Student team)</td><td>Unpaid</td></tr>
+  </table>
+</div>
+
+<div class="page-break"></div>
+<h2>11. Risk Management</h2>
+<div class="block">
+  <table>
+    <tr><th>Risk</th><th>Prob</th><th>Impact</th><th>Mitigation</th></tr>
+    <tr>
+      <td>Hardware failure or store computer crash</td>
+      <td>3/5</td><td>4/5</td>
+      <td>Daily data backups to external drives and cloud; switch to backup PC</td>
+    </tr>
+    <tr>
+      <td>Data corruption or loss</td>
+      <td>3/5</td><td>5/5</td>
+      <td>Automatic backup and recovery process; validate data before saving</td>
+    </tr>
+    <tr>
+      <td>Unauthorized access to system</td>
+      <td>2/5</td><td>5/5</td>
+      <td>Enforce strong passwords, role-based permissions, monitor login logs</td>
+    </tr>
+    <tr>
+      <td>Slow system performance</td>
+      <td>3/5</td><td>3/5</td>
+      <td>Optimize database queries and upgrade hardware if needed</td>
+    </tr>
+    <tr>
+      <td>Bugs in sales or inventory features</td>
+      <td>4/5</td><td>4/5</td>
+      <td>Thorough testing before release; apply hotfixes for urgent issues</td>
+    </tr>
+    <tr>
+      <td>Power outage during store hours</td>
+      <td>2/5</td><td>4/5</td>
+      <td>Use UPS for 30 minutes of continued operation; switch to manual receipts</td>
+    </tr>
+  </table>
+</div>
+
+<div class="page-break"></div>
+<h2>12. Expected Output / Deliverables</h2>
+<div class="block">
+  <ol>
+    <li><strong>Web-Based POS Platform</strong> — fully functional, browser-accessible POS system</li>
+    <li><strong>Sales Transaction Module</strong> — fast processing, digital receipts, product lookup</li>
+    <li><strong>Inventory Management System</strong> — real-time tracking, low-stock alerts, add/update/remove products</li>
+    <li><strong>User Authentication &amp; Role-Based Access</strong> — secure login, role-based dashboards (admin, cashier)</li>
+    <li><strong>Customer Management</strong> — record customer details, view purchase history</li>
+    <li><strong>Reporting &amp; Analytics</strong> — sales reports, inventory status, performance summaries</li>
+    <li><strong>Clean &amp; User-Friendly Interface</strong> — intuitive dashboard for non-technical users</li>
+    <li><strong>Documentation</strong> — user guide/manual, setup and login instructions</li>
+  </ol>
+</div>
+
+<div class="page-break"></div>
+<h2>13. Conclusion</h2>
+<div class="block">
+  <p>The AutoParts POS System offers a modern solution to the common challenges faced by small to medium-sized automotive parts businesses. By replacing manual processes with automation and centralized data management, it helps reduce errors, save time, and improve customer service.</p>
+  <p>With features like real-time inventory tracking, secure role-based access, and detailed reporting, the system enhances operational efficiency and gives business owners better control over daily operations.</p>
+  <p>Looking ahead, the system has strong potential for future development, including cloud integration, mobile access, and online ordering capabilities to support business growth and scalability.</p>
+  <p>In summary, the AutoParts POS System is a valuable tool that addresses current inefficiencies while paving the way for digital transformation in the automotive retail industry.</p>
+</div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- TAB 4: BEVERAGE WAREHOUSE INVENTORY SYSTEM (OUR PROJECT) -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="tab-content" id="tab-warehouse">
+
+<div class="cover" style="background: linear-gradient(135deg, #0d2137 0%, #162447 100%);">
+  <div class="icon">🥤</div>
+  <h1>Beverage Warehouse Inventory Management System</h1>
+  <p class="subtitle">Multi-Warehouse Beverage Distribution, Barcode Scanning, Expiry Tracking &amp; Cold Chain Management</p>
+  <div class="meta">
+    <p><span>Stack:</span> Go + Fiber v3 → PostgreSQL || Vue 3 + TypeScript + PrimeVue</p>
+    <p><span>Scale:</span> Mid-size beverage distributor, multi-warehouse, role-based access</p>
+    <p><span>Duration:</span> 8–12 weeks (single dev) / 4–6 weeks (2-person team)</p>
+  </div>
+</div>
+
+<div class="page-break"></div>
+<h2>Table of Contents</h2>
+<div class="toc"><ol>
+  <li>Project Overview</li>
+  <li>Background / Introduction</li>
+  <li>Goals and Objectives</li>
+  <li>Our Service</li>
+  <li>Project Scope</li>
+  <li>Software Requirements</li>
+  <li>Technology Stack</li>
+  <li>System Architecture / Design</li>
+  <li>Work Plan / Timeline</li>
+  <li>Budget and Resources</li>
+  <li>Risk Management</li>
+  <li>Expected Output / Deliverables</li>
+  <li>Conclusion</li>
+  <li>Meet Our Team</li>
+</ol></div>
+
+<div class="page-break"></div>
+<h2>1. Project Overview</h2>
+<div class="block">
+  <p>The Beverage Warehouse Inventory Management System (BWIMS) is a full-stack web application designed specifically for beverage distributors and wholesale operations. It manages inventory across multiple warehouses, tracks stock movements, enforces expiry-based picking (FEFO), and supports barcode scanning — all tailored to the unique demands of the beverage industry.</p>
+  <p>Beverage distribution involves thousands of SKUs across brands, flavors, sizes, and packaging types. Each product carries batch numbers and expiration dates that must be strictly tracked to prevent spoilage and ensure regulatory compliance. The system provides real-time inventory snapshots per warehouse, zone, and location — with automated alerts for near-expiry stock and low-stock thresholds.</p>
+  <p>The application supports four stock movement types (receive, pick, transfer, adjust) within database transactions, maintains an immutable audit trail, and uses FIFO/FEFO cost layers for accurate valuation. Barcode scanning via phone camera or USB scanner enables warehouse floor staff to complete receive and pick operations in under 10 seconds. The system is built for mid-size beverage distributors with: warehouse managers overseeing operations, pickers handling floor-level picking, admin users managing configuration and users, and viewers needing read-only access for auditing and planning.</p>
+</div>
+
+<div class="page-break"></div>
+<h2>2. Background / Introduction</h2>
+<div class="block">
+  <h4>Problem Statement</h4>
+  <p>Beverage distributors and wholesalers manage enormous inventories spanning soft drinks, water, juices, energy drinks, alcoholic beverages, and more — each with multiple brands, flavors, sizes, and packaging types (cans, bottles, kegs, cartons). Many still rely on spreadsheets, paper logs, or generic inventory software that cannot handle beverage-specific requirements: batch/lot expiry tracking, temperature zone management, and FEFO (First Expired, First Out) picking logic. This leads to product spoilage, regulatory non-compliance, stock discrepancies, slow order fulfillment, and revenue loss from expired inventory write-offs.</p>
+  <h4>Need for the Software</h4>
+  <p>There is a clear need for a beverage-specific warehouse management system that provides: real-time visibility of stock across multiple distribution centers, mandatory lot/batch tracking with automated expiry alerts, FEFO-based pick logic to minimize waste and spoilage, temperature zone mapping within warehouses, barcode scanning for fast floor operations, and complete audit trail for regulatory compliance and reconciliation.</p>
+  <h4>Target Users</h4>
+  <ul>
+    <li><strong>Warehouse Managers:</strong> Oversee beverage stock levels across distribution centers, approve adjustments, monitor expiry alerts, generate inventory valuation and wastage reports</li>
+    <li><strong>Pickers / Floor Staff:</strong> Receive incoming beverage deliveries, pick orders using FEFO logic via barcode scanners, transfer stock between temperature zones</li>
+    <li><strong>Administrators:</strong> System configuration, user management, beverage product catalog setup (brands, flavors, sizes, categories), warehouse/zone/location setup</li>
+    <li><strong>Viewers / Auditors:</strong> Read-only access to inventory data for compliance audits, financial planning, and supplier reconciliation</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>3. Goals and Objectives</h2>
+<div class="block">
+  <p><strong>Goal:</strong> To develop a beverage-specific, multi-warehouse inventory management system that provides real-time stock tracking, FEFO-based picking, expiry management, and barcode-driven operations for beverage distributors.</p>
+  <p><strong>Objectives:</strong></p>
+  <ul>
+    <li>Build a secure JWT-based authentication system with 4 distinct roles (admin, manager, picker, viewer)</li>
+    <li>Implement full CRUD for warehouses with temperature zone mapping (ambient, chilled, frozen), locations, beverage products (brand, flavor, size, packaging), and categories</li>
+    <li>Support mandatory lot/batch tracking for all beverage products, including expiration date, batch number, and production date</li>
+    <li>Implement FEFO (First Expired, First Out) pick logic to minimize product spoilage and waste</li>
+    <li>Support four stock movement types: receive, pick, transfer, and adjust — all within database transactions</li>
+    <li>Automated expiry alerts — notify managers when products are approaching expiration (30/14/7 days)</li>
+    <li>Integrate barcode scanning (camera + USB scanner) for sub-10-second receive/pick operations</li>
+    <li>Implement FIFO cost layer consumption for accurate beverage inventory valuation</li>
+    <li>Maintain an immutable, append-only audit trail in stock_movements for regulatory compliance</li>
+    <li>Support 50,000+ beverage SKU rows with virtual scrolling in the UI</li>
+    <li>Deliver API response times under 200ms for 95th percentile of requests</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>4. Our Service</h2>
+<div class="block">
+  <p>The Beverage Warehouse Inventory Management System provides the following core services tailored to beverage distribution:</p>
+  <ul>
+    <li><strong>Beverage Product Catalog:</strong> Full product catalog organized by brand, flavor, size (ml/L), packaging type (can, bottle, keg, carton), and hierarchical categories (soft drinks, water, juice, energy drinks, alcoholic beverages, mixers)</li>
+    <li><strong>Multi-Warehouse with Temperature Zones:</strong> Create and manage multiple distribution centers, each with temperature-mapped zones (ambient, chilled, frozen) and hierarchical locations (zone → aisle → rack → bin) for precise stock placement</li>
+    <li><strong>Lot/Batch &amp; Expiry Tracking:</strong> Every inventory receipt is linked to a lot/batch with production date, expiration date, and batch number — mandatory for all beverage products to ensure traceability</li>
+    <li><strong>FEFO Picking Logic:</strong> When picking stock, the system automatically selects the batch with the nearest expiration date (First Expired, First Out) to minimize spoilage and waste</li>
+    <li><strong>Real-Time Inventory Snapshots:</strong> View stock levels by warehouse, zone, product, and lot — with expiry status indicators (fresh, approaching expiry, expired)</li>
+    <li><strong>Expiry Alert System:</strong> Automated notifications at 30, 14, and 7 days before batch expiration — enabling proactive discounting, redistribution, or disposal decisions</li>
+    <li><strong>Stock Movement Operations:</strong> Four movement types (receive, pick, transfer, adjust) all executed within database transactions — picks automatically consume lots in FEFO order</li>
+    <li><strong>Barcode Scanning:</strong> Phone camera scanning via @teckel/vue-barcode-reader plus USB scanner (keyboard wedge) support — scan a beverage barcode and complete operations on the same screen</li>
+    <li><strong>FIFO Cost Tracking:</strong> Automatic cost layer consumption during picks (oldest received first) for accurate inventory valuation — critical for financial reporting in beverage distribution</li>
+    <li><strong>Reporting &amp; Dashboard:</strong> Inventory valuation reports, expiry reports (by date range), movement summaries, product velocity analytics, wastage tracking, CSV exports, and KPI dashboards</li>
+    <li><strong>Role-Based Access Control:</strong> Four distinct roles ensuring viewers can't modify, pickers can only perform movements, managers oversee operations, and admins have full system control</li>
+    <li><strong>Immutable Audit Trail:</strong> Every stock movement is append-only — never updated or deleted — enabling complete regulatory compliance and reconciliation</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>5. Project Scope</h2>
+<div class="block">
+  <h4>Inclusions (What the system will provide)</h4>
+  <ul>
+    <li><strong>Authentication:</strong> JWT (RS256) auth with login, registration, token refresh, and role-based middleware</li>
+    <li><strong>User Management:</strong> Admin-only CRUD for user accounts with role assignment (admin, warehouse_manager, picker, viewer)</li>
+    <li><strong>Warehouse &amp; Zone Management:</strong> CRUD for warehouses and temperature-mapped zones (ambient, chilled, frozen) with hierarchical locations</li>
+    <li><strong>Beverage Product Catalog:</strong> Full product CRUD with SKU, barcode, brand, flavor, size (ml/L), packaging type, and category — organized by beverage type</li>
+    <li><strong>Lot/Batch Management:</strong> Mandatory lot tracking for all beverage products — batch number, production date, expiration date</li>
+    <li><strong>Inventory Management:</strong> Stock snapshots by warehouse/zone/product/lot, low-stock alerts, expiry alerts (30/14/7 days), per-warehouse summaries</li>
+    <li><strong>Stock Movements:</strong> Receive, pick (FEFO), transfer, adjust — all with transactional updates and FIFO cost layer tracking</li>
+    <li><strong>Barcode Scanning:</strong> Camera-based (phone) and USB scanner (keyboard wedge) integration for GS1/EAN-13 barcodes standard on beverage products</li>
+    <li><strong>Barcode Generation:</strong> Backend barcode label generation using Go boombuler library for shelf/bin labels</li>
+    <li><strong>Expiry Management:</strong> Automated expiry date tracking, near-expiry alerts, expired stock quarantine workflow</li>
+    <li><strong>Reporting:</strong> Inventory valuation (FIFO), expiry reports, movement summaries, product velocity, wastage reports, CSV export</li>
+    <li><strong>Dashboard:</strong> KPIs, expiry alerts widget, low-stock alerts, recent movements, inventory by temperature zone</li>
+    <li><strong>Security:</strong> Rate limiting, request logging, comprehensive input validation, error standardization</li>
+    <li><strong>Testing:</strong> Go integration tests (database layer), Vue component tests (Vitest), E2E tests (Playwright)</li>
+  </ul>
+  <h4>Exclusions (Not included in this version)</h4>
+  <ul>
+    <li>Temperature sensor/hardware integration (IoT thermometers) — manual zone assignment only</li>
+    <li>Offline PWA support with IndexedDB sync</li>
+    <li>ERP integrations (SAP, Oracle NetSuite)</li>
+    <li>Real-time WebSocket/SSE live updates across users</li>
+    <li>Multi-tenant SaaS architecture — single beverage distributor deployment</li>
+    <li>Advanced accounting integration (QuickBooks, Xero)</li>
+    <li>Physical barcode printer hardware integration</li>
+    <li>Route optimization for delivery trucks</li>
+    <li>E-commerce or direct-to-consumer order integration</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>6. Software Requirements</h2>
+<div class="block">
+  <h4>a. Functional Requirements</h4>
+  <table>
+    <tr><th>#</th><th>Feature</th><th>Description</th></tr>
+    <tr><td>FR-1</td><td>User Registration &amp; Login</td><td>JWT (RS256) authentication with secure login, registration, and token refresh</td></tr>
+    <tr><td>FR-2</td><td>Role-Based Access</td><td>4 roles: admin, warehouse_manager, picker, viewer — enforced by middleware</td></tr>
+    <tr><td>FR-3</td><td>User Management</td><td>Admin CRUD for user accounts with role assignment and activation/deactivation</td></tr>
+    <tr><td>FR-4</td><td>Warehouse CRUD</td><td>Create, read, update, delete warehouses with name, code, address, and active status</td></tr>
+    <tr><td>FR-5</td><td>Location Management</td><td>Hierarchical locations (zone/aisle/rack/bin) within each warehouse, with barcode tags</td></tr>
+    <tr><td>FR-6</td><td>Product CRUD</td><td>Manage products with SKU, barcode, name, category, unit, and lot tracking flag</td></tr>
+    <tr><td>FR-7</td><td>Category Management</td><td>Hierarchical product categories (parent/child)</td></tr>
+    <tr><td>FR-8</td><td>Barcode Lookup</td><td>Look up product by barcode via <code>GET /api/products/by-barcode/:code</code></td></tr>
+    <tr><td>FR-9</td><td>Product Search</td><td>Search products by SKU, name, or barcode with category filtering</td></tr>
+    <tr><td>FR-10</td><td>Inventory Snapshot</td><td>Query stock by warehouse, product, and location with aggregated quantities</td></tr>
+    <tr><td>FR-11</td><td>Low-Stock Alerts</td><td>Query products below threshold quantity per warehouse with configurable thresholds</td></tr>
+    <tr><td>FR-12</td><td>Expiry Alerts</td><td>Automated alerts at 30, 14, and 7 days before batch expiration — with quarantine flag for expired stock</td></tr>
+    <tr><td>FR-13</td><td>Receive Inventory</td><td>Receive beverage stock into a location — mandatory lot/batch (batch#, production date, expiry date), updates stock, inserts cost layer</td></tr>
+    <tr><td>FR-14</td><td>Pick Inventory (FEFO)</td><td>Pick stock from a location — automatically selects batch with nearest expiry date (FEFO), consumes FIFO cost layers, decrements stock</td></tr>
+    <tr><td>FR-15</td><td>Transfer Stock</td><td>Move stock between warehouses/zones/locations — validates source has sufficient quantity, preserves lot/batch data</td></tr>
+    <tr><td>FR-16</td><td>Stock Adjustment</td><td>Correct stock counts with reason (damage, spillage, expiry write-off) — creates adjustment movement</td></tr>
+    <tr><td>FR-17</td><td>Movement History</td><td>Query all stock movements with filters (type, product, date range, location, lot/batch)</td></tr>
+    <tr><td>FR-18</td><td>FIFO Cost Tracking</td><td>Automatic cost layer creation on receive and consumption on pick (oldest layers first)</td></tr>
+    <tr><td>FR-19</td><td>FEFO Pick Logic</td><td>Picks automatically consume lots by nearest expiration date; prevents picking expired lots</td></tr>
+    <tr><td>FR-20</td><td>Barcode Generation</td><td>Server-side barcode image generation for product and shelf/bin labels</td></tr>
+    <tr><td>FR-21</td><td>Camera Barcode Scan</td><td>Phone camera scanning for GS1/EAN-13 barcodes via @teckel/vue-barcode-reader</td></tr>
+    <tr><td>FR-22</td><td>USB Scanner Input</td><td>Keyboard wedge scanner support via composable (useScanner.ts)</td></tr>
+    <tr><td>FR-23</td><td>Inventory Valuation</td><td>FIFO-based valuation report per warehouse and zone</td></tr>
+    <tr><td>FR-24</td><td>Expiry Report</td><td>Report of stock by expiry status (fresh, approaching expiry, expired) with batch details</td></tr>
+    <tr><td>FR-25</td><td>Movement Summary</td><td>Aggregated movement report by type and date range</td></tr>
+    <tr><td>FR-26</td><td>Product Velocity</td><td>Top-moving beverage products analysis by brand, category, and SKU</td></tr>
+    <tr><td>FR-27</td><td>CSV Export</td><td>Export reports to CSV format</td></tr>
+    <tr><td>FR-28</td><td>Dashboard</td><td>KPIs, expiry alerts widget, low-stock alerts, recent movements, stock by temperature zone</td></tr>
+  </table>
+
+  <h4>b. Non-Functional Requirements</h4>
+  <table>
+    <tr><th>#</th><th>Category</th><th>Requirement</th></tr>
+    <tr><td>NFR-1</td><td>Performance</td><td>API responses under 200ms for 95th percentile</td></tr>
+    <tr><td>NFR-2</td><td>Scalability</td><td>PrimeVue DataTable must handle 50,000+ product rows with virtual scroll</td></tr>
+    <tr><td>NFR-3</td><td>Security</td><td>JWT RS256 tokens, bcrypt password hashing, rate limiting, HTTPS enforcement</td></tr>
+    <tr><td>NFR-4</td><td>Data Integrity</td><td>All stock movements are append-only (immutable); stock updates are transactional</td></tr>
+    <tr><td>NFR-5</td><td>Usability</td><td>Barcode scan-to-operate in under 10 seconds; mobile-responsive for floor staff</td></tr>
+    <tr><td>NFR-6</td><td>Reliability</td><td>Database-level UNIQUE constraints prevent duplicate stock rows; FIFO is deterministic</td></tr>
+    <tr><td>NFR-7</td><td>Accessibility</td><td>Role boundaries: viewer (read-only), picker (movements only), manager (CRUD + reports), admin (full)</td></tr>
+    <tr><td>NFR-8</td><td>Testability</td><td>Integration tests for database layer; component tests (Vitest); E2E tests (Playwright)</td></tr>
+  </table>
+</div>
+
+<div class="page-break"></div>
+<h2>7. Technology Stack</h2>
+<div class="block">
+  <table>
+    <tr><th>Category</th><th>Technology</th><th>Rationale</th></tr>
+    <tr><td>Backend Language</td><td>Go 1.22+</td><td>High performance, excellent concurrency, single binary deployment</td></tr>
+    <tr><td>Web Framework</td><td>Fiber v3</td><td>Express-inspired, fast HTTP framework for Go</td></tr>
+    <tr><td>SQL Codegen</td><td>sqlc + pgx v5</td><td>Compile-time type safety, full SQL power (CTEs, window functions), zero ORM magic</td></tr>
+    <tr><td>Database</td><td>PostgreSQL 16</td><td>ACID compliance, rich SQL features, reliable for inventory systems</td></tr>
+    <tr><td>Migrations</td><td>golang-migrate</td><td>Schema versioning with up/down migrations</td></tr>
+    <tr><td>Auth</td><td>JWT RS256 + bcrypt</td><td>Stateless auth, no Redis dependency, works with mobile scanners</td></tr>
+    <tr><td>Barcode Gen</td><td>boombuler/barcode (Go)</td><td>Server-side barcode image generation</td></tr>
+    <tr><td>Frontend</td><td>Vue 3 + TypeScript + Vite</td><td>Modern reactive framework, type-safe, fast build tooling</td></tr>
+    <tr><td>UI Library</td><td>PrimeVue 4</td><td>Best DataTable for 10k+ rows (virtual scroll, export, filtering)</td></tr>
+    <tr><td>State Management</td><td>Pinia</td><td>TypeScript-native, Composition API style, modular stores</td></tr>
+    <tr><td>Form Validation</td><td>VeeValidate + Zod</td><td>Schema-based validation with TypeScript inference</td></tr>
+    <tr><td>HTTP Client</td><td>Axios</td><td>Interceptors for JWT refresh, error handling</td></tr>
+    <tr><td>Barcode Reader</td><td>@teckel/vue-barcode-reader</td><td>Camera-based barcode scanning in the browser</td></tr>
+    <tr><td>Charts</td><td>ApexCharts</td><td>Interactive charts for dashboard and reports</td></tr>
+    <tr><td>Testing</td><td>Go testing + Vitest + Playwright</td><td>Unit, integration, component, and E2E testing</td></tr>
+    <tr><td>Containerization</td><td>Docker + Docker Compose</td><td>Consistent dev environment with PostgreSQL + API</td></tr>
+    <tr><td>Deployment</td><td>Go API + Vue SPA via nginx/CDN</td><td>Separate deployments for independent scaling</td></tr>
+  </table>
+</div>
+
+<div class="page-break"></div>
+<h2>8. System Architecture / Design</h2>
+<div class="block">
+  <h4>Architecture: Clean Layered (Backend) + SPA (Frontend)</h4>
+
+  <h4>Backend Structure</h4>
+  <pre>cmd/server/main.go                 # Entry point, DI wiring
+internal/
+  config/config.go                  # Environment variables, config struct
+  handler/                          # HTTP handlers (thin layer)
+    auth.go, user.go, warehouse.go, product.go,
+    inventory.go, movement.go, report.go, barcode.go
+  service/                          # Business logic
+    auth.go, user.go, warehouse.go, product.go,
+    inventory.go, movement.go, cost.go, report.go
+  repository/                       # sqlc-generated + custom queries
+    gen/                            # sqlc output (do not edit)
+    custom/                         # Hand-written complex queries
+  middleware/
+    auth.go, rbac.go, logging.go, ratelimit.go
+  router/router.go                  # Route registration
+pkg/
+  entity/                           # Shared domain structs
+  api/                              # Request/Response DTOs
+  lib/                              # Helpers (barcode, pagination, etc.)
+migrations/                         # *.up.sql, *.down.sql</pre>
+  <p><strong>Layers:</strong> Handler → Service → Repository → PostgreSQL</p>
+  <p><strong>DI:</strong> Constructor injection (no framework)</p>
+  <p><strong>Error Model:</strong> <code>AppError{Code, Message, Err}</code> with global Fiber ErrorHandler</p>
+
+  <h4>Frontend Structure</h4>
+  <pre>frontend/src/
+  api/        client.ts, auth.ts, products.ts, inventory.ts, movements.ts
+  components/ LocationTree.vue, BarcodeScanner.vue, StockMovementForm.vue, LowStockAlert.vue
+  composables/ useAuth.ts, useScanner.ts, useCharts.ts, usePagination.ts, useWarehouse.ts
+  layouts/    DefaultLayout.vue, AuthLayout.vue
+  router/     index.ts, guards.ts
+  stores/     auth.ts, products.ts, inventory.ts, warehouses.ts, movements.ts, barcode.ts
+  views/      Login.vue, Dashboard.vue, Warehouses/, Products/, Inventory/, Movements/, Reports/, Users/</pre>
+
+  <h4>Database Schema (Key Tables)</h4>
+  <table>
+    <tr><th>Table</th><th>Key Columns</th><th>Notes</th></tr>
+    <tr><td>warehouses</td><td>id, name, code, address, is_active</td><td>Multi-warehouse distribution centers</td></tr>
+    <tr><td>locations</td><td>id, warehouse_id, temp_zone (ambient/chilled/frozen), aisle, rack, shelf, barcode, is_pickable</td><td>Temperature-mapped storage zones</td></tr>
+    <tr><td>categories</td><td>id, name, parent_id</td><td>Beverage categories (soft drinks, water, juice, energy, alcohol, etc.)</td></tr>
+    <tr><td>products</td><td>id, sku, barcode (UNIQUE), name, brand, flavor, size_ml, packaging, category_id, is_lot_tracked (always true)</td><td>Beverage product catalog with brand/flavor/size</td></tr>
+    <tr><td>lots</td><td>id, product_id, batch_number, production_date, expiration_date</td><td><strong>Mandatory</strong> lot tracking for all beverages</td></tr>
+    <tr><td><strong>stock</strong></td><td>id, warehouse_id, location_id, product_id, lot_id, qty, reserved_qty</td><td><strong>UNIQUE(w,l,p,lot)</strong> — core inventory</td></tr>
+    <tr><td><strong>stock_movements</strong></td><td>id, type ENUM, product_id, lot_id, from/to warehouse/location, qty, performed_by, created_at</td><td><strong>APPEND-ONLY</strong> — immutable audit trail</td></tr>
+    <tr><td>cost_layers</td><td>id, product_id, lot_id, qty, remaining_qty, unit_cost, received_at</td><td>FIFO cost tracking</td></tr>
+    <tr><td>users</td><td>id, email, password_hash, name, role ENUM, warehouse_id, is_active</td><td>4 roles: admin/warehouse_manager/picker/viewer</td></tr>
+    <tr><td>refresh_tokens</td><td>id, user_id, token_hash, expires_at</td><td>JWT refresh token storage</td></tr>
+  </table>
+
+  <h4>Key Design Decisions</h4>
+  <table>
+    <tr><th>Decision</th><th>Choice</th><th>Why</th></tr>
+    <tr><td>ORM vs Query Builder</td><td>sqlc + pgx</td><td>Compile-time type safety, full SQL power</td></tr>
+    <tr><td>Auth</td><td>JWT RS256</td><td>Stateless, mobile-friendly, no Redis</td></tr>
+    <tr><td>Audit Trail</td><td>Append-only stock_movements</td><td>Immutable source of truth</td></tr>
+    <tr><td>Multi-Warehouse</td><td>warehouse_id on rows</td><td>Flexible cross-warehouse queries</td></tr>
+    <tr><td>Costing</td><td>cost_layers with remaining_qty</td><td>FIFO — oldest layers consumed first</td></tr>
+    <tr><td>RBAC</td><td>Hard-coded in Go</td><td>4 roles, ~25 endpoints — no Casbin needed</td></tr>
+  </table>
+</div>
+
+<div class="page-break"></div>
+<h2>9. Work Plan / Timeline</h2>
+<div class="block">
+  <table>
+    <tr><th>Phase</th><th>Week</th><th>Activities</th><th>Effort</th></tr>
+    <tr>
+      <td><strong>Phase 0: Foundation</strong></td>
+      <td>1</td>
+      <td>Go module + Fiber v3 server, PostgreSQL schema (all tables), sqlc codegen config, golang-migrate integration, env config, health check endpoint, Docker Compose</td>
+      <td>11.5h</td>
+    </tr>
+    <tr>
+      <td><strong>Phase 1: Auth + Users</strong></td>
+      <td>1–2</td>
+      <td>JWT auth (RS256), login/register/refresh, JWT middleware, role middleware (4 roles), user CRUD, password hashing, Vue login page, Pinia auth store, route guards</td>
+      <td>18h</td>
+    </tr>
+    <tr>
+      <td><strong>Phase 2: Core Domain</strong></td>
+      <td>2–4</td>
+      <td>Warehouse &amp; location CRUD, product &amp; category CRUD, barcode lookup, product search, inventory snapshot, low-stock alerts, inventory summary, Vue warehouse/product/inventory pages</td>
+      <td>35h</td>
+    </tr>
+    <tr>
+      <td><strong>Phase 3: Stock Movements</strong></td>
+      <td>4–5</td>
+      <td>Receive, pick, transfer, adjust — all transactional, FIFO cost layer consumption, movement history, Vue receive/pick/transfer/history forms</td>
+      <td>26h</td>
+    </tr>
+    <tr>
+      <td><strong>Phase 4: Barcode Scanning</strong></td>
+      <td>5–6</td>
+      <td>@teckel/vue-barcode-reader integration, camera scan component, scan-to-receive/pick flow, barcode label generation (boombuler), USB scanner composable</td>
+      <td>14h</td>
+    </tr>
+    <tr>
+      <td><strong>Phase 5: Reporting</strong></td>
+      <td>6–7</td>
+      <td>Inventory valuation (FIFO), movement summaries, product velocity, CSV export, enhanced dashboard (KPIs + charts), reports page, ApexCharts integration</td>
+      <td>15h</td>
+    </tr>
+    <tr>
+      <td><strong>Phase 6: Polish</strong></td>
+      <td>7–8</td>
+      <td>Input validation (Go + Zod), error standardization, rate limiting, logging middleware, Vue error boundaries, loading states, responsive design, Go/Vitest/Playwright tests</td>
+      <td>26h</td>
+    </tr>
+  </table>
+  <div class="summary" style="margin-top:1rem;">
+    <p><strong>Total Estimated Effort:</strong> ~145 hours (8–12 weeks single developer / 4–6 weeks 2-person team)</p>
+  </div>
+
+  <h4>Milestone Summary</h4>
+  <div class="milestone"><strong>Phase 0:</strong> Server starts, DB connected, migrations run, /health returns 200</div>
+  <div class="milestone"><strong>Phase 1:</strong> Users register/login, JWT tokens issued, protected routes enforce roles</div>
+  <div class="milestone"><strong>Phase 2:</strong> Full warehouse/product/inventory CRUD working with Vue UI</div>
+  <div class="milestone"><strong>Phase 3:</strong> All 4 movement types work, stock quantities correct, audit trail immutable</div>
+  <div class="milestone"><strong>Phase 4:</strong> Scan barcode → product appears → receive/pick from same screen</div>
+  <div class="milestone"><strong>Phase 5:</strong> Dashboard shows active stock, low-stock alerts, recent movements, valuation</div>
+  <div class="milestone"><strong>Phase 6:</strong> Production-ready, tested, mobile-responsive</div>
+</div>
+
+<div class="page-break"></div>
+<h2>10. Budget and Resources</h2>
+<div class="block">
+  <h4>Development Costs (MVP — 3 months)</h4>
+  <table>
+    <tr><th>Category</th><th>Description</th><th>Estimated Cost</th></tr>
+    <tr><td>Development Tools</td><td>Go, Node.js, VS Code, Git, Docker</td><td>Free (open source)</td></tr>
+    <tr><td>Database Hosting</td><td>PostgreSQL on Railway / Supabase (dev tier)</td><td>$0 – $25/month</td></tr>
+    <tr><td>Backend Hosting</td><td>Go API on Fly.io / Railway (shared CPU)</td><td>$0 – $25/month</td></tr>
+    <tr><td>Frontend Hosting</td><td>Vue SPA on Vercel / Netlify (static hosting)</td><td>Free tier</td></tr>
+    <tr><td>Domain Name</td><td>Cloudflare / Namecheap</td><td>$10 – $15/year</td></tr>
+    <tr><td>SSL Certificate</td><td>Let's Encrypt / Cloudflare</td><td>Free</td></tr>
+    <tr><td>Barcode Library</td><td>boombuler/barcode (MIT License)</td><td>Free</td></tr>
+    <tr><td>Labor (Student Team)</td><td>Self-developed / academic project</td><td>Unpaid</td></tr>
+  </table>
+
+  <h4>Monthly Operating Costs (Post-Launch)</h4>
+  <table>
+    <tr><th>Resource</th><th>Estimated Monthly Cost</th></tr>
+    <tr><td>PostgreSQL (production tier, 2GB RAM)</td><td>$25 – $50/month</td></tr>
+    <tr><td>Backend hosting (2 vCPU, 4GB RAM)</td><td>$25 – $50/month</td></tr>
+    <tr><td>Frontend CDN + hosting</td><td>$0 – $20/month</td></tr>
+    <tr><td>Domain renewal</td><td>$1/month</td></tr>
+    <tr><td>Monitoring (Sentry / Grafana free tier)</td><td>$0</td></tr>
+    <tr><td><strong>Total Monthly (estimated):</strong></td><td><strong>$51 – $121/month</strong></td></tr>
+  </table>
+
+  <h4>Total MVP Cost</h4>
+  <div class="summary" style="margin-top:1rem;">
+    <p><strong>Development phase (3 months):</strong> $0 – $150 (hosting + domain only)</p>
+    <p><strong>Post-launch monthly:</strong> $51 – $121/month</p>
+  </div>
+</div>
+
+<div class="page-break"></div>
+<h2>11. Risk Management</h2>
+<div class="block">
+  <table>
+    <tr><th>Risk</th><th>Prob</th><th>Impact</th><th>Mitigation Strategy</th></tr>
+    <tr>
+      <td><strong>Beverage spoilage / expiry mismanagement</strong> — FEFO logic fails, causing expired stock to be picked instead of fresh stock</td>
+      <td>Medium</td><td>Critical</td>
+      <td>Rigorous FEFO unit tests with edge cases (same expiry, mixed lots); integration tests verifying pick order; expiry validation before pick commit</td>
+    </tr>
+    <tr>
+      <td><strong>Stock quantity inconsistency</strong> — race condition between SELECT and UPDATE during concurrent movements</td>
+      <td>High</td><td>Critical</td>
+      <td>Use <code>SELECT ... FOR UPDATE</code> row-level locking within transactions; all movements in a single DB transaction with SERIALIZABLE isolation</td>
+    </tr>
+    <tr>
+      <td><strong>FIFO cost layer misallocation</strong> — picks consuming wrong layers under concurrent load</td>
+      <td>Medium</td><td>High</td>
+      <td>Lock cost_layers rows with <code>FOR UPDATE</code> during pick; process layers in order; validate remaining_qty >= 0 after each consumption</td>
+    </tr>
+    <tr>
+      <td><strong>Barcode scanner incompatibility</strong> — @teckel/vue-barcode-reader not working on certain devices</td>
+      <td>Medium</td><td>Medium</td>
+      <td>Fallback to manual SKU entry; USB scanner (keyboard wedge) as alternative input method; test on target devices early</td>
+    </tr>
+    <tr>
+      <td><strong>Performance degradation</strong> — API slows down with 50k+ product rows and complex joins</td>
+      <td>Medium</td><td>High</td>
+      <td>Database indexing on all query fields; PrimeVue virtual scroll; paginate all list endpoints; query optimization with EXPLAIN ANALYZE</td>
+    </tr>
+    <tr>
+      <td><strong>JWT token theft</strong> — attacker gains unauthorized access via stolen token</td>
+      <td>Low</td><td>Critical</td>
+      <td>Short-lived access tokens (15min); refresh token rotation; token revocation on role change; HTTPS enforcement</td>
+    </tr>
+    <tr>
+      <td><strong>Data loss</strong> — PostgreSQL failure or accidental deletion</td>
+      <td>Low</td><td>Critical</td>
+      <td>Daily automated backups; WAL archiving; point-in-time recovery; append-only stock_movements means events are never deleted</td>
+    </tr>
+    <tr>
+      <td><strong>Scope creep</strong> — features added beyond MVP causing delays</td>
+      <td>High</td><td>Medium</td>
+      <td>Strict MVP scope freeze after Phase 2; backlog all requests for Phase 2; weekly sprint reviews against original scope</td>
+    </tr>
+    <tr>
+      <td><strong>Learning curve</strong> — team unfamiliar with Go + sqlc + Fiber stack</td>
+      <td>Medium</td><td>Medium</td>
+      <td>Allocate Phase 0 as learning buffer; create internal wiki/knowledge base; pair programming on complex SQL queries</td>
+    </tr>
+    <tr>
+      <td><strong>Database migration failure</strong> — broken migration during deploy</td>
+      <td>Medium</td><td>High</td>
+      <td>Always test migrations on staging first; every migration has a verified down migration; Docker Compose for local testing</td>
+    </tr>
+    <tr>
+      <td><strong>Mobile responsiveness issues</strong> — floor staff unable to use on tablets</td>
+      <td>Medium</td><td>Medium</td>
+      <td>Test on real mobile/tablet devices during Phase 6; use PrimeVue responsive utilities; separate mobile-optimized scan views</td>
+    </tr>
+  </table>
+</div>
+
+<div class="page-break"></div>
+<h2>12. Expected Output / Deliverables</h2>
+<div class="block">
+  <h4>MVP Deliverables</h4>
+
+  <p><strong>1. Backend API Server (Go + Fiber v3)</strong></p>
+  <ul>
+    <li>REST API with ~25 endpoints across 6 domains (auth, users, warehouses, products, inventory, movements, reports)</li>
+    <li>JWT RS256 authentication with 4 role-based access levels</li>
+    <li>PostgreSQL database with 10 tables, sqlc-generated type-safe queries</li>
+    <li>Transactional stock movement processing (receive, pick, transfer, adjust)</li>
+    <li>FIFO cost layer engine with automatic consumption</li>
+    <li>Barcode label generation endpoint</li>
+    <li>CSV report export</li>
+    <li>Rate limiting and request logging middleware</li>
+  </ul>
+
+  <p><strong>2. Frontend SPA (Vue 3 + TypeScript + PrimeVue)</strong></p>
+  <ul>
+    <li>Login/register pages with JWT auth flow</li>
+    <li>Warehouse &amp; location management with tree component</li>
+    <li>Product catalog with PrimeVue DataTable (virtual scroll for 50k+ rows)</li>
+    <li>Inventory dashboard with KPIs, charts, and low-stock alerts</li>
+    <li>Stock movement forms — receive, pick (with barcode), transfer, history</li>
+    <li>Camera-based barcode scanner component</li>
+    <li>Reports page with valuation, velocity, and movement summaries</li>
+    <li>User management (admin only)</li>
+    <li>Responsive design for tablet/phone floor staff</li>
+  </ul>
+
+  <p><strong>3. Documentation</strong></p>
+  <ul>
+    <li>API Documentation — all endpoints with request/response examples</li>
+    <li>Database Schema Documentation — tables, relationships, constraints</li>
+    <li>Deployment Guide — Docker Compose setup + cloud deployment instructions</li>
+    <li>User Manual — guide for each role (admin, manager, picker, viewer)</li>
+  </ul>
+
+  <p><strong>4. Testing Suite</strong></p>
+  <ul>
+    <li>Go integration tests — database layer, movement transactions</li>
+    <li>Vue component tests (Vitest) — forms, tables, auth flow</li>
+    <li>E2E tests (Playwright) — critical paths (login → scan → receive → verify stock)</li>
+  </ul>
+
+  <p><strong>5. Source Code &amp; Infrastructure</strong></p>
+  <ul>
+    <li>GitHub repository with full source code</li>
+    <li>Docker Compose file for local development</li>
+    <li>Database migration files (up + down)</li>
+    <li>CI/CD pipeline configuration</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>13. Conclusion</h2>
+<div class="block">
+  <p>The Warehouse Inventory Management System addresses a critical gap in how mid-size organizations manage inventory across multiple physical locations. By replacing error-prone spreadsheets and manual processes with a centralized, real-time system, it delivers immediate operational value: faster barcode-based operations, complete stock traceability, and accurate inventory valuation.</p>
+
+  <p>Key differentiators of this system include:</p>
+  <ul>
+    <li><strong>FEFO Picking:</strong> The system automatically selects lots with the nearest expiration date during picks — critical in beverage distribution where product spoilage directly impacts profitability and regulatory compliance.</li>
+    <li><strong>Expiry Management:</strong> Automated alerts at 30/14/7 days before expiry give warehouse managers time to discount, redistribute, or dispose of aging stock — reducing write-offs and revenue loss.</li>
+    <li><strong>Immutability:</strong> The append-only stock_movements table serves as a permanent, verifiable audit trail — stock quantities can always be reconciled by replaying movements, essential for food &amp; beverage regulatory audits.</li>
+    <li><strong>Barcode-First Design:</strong> Floor staff can scan a beverage product's GS1/EAN-13 barcode and complete a receive or FEFO pick operation in under 10 seconds, dramatically reducing operational friction in fast-moving distribution centers.</li>
+    <li><strong>Temperature Zone Mapping:</strong> Warehouses are organized by temperature zones (ambient, chilled, frozen), ensuring beverages are stored and tracked in appropriate conditions — reducing spoilage risk.</li>
+    <li><strong>Clean Architecture:</strong> The layered Go backend and modular Vue frontend make the system maintainable, testable, and extensible for future features like IoT temperature sensor integration or route optimization.</li>
+  </ul>
+
+  <p>The system is built on a modern, production-proven stack (Go, PostgreSQL, Vue 3, TypeScript) that balances performance, developer productivity, and long-term maintainability. With an estimated 8–12 week timeline and minimal infrastructure costs ($0–$150 during development), it represents a high-value, low-risk software project for any beverage distribution operation.</p>
+
+  <p>Upon completion, the Beverage Warehouse Inventory Management System will provide a solid foundation for beverage distributors to reduce spoilage, improve order accuracy, maintain regulatory compliance, and make data-driven inventory decisions.</p>
+</div>
+
+<div class="page-break"></div>
+<h2>14. Meet Our Team</h2>
+<div class="block">
+  <p><em>[Add team member photos, names, roles, and quotes here following the template format]</em></p>
+  <table>
+    <tr>
+      <td style="width:150px; text-align:center; padding:1.5rem;">
+        <div style="width:80px; height:80px; background:var(--surface); border:2px solid var(--border); border-radius:50%; margin:0 auto 0.5rem; display:flex; align-items:center; justify-content:center; font-size:2rem;">👤</div>
+      </td>
+      <td>
+        <strong>[Team Member 1]</strong><br>
+        <span class="tag tag-a">Project Manager</span><br>
+        <p style="margin-top:0.5rem;"><em>"[Quote about the project]"</em></p>
+      </td>
+    </tr>
+    <tr>
+      <td style="text-align:center; padding:1.5rem;">
+        <div style="width:80px; height:80px; background:var(--surface); border:2px solid var(--border); border-radius:50%; margin:0 auto 0.5rem; display:flex; align-items:center; justify-content:center; font-size:2rem;">👤</div>
+      </td>
+      <td>
+        <strong>[Team Member 2]</strong><br>
+        <span class="tag tag-m">Lead Developer</span><br>
+        <p style="margin-top:0.5rem;"><em>"[Quote about the project]"</em></p>
+      </td>
+    </tr>
+    <tr>
+      <td style="text-align:center; padding:1.5rem;">
+        <div style="width:80px; height:80px; background:var(--surface); border:2px solid var(--border); border-radius:50%; margin:0 auto 0.5rem; display:flex; align-items:center; justify-content:center; font-size:2rem;">👤</div>
+      </td>
+      <td>
+        <strong>[Team Member 3]</strong><br>
+        <span class="tag tag-p">Frontend Developer &amp; UI/UX</span><br>
+        <p style="margin-top:0.5rem;"><em>"[Quote about the project]"</em></p>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<div class="page-break"></div>
+<h2>15. Attachments / Annexes</h2>
+<div class="block">
+  <ul>
+    <li><strong>Database Schema:</strong> Full PostgreSQL DDL with all 10 tables, indexes, and constraints</li>
+    <li><strong>API Specification:</strong> OpenAPI/Swagger documentation for all ~25 endpoints</li>
+    <li><strong>ER Diagram:</strong> Visual entity-relationship diagram for the database</li>
+    <li><strong>System Architecture Diagram:</strong> 3-tier architecture with data flow</li>
+    <li><strong>Barcode Scan Flow Diagram:</strong> Camera/USB scan → lookup → movement → stock update</li>
+    <li><strong>Auth Flow Diagram:</strong> JWT login, refresh, and RBAC middleware pipeline</li>
+  </ul>
+</div>
+
+</div>
+
+</body>
+</html>

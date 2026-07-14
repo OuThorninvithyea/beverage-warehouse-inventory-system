@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Software Project Proposal — Beverage Warehouse Inventory Management System</title>
+<style>
+  :root {
+    --bg: #0d1117; --surface: #161b22; --border: #30363d;
+    --text: #c9d1d9; --muted: #8b949e; --accent: #58a6ff;
+    --green: #3fb950; --orange: #d2991d; --red: #f85149;
+    --purple: #a371f7; --pink: #f778ba;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.7; min-height: 100vh;
+  }
+
+  /* ── Content ── */
+  .content { max-width: 1100px; margin: 0 auto; padding: 2rem; }
+
+  /* ── Typography ── */
+  h1 { font-size: 2rem; color: #f0f6fc; margin-bottom: 0.5rem; }
+  h2 { font-size: 1.5rem; color: #f0f6fc; margin-top: 2.5rem; margin-bottom: 1rem; padding-bottom: 0.3rem; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 1.2rem; color: #f0f6fc; margin-top: 1.5rem; margin-bottom: 0.5rem; }
+  h4 { font-size: 1.05rem; color: var(--accent); margin-top: 1.2rem; margin-bottom: 0.4rem; }
+  p { margin-bottom: 0.8rem; }
+  strong { color: #f0f6fc; }
+
+  /* ── Cover Page ── */
+  .cover {
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    text-align: center; min-height: 85vh; padding: 3rem 2rem;
+    background: linear-gradient(135deg, var(--surface) 0%, #0d2137 100%);
+    border-radius: 12px; margin-bottom: 2rem;
+    border: 1px solid var(--border);
+  }
+  .cover .icon { font-size: 4rem; margin-bottom: 1.5rem; }
+  .cover h1 { font-size: 2.5rem; border: none; margin-bottom: 1rem; }
+  .cover .subtitle { color: var(--muted); font-size: 1.1rem; margin-bottom: 2rem; }
+  .cover .meta { color: var(--muted); font-size: 0.9rem; line-height: 1.8; }
+  .cover .meta span { color: var(--accent); }
+
+  /* ── Tables ── */
+  table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; font-size: 0.9rem; }
+  th, td { border: 1px solid var(--border); padding: 0.5rem 0.75rem; text-align: left; vertical-align: top; }
+  th { background: var(--surface); font-weight: 600; color: #f0f6fc; }
+  tr:nth-child(even) td { background: rgba(255,255,255,0.01); }
+
+  /* ── Code / Pre ── */
+  code {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 4px;
+    padding: 0.15em 0.4em; font-size: 0.9em; color: var(--orange);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+  pre {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; margin-bottom: 1rem;
+    font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.85rem; line-height: 1.5;
+  }
+
+  /* ── Blocks ── */
+  .block {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 1.25rem; margin-bottom: 1rem;
+  }
+  .block h4 { margin-top: 0; }
+
+  .milestone {
+    background: rgba(63,185,80,0.08); border-left: 3px solid var(--green);
+    padding: 0.5rem 1rem; margin-top: 0.75rem; border-radius: 0 6px 6px 0; font-size: 0.9rem;
+  }
+  .milestone strong { color: var(--green); }
+
+  .summary {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 1.25rem; margin-bottom: 2rem;
+  }
+  .summary p { margin-bottom: 0.3rem; }
+  .summary p:last-child { margin-bottom: 0; }
+
+  hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+
+  /* ── Tags ── */
+  .tag {
+    display: inline-block; padding: 0.1em 0.5em; border-radius: 3px;
+    font-size: 0.78rem; font-weight: 500; margin: 0.1rem;
+  }
+  .tag-a { background: rgba(248,81,73,0.15); color: var(--red); }
+  .tag-m { background: rgba(210,153,29,0.15); color: var(--orange); }
+  .tag-p { background: rgba(88,166,255,0.15); color: var(--accent); }
+  .tag-v { background: rgba(139,148,158,0.15); color: var(--muted); }
+  .tag-public { background: rgba(63,185,80,0.15); color: var(--green); }
+  .tag-auth { background: rgba(167,113,247,0.15); color: var(--purple); }
+
+  /* ── Print ── */
+  @media print {
+    body { background: white; color: #000; }
+    .cover, .block, .summary, pre, table { background: #f8f8f8; border-color: #ccc; }
+    h1, h2, h3, h4, strong { color: #000; }
+    .milestone { background: #e8f5e9; border-left-color: #4caf50; }
+    .cover { background: #f0f4f8; }
+    .page-break { page-break-before: always; }
+  }
+
+  /* ── Utility ── */
+  .toc { margin-bottom: 2rem; }
+  .toc ol { padding-left: 1.5rem; }
+  .toc li { margin-bottom: 0.2rem; }
+  .page-break { margin-top: 3rem; border-top: 1px dashed var(--border); padding-top: 1rem; }
+</style>
+</head>
+<body>
+
+<div class="content">
+
+<div class="cover" style="background: linear-gradient(135deg, #0d2137 0%, #162447 100%);">
+  <div class="icon">🥤</div>
+  <h1>Beverage Warehouse Inventory Management System</h1>
+  <p class="subtitle">Multi-Warehouse Beverage Distribution, Barcode Scanning, Expiry Tracking &amp; Cold Chain Management</p>
+  <div class="meta">
+    <p><span>Stack:</span> Go + Fiber v3 → PostgreSQL || Vue 3 + TypeScript + PrimeVue</p>
+    <p><span>Scale:</span> Mid-size beverage distributor, multi-warehouse, role-based access</p>
+    <p><span>Duration:</span> 8–12 weeks (single dev) / 4–6 weeks (2-person team)</p>
+  </div>
+</div>
+
+<div class="page-break"></div>
+<h2>Table of Contents</h2>
+<div class="toc"><ol>
+  <li>Project Overview</li>
+  <li>Background / Introduction</li>
+  <li>Goals and Objectives</li>
+  <li>Our Service</li>
+  <li>Project Scope</li>
+  <li>Software Requirements</li>
+  <li>Technology Stack</li>
+  <li>System Architecture / Design</li>
+  <li>Work Plan / Timeline</li>
+  <li>Budget and Resources</li>
+  <li>Risk Management</li>
+  <li>Expected Output / Deliverables</li>
+  <li>Conclusion</li>
+  <li>Meet Our Team</li>
+</ol></div>
+
+<div class="page-break"></div>
+<h2>1. Project Overview</h2>
+<div class="block">
+  <p>The Beverage Warehouse Inventory Management System (BWIMS) is a full-stack web application designed specifically for beverage distributors and wholesale operations. It manages inventory across multiple warehouses, tracks stock movements, enforces expiry-based picking (FEFO), and supports barcode scanning — all tailored to the unique demands of the beverage industry.</p>
+  <p>Beverage distribution involves thousands of SKUs across brands, flavors, sizes, and packaging types. Each product carries batch numbers and expiration dates that must be strictly tracked to prevent spoilage and ensure regulatory compliance. The system provides real-time inventory snapshots per warehouse, zone, and location — with automated alerts for near-expiry stock and low-stock thresholds.</p>
+  <p>The application supports four stock movement types (receive, pick, transfer, adjust) within database transactions, maintains an immutable audit trail, and uses FIFO/FEFO cost layers for accurate valuation. Barcode scanning via phone camera or USB scanner enables warehouse floor staff to complete receive and pick operations in under 10 seconds. The system is built for mid-size beverage distributors with: warehouse managers overseeing operations, pickers handling floor-level picking, admin users managing configuration and users, and viewers needing read-only access for auditing and planning.</p>
+</div>
+
+<div class="page-break"></div>
+<h2>2. Background / Introduction</h2>
+<div class="block">
+  <h4>Problem Statement</h4>
+  <p>Beverage distributors and wholesalers manage enormous inventories spanning soft drinks, water, juices, energy drinks, alcoholic beverages, and more — each with multiple brands, flavors, sizes, and packaging types (cans, bottles, kegs, cartons). Many still rely on spreadsheets, paper logs, or generic inventory software that cannot handle beverage-specific requirements: batch/lot expiry tracking, temperature zone management, and FEFO (First Expired, First Out) picking logic. This leads to product spoilage, regulatory non-compliance, stock discrepancies, slow order fulfillment, and revenue loss from expired inventory write-offs.</p>
+  <h4>Need for the Software</h4>
+  <p>There is a clear need for a beverage-specific warehouse management system that provides: real-time visibility of stock across multiple distribution centers, mandatory lot/batch tracking with automated expiry alerts, FEFO-based pick logic to minimize waste and spoilage, temperature zone mapping within warehouses, barcode scanning for fast floor operations, and complete audit trail for regulatory compliance and reconciliation.</p>
+  <h4>Target Users</h4>
+  <ul>
+    <li><strong>Warehouse Managers:</strong> Oversee beverage stock levels across distribution centers, approve adjustments, monitor expiry alerts, generate inventory valuation and wastage reports</li>
+    <li><strong>Pickers / Floor Staff:</strong> Receive incoming beverage deliveries, pick orders using FEFO logic via barcode scanners, transfer stock between temperature zones</li>
+    <li><strong>Administrators:</strong> System configuration, user management, beverage product catalog setup (brands, flavors, sizes, categories), warehouse/zone/location setup</li>
+    <li><strong>Viewers / Auditors:</strong> Read-only access to inventory data for compliance audits, financial planning, and supplier reconciliation</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>3. Goals and Objectives</h2>
+<div class="block">
+  <p><strong>Goal:</strong> To develop a beverage-specific, multi-warehouse inventory management system that provides real-time stock tracking, FEFO-based picking, expiry management, and barcode-driven operations for beverage distributors.</p>
+  <p><strong>Objectives:</strong></p>
+  <ul>
+    <li>Build a secure JWT-based authentication system with 4 distinct roles (admin, manager, picker, viewer)</li>
+    <li>Implement full CRUD for warehouses with temperature zone mapping (ambient, chilled, frozen), locations, beverage products (brand, flavor, size, packaging), and categories</li>
+    <li>Support mandatory lot/batch tracking for all beverage products, including expiration date, batch number, and production date</li>
+    <li>Implement FEFO (First Expired, First Out) pick logic to minimize product spoilage and waste</li>
+    <li>Support four stock movement types: receive, pick, transfer, and adjust — all within database transactions</li>
+    <li>Automated expiry alerts — notify managers when products are approaching expiration (30/14/7 days)</li>
+    <li>Integrate barcode scanning (camera + USB scanner) for sub-10-second receive/pick operations</li>
+    <li>Implement FIFO cost layer consumption for accurate beverage inventory valuation</li>
+    <li>Maintain an immutable, append-only audit trail in stock_movements for regulatory compliance</li>
+    <li>Support 50,000+ beverage SKU rows with virtual scrolling in the UI</li>
+    <li>Deliver API response times under 200ms for 95th percentile of requests</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>4. Our Service</h2>
+<div class="block">
+  <p>The Beverage Warehouse Inventory Management System provides the following core services tailored to beverage distribution:</p>
+  <ul>
+    <li><strong>Beverage Product Catalog:</strong> Full product catalog organized by brand, flavor, size (ml/L), packaging type (can, bottle, keg, carton), and hierarchical categories (soft drinks, water, juice, energy drinks, alcoholic beverages, mixers)</li>
+    <li><strong>Multi-Warehouse with Temperature Zones:</strong> Create and manage multiple distribution centers, each with temperature-mapped zones (ambient, chilled, frozen) and hierarchical locations (zone → aisle → rack → bin) for precise stock placement</li>
+    <li><strong>Lot/Batch &amp; Expiry Tracking:</strong> Every inventory receipt is linked to a lot/batch with production date, expiration date, and batch number — mandatory for all beverage products to ensure traceability</li>
+    <li><strong>FEFO Picking Logic:</strong> When picking stock, the system automatically selects the batch with the nearest expiration date (First Expired, First Out) to minimize spoilage and waste</li>
+    <li><strong>Real-Time Inventory Snapshots:</strong> View stock levels by warehouse, zone, product, and lot — with expiry status indicators (fresh, approaching expiry, expired)</li>
+    <li><strong>Expiry Alert System:</strong> Automated notifications at 30, 14, and 7 days before batch expiration — enabling proactive discounting, redistribution, or disposal decisions</li>
+    <li><strong>Stock Movement Operations:</strong> Four movement types (receive, pick, transfer, adjust) all executed within database transactions — picks automatically consume lots in FEFO order</li>
+    <li><strong>Barcode Scanning:</strong> Phone camera scanning via @teckel/vue-barcode-reader plus USB scanner (keyboard wedge) support — scan a beverage barcode and complete operations on the same screen</li>
+    <li><strong>FIFO Cost Tracking:</strong> Automatic cost layer consumption during picks (oldest received first) for accurate inventory valuation — critical for financial reporting in beverage distribution</li>
+    <li><strong>Reporting &amp; Dashboard:</strong> Inventory valuation reports, expiry reports (by date range), movement summaries, product velocity analytics, wastage tracking, CSV exports, and KPI dashboards</li>
+    <li><strong>Role-Based Access Control:</strong> Four distinct roles ensuring viewers can't modify, pickers can only perform movements, managers oversee operations, and admins have full system control</li>
+    <li><strong>Immutable Audit Trail:</strong> Every stock movement is append-only — never updated or deleted — enabling complete regulatory compliance and reconciliation</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>5. Project Scope</h2>
+<div class="block">
+  <h4>Inclusions (What the system will provide)</h4>
+  <ul>
+    <li><strong>Authentication:</strong> JWT (RS256) auth with login, registration, token refresh, and role-based middleware</li>
+    <li><strong>User Management:</strong> Admin-only CRUD for user accounts with role assignment (admin, warehouse_manager, picker, viewer)</li>
+    <li><strong>Warehouse &amp; Zone Management:</strong> CRUD for warehouses and temperature-mapped zones (ambient, chilled, frozen) with hierarchical locations</li>
+    <li><strong>Beverage Product Catalog:</strong> Full product CRUD with SKU, barcode, brand, flavor, size (ml/L), packaging type, and category — organized by beverage type</li>
+    <li><strong>Lot/Batch Management:</strong> Mandatory lot tracking for all beverage products — batch number, production date, expiration date</li>
+    <li><strong>Inventory Management:</strong> Stock snapshots by warehouse/zone/product/lot, low-stock alerts, expiry alerts (30/14/7 days), per-warehouse summaries</li>
+    <li><strong>Stock Movements:</strong> Receive, pick (FEFO), transfer, adjust — all with transactional updates and FIFO cost layer tracking</li>
+    <li><strong>Barcode Scanning:</strong> Camera-based (phone) and USB scanner (keyboard wedge) integration for GS1/EAN-13 barcodes standard on beverage products</li>
+    <li><strong>Barcode Generation:</strong> Backend barcode label generation using Go boombuler library for shelf/bin labels</li>
+    <li><strong>Expiry Management:</strong> Automated expiry date tracking, near-expiry alerts, expired stock quarantine workflow</li>
+    <li><strong>Reporting:</strong> Inventory valuation (FIFO), expiry reports, movement summaries, product velocity, wastage reports, CSV export</li>
+    <li><strong>Dashboard:</strong> KPIs, expiry alerts widget, low-stock alerts, recent movements, inventory by temperature zone</li>
+    <li><strong>Security:</strong> Rate limiting, request logging, comprehensive input validation, error standardization</li>
+    <li><strong>Testing:</strong> Go integration tests (database layer), Vue component tests (Vitest), E2E tests (Playwright)</li>
+  </ul>
+  <h4>Exclusions (Not included in this version)</h4>
+  <ul>
+    <li>Temperature sensor/hardware integration (IoT thermometers) — manual zone assignment only</li>
+    <li>Offline PWA support with IndexedDB sync</li>
+    <li>ERP integrations (SAP, Oracle NetSuite)</li>
+    <li>Real-time WebSocket/SSE live updates across users</li>
+    <li>Multi-tenant SaaS architecture — single beverage distributor deployment</li>
+    <li>Advanced accounting integration (QuickBooks, Xero)</li>
+    <li>Physical barcode printer hardware integration</li>
+    <li>Route optimization for delivery trucks</li>
+    <li>E-commerce or direct-to-consumer order integration</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>6. Software Requirements</h2>
+<div class="block">
+  <h4>a. Functional Requirements</h4>
+  <table>
+    <tr><th>#</th><th>Feature</th><th>Description</th></tr>
+    <tr><td>FR-1</td><td>User Registration &amp; Login</td><td>JWT (RS256) authentication with secure login, registration, and token refresh</td></tr>
+    <tr><td>FR-2</td><td>Role-Based Access</td><td>4 roles: admin, warehouse_manager, picker, viewer — enforced by middleware</td></tr>
+    <tr><td>FR-3</td><td>User Management</td><td>Admin CRUD for user accounts with role assignment and activation/deactivation</td></tr>
+    <tr><td>FR-4</td><td>Warehouse CRUD</td><td>Create, read, update, delete warehouses with name, code, address, and active status</td></tr>
+    <tr><td>FR-5</td><td>Location Management</td><td>Hierarchical locations (zone/aisle/rack/bin) within each warehouse, with barcode tags</td></tr>
+    <tr><td>FR-6</td><td>Product CRUD</td><td>Manage products with SKU, barcode, name, category, unit, and lot tracking flag</td></tr>
+    <tr><td>FR-7</td><td>Category Management</td><td>Hierarchical product categories (parent/child)</td></tr>
+    <tr><td>FR-8</td><td>Barcode Lookup</td><td>Look up product by barcode via <code>GET /api/products/by-barcode/:code</code></td></tr>
+    <tr><td>FR-9</td><td>Product Search</td><td>Search products by SKU, name, or barcode with category filtering</td></tr>
+    <tr><td>FR-10</td><td>Inventory Snapshot</td><td>Query stock by warehouse, product, and location with aggregated quantities</td></tr>
+    <tr><td>FR-11</td><td>Low-Stock Alerts</td><td>Query products below threshold quantity per warehouse with configurable thresholds</td></tr>
+    <tr><td>FR-12</td><td>Expiry Alerts</td><td>Automated alerts at 30, 14, and 7 days before batch expiration — with quarantine flag for expired stock</td></tr>
+    <tr><td>FR-13</td><td>Receive Inventory</td><td>Receive beverage stock into a location — mandatory lot/batch (batch#, production date, expiry date), updates stock, inserts cost layer</td></tr>
+    <tr><td>FR-14</td><td>Pick Inventory (FEFO)</td><td>Pick stock from a location — automatically selects batch with nearest expiry date (FEFO), consumes FIFO cost layers, decrements stock</td></tr>
+    <tr><td>FR-15</td><td>Transfer Stock</td><td>Move stock between warehouses/zones/locations — validates source has sufficient quantity, preserves lot/batch data</td></tr>
+    <tr><td>FR-16</td><td>Stock Adjustment</td><td>Correct stock counts with reason (damage, spillage, expiry write-off) — creates adjustment movement</td></tr>
+    <tr><td>FR-17</td><td>Movement History</td><td>Query all stock movements with filters (type, product, date range, location, lot/batch)</td></tr>
+    <tr><td>FR-18</td><td>FIFO Cost Tracking</td><td>Automatic cost layer creation on receive and consumption on pick (oldest layers first)</td></tr>
+    <tr><td>FR-19</td><td>FEFO Pick Logic</td><td>Picks automatically consume lots by nearest expiration date; prevents picking expired lots</td></tr>
+    <tr><td>FR-20</td><td>Barcode Generation</td><td>Server-side barcode image generation for product and shelf/bin labels</td></tr>
+    <tr><td>FR-21</td><td>Camera Barcode Scan</td><td>Phone camera scanning for GS1/EAN-13 barcodes via @teckel/vue-barcode-reader</td></tr>
+    <tr><td>FR-22</td><td>USB Scanner Input</td><td>Keyboard wedge scanner support via composable (useScanner.ts)</td></tr>
+    <tr><td>FR-23</td><td>Inventory Valuation</td><td>FIFO-based valuation report per warehouse and zone</td></tr>
+    <tr><td>FR-24</td><td>Expiry Report</td><td>Report of stock by expiry status (fresh, approaching expiry, expired) with batch details</td></tr>
+    <tr><td>FR-25</td><td>Movement Summary</td><td>Aggregated movement report by type and date range</td></tr>
+    <tr><td>FR-26</td><td>Product Velocity</td><td>Top-moving beverage products analysis by brand, category, and SKU</td></tr>
+    <tr><td>FR-27</td><td>CSV Export</td><td>Export reports to CSV format</td></tr>
+    <tr><td>FR-28</td><td>Dashboard</td><td>KPIs, expiry alerts widget, low-stock alerts, recent movements, stock by temperature zone</td></tr>
+  </table>
+
+  <h4>b. Non-Functional Requirements</h4>
+  <table>
+    <tr><th>#</th><th>Category</th><th>Requirement</th></tr>
+    <tr><td>NFR-1</td><td>Performance</td><td>API responses under 200ms for 95th percentile</td></tr>
+    <tr><td>NFR-2</td><td>Scalability</td><td>PrimeVue DataTable must handle 50,000+ product rows with virtual scroll</td></tr>
+    <tr><td>NFR-3</td><td>Security</td><td>JWT RS256 tokens, bcrypt password hashing, rate limiting, HTTPS enforcement</td></tr>
+    <tr><td>NFR-4</td><td>Data Integrity</td><td>All stock movements are append-only (immutable); stock updates are transactional</td></tr>
+    <tr><td>NFR-5</td><td>Usability</td><td>Barcode scan-to-operate in under 10 seconds; mobile-responsive for floor staff</td></tr>
+    <tr><td>NFR-6</td><td>Reliability</td><td>Database-level UNIQUE constraints prevent duplicate stock rows; FIFO is deterministic</td></tr>
+    <tr><td>NFR-7</td><td>Accessibility</td><td>Role boundaries: viewer (read-only), picker (movements only), manager (CRUD + reports), admin (full)</td></tr>
+    <tr><td>NFR-8</td><td>Testability</td><td>Integration tests for database layer; component tests (Vitest); E2E tests (Playwright)</td></tr>
+  </table>
+</div>
+
+<div class="page-break"></div>
+<h2>7. Technology Stack</h2>
+<div class="block">
+  <table>
+    <tr><th>Category</th><th>Technology</th><th>Rationale</th></tr>
+    <tr><td>Backend Language</td><td>Go 1.22+</td><td>High performance, excellent concurrency, single binary deployment</td></tr>
+    <tr><td>Web Framework</td><td>Fiber v3</td><td>Express-inspired, fast HTTP framework for Go</td></tr>
+    <tr><td>SQL Codegen</td><td>sqlc + pgx v5</td><td>Compile-time type safety, full SQL power (CTEs, window functions), zero ORM magic</td></tr>
+    <tr><td>Database</td><td>PostgreSQL 16</td><td>ACID compliance, rich SQL features, reliable for inventory systems</td></tr>
+    <tr><td>Migrations</td><td>golang-migrate</td><td>Schema versioning with up/down migrations</td></tr>
+    <tr><td>Auth</td><td>JWT RS256 + bcrypt</td><td>Stateless auth, no Redis dependency, works with mobile scanners</td></tr>
+    <tr><td>Barcode Gen</td><td>boombuler/barcode (Go)</td><td>Server-side barcode image generation</td></tr>
+    <tr><td>Frontend</td><td>Vue 3 + TypeScript + Vite</td><td>Modern reactive framework, type-safe, fast build tooling</td></tr>
+    <tr><td>UI Library</td><td>PrimeVue 4</td><td>Best DataTable for 10k+ rows (virtual scroll, export, filtering)</td></tr>
+    <tr><td>State Management</td><td>Pinia</td><td>TypeScript-native, Composition API style, modular stores</td></tr>
+    <tr><td>Form Validation</td><td>VeeValidate + Zod</td><td>Schema-based validation with TypeScript inference</td></tr>
+    <tr><td>HTTP Client</td><td>Axios</td><td>Interceptors for JWT refresh, error handling</td></tr>
+    <tr><td>Barcode Reader</td><td>@teckel/vue-barcode-reader</td><td>Camera-based barcode scanning in the browser</td></tr>
+    <tr><td>Charts</td><td>ApexCharts</td><td>Interactive charts for dashboard and reports</td></tr>
+    <tr><td>Testing</td><td>Go testing + Vitest + Playwright</td><td>Unit, integration, component, and E2E testing</td></tr>
+    <tr><td>Containerization</td><td>Docker + Docker Compose</td><td>Consistent dev environment with PostgreSQL + API</td></tr>
+    <tr><td>Deployment</td><td>Go API + Vue SPA via nginx/CDN</td><td>Separate deployments for independent scaling</td></tr>
+  </table>
+</div>
+
+<div class="page-break"></div>
+<h2>8. System Architecture / Design</h2>
+<div class="block">
+  <h4>Architecture: Clean Layered (Backend) + SPA (Frontend)</h4>
+
+  <h4>Backend Structure</h4>
+  <pre>cmd/server/main.go                 # Entry point, DI wiring
+internal/
+  config/config.go                  # Environment variables, config struct
+  handler/                          # HTTP handlers (thin layer)
+    auth.go, user.go, warehouse.go, product.go,
+    inventory.go, movement.go, report.go, barcode.go
+  service/                          # Business logic
+    auth.go, user.go, warehouse.go, product.go,
+    inventory.go, movement.go, cost.go, report.go
+  repository/                       # sqlc-generated + custom queries
+    gen/                            # sqlc output (do not edit)
+    custom/                         # Hand-written complex queries
+  middleware/
+    auth.go, rbac.go, logging.go, ratelimit.go
+  router/router.go                  # Route registration
+pkg/
+  entity/                           # Shared domain structs
+  api/                              # Request/Response DTOs
+  lib/                              # Helpers (barcode, pagination, etc.)
+migrations/                         # *.up.sql, *.down.sql</pre>
+  <p><strong>Layers:</strong> Handler → Service → Repository → PostgreSQL</p>
+  <p><strong>DI:</strong> Constructor injection (no framework)</p>
+  <p><strong>Error Model:</strong> <code>AppError{Code, Message, Err}</code> with global Fiber ErrorHandler</p>
+
+  <h4>Frontend Structure</h4>
+  <pre>frontend/src/
+  api/        client.ts, auth.ts, products.ts, inventory.ts, movements.ts
+  components/ LocationTree.vue, BarcodeScanner.vue, StockMovementForm.vue, LowStockAlert.vue
+  composables/ useAuth.ts, useScanner.ts, useCharts.ts, usePagination.ts, useWarehouse.ts
+  layouts/    DefaultLayout.vue, AuthLayout.vue
+  router/     index.ts, guards.ts
+  stores/     auth.ts, products.ts, inventory.ts, warehouses.ts, movements.ts, barcode.ts
+  views/      Login.vue, Dashboard.vue, Warehouses/, Products/, Inventory/, Movements/, Reports/, Users/</pre>
+
+  <h4>Database Schema (Key Tables)</h4>
+  <table>
+    <tr><th>Table</th><th>Key Columns</th><th>Notes</th></tr>
+    <tr><td>warehouses</td><td>id, name, code, address, is_active</td><td>Multi-warehouse distribution centers</td></tr>
+    <tr><td>locations</td><td>id, warehouse_id, temp_zone (ambient/chilled/frozen), aisle, rack, shelf, barcode, is_pickable</td><td>Temperature-mapped storage zones</td></tr>
+    <tr><td>categories</td><td>id, name, parent_id</td><td>Beverage categories (soft drinks, water, juice, energy, alcohol, etc.)</td></tr>
+    <tr><td>products</td><td>id, sku, barcode (UNIQUE), name, brand, flavor, size_ml, packaging, category_id, is_lot_tracked (always true)</td><td>Beverage product catalog with brand/flavor/size</td></tr>
+    <tr><td>lots</td><td>id, product_id, batch_number, production_date, expiration_date</td><td><strong>Mandatory</strong> lot tracking for all beverages</td></tr>
+    <tr><td><strong>stock</strong></td><td>id, warehouse_id, location_id, product_id, lot_id, qty, reserved_qty</td><td><strong>UNIQUE(w,l,p,lot)</strong> — core inventory</td></tr>
+    <tr><td><strong>stock_movements</strong></td><td>id, type ENUM, product_id, lot_id, from/to warehouse/location, qty, performed_by, created_at</td><td><strong>APPEND-ONLY</strong> — immutable audit trail</td></tr>
+    <tr><td>cost_layers</td><td>id, product_id, lot_id, qty, remaining_qty, unit_cost, received_at</td><td>FIFO cost tracking</td></tr>
+    <tr><td>users</td><td>id, email, password_hash, name, role ENUM, warehouse_id, is_active</td><td>4 roles: admin/warehouse_manager/picker/viewer</td></tr>
+    <tr><td>refresh_tokens</td><td>id, user_id, token_hash, expires_at</td><td>JWT refresh token storage</td></tr>
+  </table>
+
+  <h4>Key Design Decisions</h4>
+  <table>
+    <tr><th>Decision</th><th>Choice</th><th>Why</th></tr>
+    <tr><td>ORM vs Query Builder</td><td>sqlc + pgx</td><td>Compile-time type safety, full SQL power</td></tr>
+    <tr><td>Auth</td><td>JWT RS256</td><td>Stateless, mobile-friendly, no Redis</td></tr>
+    <tr><td>Audit Trail</td><td>Append-only stock_movements</td><td>Immutable source of truth</td></tr>
+    <tr><td>Multi-Warehouse</td><td>warehouse_id on rows</td><td>Flexible cross-warehouse queries</td></tr>
+    <tr><td>Costing</td><td>cost_layers with remaining_qty</td><td>FIFO — oldest layers consumed first</td></tr>
+    <tr><td>RBAC</td><td>Hard-coded in Go</td><td>4 roles, ~25 endpoints — no Casbin needed</td></tr>
+  </table>
+</div>
+
+<div class="page-break"></div>
+<h2>9. Work Plan / Timeline</h2>
+<div class="block">
+  <table>
+    <tr><th>Phase</th><th>Week</th><th>Activities</th><th>Effort</th></tr>
+    <tr>
+      <td><strong>Phase 0: Foundation</strong></td>
+      <td>1</td>
+      <td>Go module + Fiber v3 server, PostgreSQL schema (all tables), sqlc codegen config, golang-migrate integration, env config, health check endpoint, Docker Compose</td>
+      <td>11.5h</td>
+    </tr>
+    <tr>
+      <td><strong>Phase 1: Auth + Users</strong></td>
+      <td>1–2</td>
+      <td>JWT auth (RS256), login/register/refresh, JWT middleware, role middleware (4 roles), user CRUD, password hashing, Vue login page, Pinia auth store, route guards</td>
+      <td>18h</td>
+    </tr>
+    <tr>
+      <td><strong>Phase 2: Core Domain</strong></td>
+      <td>2–4</td>
+      <td>Warehouse &amp; location CRUD, product &amp; category CRUD, barcode lookup, product search, inventory snapshot, low-stock alerts, inventory summary, Vue warehouse/product/inventory pages</td>
+      <td>35h</td>
+    </tr>
+    <tr>
+      <td><strong>Phase 3: Stock Movements</strong></td>
+      <td>4–5</td>
+      <td>Receive, pick, transfer, adjust — all transactional, FIFO cost layer consumption, movement history, Vue receive/pick/transfer/history forms</td>
+      <td>26h</td>
+    </tr>
+    <tr>
+      <td><strong>Phase 4: Barcode Scanning</strong></td>
+      <td>5–6</td>
+      <td>@teckel/vue-barcode-reader integration, camera scan component, scan-to-receive/pick flow, barcode label generation (boombuler), USB scanner composable</td>
+      <td>14h</td>
+    </tr>
+    <tr>
+      <td><strong>Phase 5: Reporting</strong></td>
+      <td>6–7</td>
+      <td>Inventory valuation (FIFO), movement summaries, product velocity, CSV export, enhanced dashboard (KPIs + charts), reports page, ApexCharts integration</td>
+      <td>15h</td>
+    </tr>
+    <tr>
+      <td><strong>Phase 6: Polish</strong></td>
+      <td>7–8</td>
+      <td>Input validation (Go + Zod), error standardization, rate limiting, logging middleware, Vue error boundaries, loading states, responsive design, Go/Vitest/Playwright tests</td>
+      <td>26h</td>
+    </tr>
+  </table>
+  <div class="summary" style="margin-top:1rem;">
+    <p><strong>Total Estimated Effort:</strong> ~145 hours (8–12 weeks single developer / 4–6 weeks 2-person team)</p>
+  </div>
+
+  <h4>Milestone Summary</h4>
+  <div class="milestone"><strong>Phase 0:</strong> Server starts, DB connected, migrations run, /health returns 200</div>
+  <div class="milestone"><strong>Phase 1:</strong> Users register/login, JWT tokens issued, protected routes enforce roles</div>
+  <div class="milestone"><strong>Phase 2:</strong> Full warehouse/product/inventory CRUD working with Vue UI</div>
+  <div class="milestone"><strong>Phase 3:</strong> All 4 movement types work, stock quantities correct, audit trail immutable</div>
+  <div class="milestone"><strong>Phase 4:</strong> Scan barcode → product appears → receive/pick from same screen</div>
+  <div class="milestone"><strong>Phase 5:</strong> Dashboard shows active stock, low-stock alerts, recent movements, valuation</div>
+  <div class="milestone"><strong>Phase 6:</strong> Production-ready, tested, mobile-responsive</div>
+</div>
+
+<div class="page-break"></div>
+<h2>10. Budget and Resources</h2>
+<div class="block">
+  <h4>Development Costs (MVP — 3 months)</h4>
+  <table>
+    <tr><th>Category</th><th>Description</th><th>Estimated Cost</th></tr>
+    <tr><td>Development Tools</td><td>Go, Node.js, VS Code, Git, Docker</td><td>Free (open source)</td></tr>
+    <tr><td>Database Hosting</td><td>PostgreSQL on Railway / Supabase (dev tier)</td><td>$0 – $25/month</td></tr>
+    <tr><td>Backend Hosting</td><td>Go API on Fly.io / Railway (shared CPU)</td><td>$0 – $25/month</td></tr>
+    <tr><td>Frontend Hosting</td><td>Vue SPA on Vercel / Netlify (static hosting)</td><td>Free tier</td></tr>
+    <tr><td>Domain Name</td><td>Cloudflare / Namecheap</td><td>$10 – $15/year</td></tr>
+    <tr><td>SSL Certificate</td><td>Let's Encrypt / Cloudflare</td><td>Free</td></tr>
+    <tr><td>Barcode Library</td><td>boombuler/barcode (MIT License)</td><td>Free</td></tr>
+    <tr><td>Labor (Student Team)</td><td>Self-developed / academic project</td><td>Unpaid</td></tr>
+  </table>
+
+  <h4>Monthly Operating Costs (Post-Launch)</h4>
+  <table>
+    <tr><th>Resource</th><th>Estimated Monthly Cost</th></tr>
+    <tr><td>PostgreSQL (production tier, 2GB RAM)</td><td>$25 – $50/month</td></tr>
+    <tr><td>Backend hosting (2 vCPU, 4GB RAM)</td><td>$25 – $50/month</td></tr>
+    <tr><td>Frontend CDN + hosting</td><td>$0 – $20/month</td></tr>
+    <tr><td>Domain renewal</td><td>$1/month</td></tr>
+    <tr><td>Monitoring (Sentry / Grafana free tier)</td><td>$0</td></tr>
+    <tr><td><strong>Total Monthly (estimated):</strong></td><td><strong>$51 – $121/month</strong></td></tr>
+  </table>
+
+  <h4>Total MVP Cost</h4>
+  <div class="summary" style="margin-top:1rem;">
+    <p><strong>Development phase (3 months):</strong> $0 – $150 (hosting + domain only)</p>
+    <p><strong>Post-launch monthly:</strong> $51 – $121/month</p>
+  </div>
+</div>
+
+<div class="page-break"></div>
+<h2>11. Risk Management</h2>
+<div class="block">
+  <table>
+    <tr><th>Risk</th><th>Prob</th><th>Impact</th><th>Mitigation Strategy</th></tr>
+    <tr>
+      <td><strong>Beverage spoilage / expiry mismanagement</strong> — FEFO logic fails, causing expired stock to be picked instead of fresh stock</td>
+      <td>Medium</td><td>Critical</td>
+      <td>Rigorous FEFO unit tests with edge cases (same expiry, mixed lots); integration tests verifying pick order; expiry validation before pick commit</td>
+    </tr>
+    <tr>
+      <td><strong>Stock quantity inconsistency</strong> — race condition between SELECT and UPDATE during concurrent movements</td>
+      <td>High</td><td>Critical</td>
+      <td>Use <code>SELECT ... FOR UPDATE</code> row-level locking within transactions; all movements in a single DB transaction with SERIALIZABLE isolation</td>
+    </tr>
+    <tr>
+      <td><strong>FIFO cost layer misallocation</strong> — picks consuming wrong layers under concurrent load</td>
+      <td>Medium</td><td>High</td>
+      <td>Lock cost_layers rows with <code>FOR UPDATE</code> during pick; process layers in order; validate remaining_qty >= 0 after each consumption</td>
+    </tr>
+    <tr>
+      <td><strong>Barcode scanner incompatibility</strong> — @teckel/vue-barcode-reader not working on certain devices</td>
+      <td>Medium</td><td>Medium</td>
+      <td>Fallback to manual SKU entry; USB scanner (keyboard wedge) as alternative input method; test on target devices early</td>
+    </tr>
+    <tr>
+      <td><strong>Performance degradation</strong> — API slows down with 50k+ product rows and complex joins</td>
+      <td>Medium</td><td>High</td>
+      <td>Database indexing on all query fields; PrimeVue virtual scroll; paginate all list endpoints; query optimization with EXPLAIN ANALYZE</td>
+    </tr>
+    <tr>
+      <td><strong>JWT token theft</strong> — attacker gains unauthorized access via stolen token</td>
+      <td>Low</td><td>Critical</td>
+      <td>Short-lived access tokens (15min); refresh token rotation; token revocation on role change; HTTPS enforcement</td>
+    </tr>
+    <tr>
+      <td><strong>Data loss</strong> — PostgreSQL failure or accidental deletion</td>
+      <td>Low</td><td>Critical</td>
+      <td>Daily automated backups; WAL archiving; point-in-time recovery; append-only stock_movements means events are never deleted</td>
+    </tr>
+    <tr>
+      <td><strong>Scope creep</strong> — features added beyond MVP causing delays</td>
+      <td>High</td><td>Medium</td>
+      <td>Strict MVP scope freeze after Phase 2; backlog all requests for Phase 2; weekly sprint reviews against original scope</td>
+    </tr>
+    <tr>
+      <td><strong>Learning curve</strong> — team unfamiliar with Go + sqlc + Fiber stack</td>
+      <td>Medium</td><td>Medium</td>
+      <td>Allocate Phase 0 as learning buffer; create internal wiki/knowledge base; pair programming on complex SQL queries</td>
+    </tr>
+    <tr>
+      <td><strong>Database migration failure</strong> — broken migration during deploy</td>
+      <td>Medium</td><td>High</td>
+      <td>Always test migrations on staging first; every migration has a verified down migration; Docker Compose for local testing</td>
+    </tr>
+    <tr>
+      <td><strong>Mobile responsiveness issues</strong> — floor staff unable to use on tablets</td>
+      <td>Medium</td><td>Medium</td>
+      <td>Test on real mobile/tablet devices during Phase 6; use PrimeVue responsive utilities; separate mobile-optimized scan views</td>
+    </tr>
+  </table>
+</div>
+
+<div class="page-break"></div>
+<h2>12. Expected Output / Deliverables</h2>
+<div class="block">
+  <h4>MVP Deliverables</h4>
+
+  <p><strong>1. Backend API Server (Go + Fiber v3)</strong></p>
+  <ul>
+    <li>REST API with ~25 endpoints across 6 domains (auth, users, warehouses, products, inventory, movements, reports)</li>
+    <li>JWT RS256 authentication with 4 role-based access levels</li>
+    <li>PostgreSQL database with 10 tables, sqlc-generated type-safe queries</li>
+    <li>Transactional stock movement processing (receive, pick, transfer, adjust)</li>
+    <li>FIFO cost layer engine with automatic consumption</li>
+    <li>Barcode label generation endpoint</li>
+    <li>CSV report export</li>
+    <li>Rate limiting and request logging middleware</li>
+  </ul>
+
+  <p><strong>2. Frontend SPA (Vue 3 + TypeScript + PrimeVue)</strong></p>
+  <ul>
+    <li>Login/register pages with JWT auth flow</li>
+    <li>Warehouse &amp; location management with tree component</li>
+    <li>Product catalog with PrimeVue DataTable (virtual scroll for 50k+ rows)</li>
+    <li>Inventory dashboard with KPIs, charts, and low-stock alerts</li>
+    <li>Stock movement forms — receive, pick (with barcode), transfer, history</li>
+    <li>Camera-based barcode scanner component</li>
+    <li>Reports page with valuation, velocity, and movement summaries</li>
+    <li>User management (admin only)</li>
+    <li>Responsive design for tablet/phone floor staff</li>
+  </ul>
+
+  <p><strong>3. Documentation</strong></p>
+  <ul>
+    <li>API Documentation — all endpoints with request/response examples</li>
+    <li>Database Schema Documentation — tables, relationships, constraints</li>
+    <li>Deployment Guide — Docker Compose setup + cloud deployment instructions</li>
+    <li>User Manual — guide for each role (admin, manager, picker, viewer)</li>
+  </ul>
+
+  <p><strong>4. Testing Suite</strong></p>
+  <ul>
+    <li>Go integration tests — database layer, movement transactions</li>
+    <li>Vue component tests (Vitest) — forms, tables, auth flow</li>
+    <li>E2E tests (Playwright) — critical paths (login → scan → receive → verify stock)</li>
+  </ul>
+
+  <p><strong>5. Source Code &amp; Infrastructure</strong></p>
+  <ul>
+    <li>GitHub repository with full source code</li>
+    <li>Docker Compose file for local development</li>
+    <li>Database migration files (up + down)</li>
+    <li>CI/CD pipeline configuration</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>13. Conclusion</h2>
+<div class="block">
+  <p>The Warehouse Inventory Management System addresses a critical gap in how mid-size organizations manage inventory across multiple physical locations. By replacing error-prone spreadsheets and manual processes with a centralized, real-time system, it delivers immediate operational value: faster barcode-based operations, complete stock traceability, and accurate inventory valuation.</p>
+
+  <p>Key differentiators of this system include:</p>
+  <ul>
+    <li><strong>FEFO Picking:</strong> The system automatically selects lots with the nearest expiration date during picks — critical in beverage distribution where product spoilage directly impacts profitability and regulatory compliance.</li>
+    <li><strong>Expiry Management:</strong> Automated alerts at 30/14/7 days before expiry give warehouse managers time to discount, redistribute, or dispose of aging stock — reducing write-offs and revenue loss.</li>
+    <li><strong>Immutability:</strong> The append-only stock_movements table serves as a permanent, verifiable audit trail — stock quantities can always be reconciled by replaying movements, essential for food &amp; beverage regulatory audits.</li>
+    <li><strong>Barcode-First Design:</strong> Floor staff can scan a beverage product's GS1/EAN-13 barcode and complete a receive or FEFO pick operation in under 10 seconds, dramatically reducing operational friction in fast-moving distribution centers.</li>
+    <li><strong>Temperature Zone Mapping:</strong> Warehouses are organized by temperature zones (ambient, chilled, frozen), ensuring beverages are stored and tracked in appropriate conditions — reducing spoilage risk.</li>
+    <li><strong>Clean Architecture:</strong> The layered Go backend and modular Vue frontend make the system maintainable, testable, and extensible for future features like IoT temperature sensor integration or route optimization.</li>
+  </ul>
+
+  <p>The system is built on a modern, production-proven stack (Go, PostgreSQL, Vue 3, TypeScript) that balances performance, developer productivity, and long-term maintainability. With an estimated 8–12 week timeline and minimal infrastructure costs ($0–$150 during development), it represents a high-value, low-risk software project for any beverage distribution operation.</p>
+
+  <p>Upon completion, the Beverage Warehouse Inventory Management System will provide a solid foundation for beverage distributors to reduce spoilage, improve order accuracy, maintain regulatory compliance, and make data-driven inventory decisions.</p>
+</div>
+
+<div class="page-break"></div>
+<h2>14. Meet Our Team</h2>
+<div class="block">
+  <p><em>[Add team member photos, names, roles, and quotes here following the template format]</em></p>
+  <table>
+    <tr>
+      <td style="width:150px; text-align:center; padding:1.5rem;">
+        <div style="width:80px; height:80px; background:var(--surface); border:2px solid var(--border); border-radius:50%; margin:0 auto 0.5rem; display:flex; align-items:center; justify-content:center; font-size:2rem;">👤</div>
+      </td>
+      <td>
+        <strong>[Team Member 1]</strong><br>
+        <span class="tag tag-a">Project Manager</span><br>
+        <p style="margin-top:0.5rem;"><em>"[Quote about the project]"</em></p>
+      </td>
+    </tr>
+    <tr>
+      <td style="text-align:center; padding:1.5rem;">
+        <div style="width:80px; height:80px; background:var(--surface); border:2px solid var(--border); border-radius:50%; margin:0 auto 0.5rem; display:flex; align-items:center; justify-content:center; font-size:2rem;">👤</div>
+      </td>
+      <td>
+        <strong>[Team Member 2]</strong><br>
+        <span class="tag tag-m">Lead Developer</span><br>
+        <p style="margin-top:0.5rem;"><em>"[Quote about the project]"</em></p>
+      </td>
+    </tr>
+    <tr>
+      <td style="text-align:center; padding:1.5rem;">
+        <div style="width:80px; height:80px; background:var(--surface); border:2px solid var(--border); border-radius:50%; margin:0 auto 0.5rem; display:flex; align-items:center; justify-content:center; font-size:2rem;">👤</div>
+      </td>
+      <td>
+        <strong>[Team Member 3]</strong><br>
+        <span class="tag tag-p">Frontend Developer &amp; UI/UX</span><br>
+        <p style="margin-top:0.5rem;"><em>"[Quote about the project]"</em></p>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<div class="page-break"></div>
+<h2>15. Attachments / Annexes</h2>
+<div class="block">
+  <ul>
+    <li><strong>Database Schema:</strong> Full PostgreSQL DDL with all 10 tables, indexes, and constraints</li>
+    <li><strong>API Specification:</strong> OpenAPI/Swagger documentation for all ~25 endpoints</li>
+    <li><strong>ER Diagram:</strong> Visual entity-relationship diagram for the database</li>
+    <li><strong>System Architecture Diagram:</strong> 3-tier architecture with data flow</li>
+    <li><strong>Barcode Scan Flow Diagram:</strong> Camera/USB scan → lookup → movement → stock update</li>
+    <li><strong>Auth Flow Diagram:</strong> JWT login, refresh, and RBAC middleware pipeline</li>
+  </ul>
+</div>
+
+</div>
+
+</body>
+</html>

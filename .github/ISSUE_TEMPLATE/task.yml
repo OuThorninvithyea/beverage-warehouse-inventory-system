@@ -1,0 +1,77 @@
+name: Project task
+description: A planned implementation, QA, documentation, design or research task
+title: "[WEEK][AREA] "
+labels:
+  - task
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Keep this issue small enough to complete in approximately half a day to two days.
+
+  - type: dropdown
+    id: week
+    attributes:
+      label: Project week
+      options:
+        - Week 6
+        - Week 7
+        - Week 8
+        - Week 9
+        - Week 10
+        - Week 11
+        - Week 12
+        - Week 13
+        - Week 14
+        - Week 15
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Backend
+        - Frontend
+        - Database and DevOps
+        - QA
+        - Documentation
+        - UI/UX
+        - Barcode and integration
+    validations:
+      required: true
+
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Required outcome
+      description: Describe the observable result, not only the activity.
+      placeholder: The backend starts and GET /health returns HTTP 200.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Add a checklist of objective conditions.
+      placeholder: |
+        - [ ] Application starts locally
+        - [ ] Endpoint returns the agreed response format
+        - [ ] Relevant tests pass
+    validations:
+      required: true
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies and blockers
+      placeholder: Depends on the initial ERD and database connection settings.
+
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation evidence
+      description: Complete this before moving the issue to Done.
+      placeholder: Commands, screenshots, test cases or review notes.
