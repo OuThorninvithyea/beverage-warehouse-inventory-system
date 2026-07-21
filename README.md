@@ -46,6 +46,8 @@ Development is planned from **Week 6 through Week 15**. The approved Google Gant
 
 Detailed working agreements are in [CONTRIBUTING.md](CONTRIBUTING.md), and the progress workflow is in [docs/project-management.md](docs/project-management.md).
 
+Backend setup and architecture are documented in [backend/README.md](backend/README.md), and the frontend/QA contract is in [docs/api-contract.md](docs/api-contract.md).
+
 ## Current Week 6 goal
 
 The first technical milestone is a runnable foundation:
