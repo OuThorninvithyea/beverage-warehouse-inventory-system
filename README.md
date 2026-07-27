@@ -46,7 +46,12 @@ Development is planned from **Week 6 through Week 15**. The approved Google Gant
 
 Detailed working agreements are in [CONTRIBUTING.md](CONTRIBUTING.md), and the progress workflow is in [docs/project-management.md](docs/project-management.md).
 
-Backend setup and architecture are documented in [backend/README.md](backend/README.md), and the frontend/QA contract is in [docs/api-contract.md](docs/api-contract.md).
+Backend setup and architecture are documented in [backend/README.md](backend/README.md),
+and frontend setup is documented in [frontend/README.md](frontend/README.md).
+The [database ERD](docs/database-erd.md) and
+[API contract](docs/api-contract.md) define the shared backend, frontend, and QA
+foundation. The latest command evidence is recorded in
+[Week 6 foundation validation](docs/week-6-foundation-validation.md).
 
 ## Current Week 6 goal
 

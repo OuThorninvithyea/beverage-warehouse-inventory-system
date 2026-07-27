@@ -1,4 +1,4 @@
-.PHONY: backend-format backend-test backend-vet migrate-up migrate-down up down
+.PHONY: backend-format backend-test backend-vet frontend-install frontend-dev frontend-typecheck frontend-build migrate-up migrate-down up down
 
 backend-format:
 	cd backend && gofmt -w $$(find . -name '*.go' -type f)
@@ -8,6 +8,18 @@ backend-test:
 
 backend-vet:
 	cd backend && go vet ./...
+
+frontend-install:
+	cd frontend && npm install
+
+frontend-dev:
+	cd frontend && npm run dev
+
+frontend-typecheck:
+	cd frontend && npm run typecheck
+
+frontend-build:
+	cd frontend && npm run build
 
 migrate-up:
 	docker compose run --rm migrate

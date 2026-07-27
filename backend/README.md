@@ -15,7 +15,7 @@ Route -> Handler -> Service -> Repository -> PostgreSQL
 - `internal/platform`: configuration, database and shared HTTP behavior
 - `internal/modules`: complete vertical feature slices
 - `migrations`: versioned PostgreSQL migrations
-- `queries`: future sqlc queries after the ERD is approved
+- `queries`: future sqlc queries generated from the approved schema
 
 ## Local setup
 
@@ -25,6 +25,11 @@ docker compose up -d postgres
 docker compose run --rm migrate
 docker compose up --build api
 ```
+
+The schema and relationships are documented in
+[`docs/database-erd.md`](../docs/database-erd.md). Migration `000002` creates
+the initial application tables, indexes, constraints, seeded roles, and
+append-only protections.
 
 Run the API directly from the backend directory when PostgreSQL is already
 available:
