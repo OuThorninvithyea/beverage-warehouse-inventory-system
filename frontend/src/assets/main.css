@@ -126,6 +126,26 @@ a {
   letter-spacing: 0.08em;
 }
 
+.session-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.session-summary > span {
+  display: grid;
+  color: #172033;
+  font-size: 0.9rem;
+  font-weight: 650;
+  text-align: right;
+}
+
+.session-summary small {
+  color: #65738a;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
 .page-content {
   padding: clamp(1.25rem, 3vw, 2.5rem);
 }
@@ -200,6 +220,46 @@ a {
   color: #b86600;
   font-size: 0.82rem;
   font-weight: 700;
+}
+
+.scanner-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.scanner-panel {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.scanner-video {
+  width: 100%;
+  min-height: 280px;
+  border-radius: 12px;
+  object-fit: cover;
+  background: #091a2d;
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.barcode-result {
+  display: grid;
+  gap: 0.4rem;
+  padding: 1rem;
+  border-radius: 12px;
+  background: #f4f7fb;
+}
+
+.barcode-result strong {
+  overflow-wrap: anywhere;
+  color: #0f2947;
+  font-size: 1.4rem;
+  letter-spacing: 0.08em;
 }
 
 .auth-page,
@@ -278,7 +338,8 @@ a {
   }
 
   .metric-grid,
-  .roadmap {
+  .roadmap,
+  .scanner-grid {
     grid-template-columns: 1fr;
   }
 }

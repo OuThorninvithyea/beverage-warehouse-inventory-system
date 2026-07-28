@@ -39,8 +39,28 @@ services:
       DB_MIN_CONNECTIONS: 2
       DB_CONNECT_TIMEOUT: 5s
       SHUTDOWN_TIMEOUT: 10s
+      JWT_ISSUER: bwims-api
+      JWT_ACCESS_TTL: 15m
+      JWT_REFRESH_TTL: 168h
     ports:
       - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  seed:
+    build:
+      context: ./backend
+    entrypoint: ["bwims-seed"]
+    environment:
+      APP_ENV: development
+      DATABASE_URL: postgres://bwims:bwims@postgres:5432/bwims?sslmode=disable
+      DB_MAX_CONNECTIONS: 2
+      DB_MIN_CONNECTIONS: 0
+      DB_CONNECT_TIMEOUT: 5s
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@bwims.local}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-ChangeMe123!}
+      SEED_ADMIN_NAME: ${SEED_ADMIN_NAME:-Development Administrator}
     depends_on:
       postgres:
         condition: service_healthy

@@ -31,6 +31,17 @@ The schema and relationships are documented in
 the initial application tables, indexes, constraints, seeded roles, and
 append-only protections.
 
+Create or reset the local development administrator after migrations:
+
+```bash
+make seed-admin
+```
+
+Default development credentials are `admin@bwims.local` / `ChangeMe123!`.
+Override `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`, and `SEED_ADMIN_NAME`
+before running the command when shared credentials are inappropriate. The
+seeder refuses to run outside `APP_ENV=development`.
+
 Run the API directly from the backend directory when PostgreSQL is already
 available:
 
@@ -67,3 +78,26 @@ Error:
 
 Internal errors are logged by the centralized Fiber error handler and are not
 exposed to API clients.
+
+## Authentication and RBAC
+
+Week 7 adds RS256 access tokens, opaque rotating refresh tokens, bcrypt
+password verification, and four roles:
+
+- `admin`
+- `warehouse_manager`
+- `picker`
+- `viewer`
+
+Development creates an ephemeral RSA key pair when JWT key variables are empty.
+Production must provide base64-encoded PEM values through
+`JWT_PRIVATE_KEY_BASE64` and `JWT_PUBLIC_KEY_BASE64`. Refresh tokens are stored
+only as SHA-256 hashes and are invalid after rotation or logout.
+
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"admin@bwims.local","password":"ChangeMe123!"}'
+```
+
+Never use the development password in production.

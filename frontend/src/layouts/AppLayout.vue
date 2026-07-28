@@ -1,6 +1,17 @@
 <script setup lang="ts">
 import Button from 'primevue/button'
 import { RouterLink, RouterView } from 'vue-router'
+import { useRouter } from 'vue-router'
+
+import { useAuthStore } from '@/stores/auth'
+
+const auth = useAuthStore()
+const router = useRouter()
+
+async function signOut() {
+  await auth.signOut()
+  await router.push({ name: 'login' })
+}
 </script>
 
 <template>
@@ -16,14 +27,14 @@ import { RouterLink, RouterView } from 'vue-router'
 
       <nav aria-label="Primary navigation">
         <RouterLink to="/" class="nav-link">Dashboard</RouterLink>
+        <RouterLink to="/barcode-test" class="nav-link">Barcode test</RouterLink>
         <span class="nav-link nav-link--disabled">Inventory</span>
         <span class="nav-link nav-link--disabled">Movements</span>
-        <span class="nav-link nav-link--disabled">Reports</span>
       </nav>
 
       <div class="sidebar-note">
-        <small>Week 6 foundation</small>
-        <span>Core modules arrive in Weeks 7–10.</span>
+        <small>Week 6–7 foundation</small>
+        <span>Camera validation and authentication are the current milestone.</span>
       </div>
     </aside>
 
@@ -33,7 +44,13 @@ import { RouterLink, RouterView } from 'vue-router'
           <small class="eyebrow">Beverage warehouse</small>
           <strong>Inventory Management System</strong>
         </div>
-        <Button label="Sign in" as="router-link" to="/login" size="small" />
+        <div class="session-summary">
+          <span v-if="auth.user">
+            {{ auth.user.full_name }}
+            <small>{{ auth.user.role.replace('_', ' ') }}</small>
+          </span>
+          <Button label="Sign out" size="small" severity="secondary" @click="signOut" />
+        </div>
       </header>
 
       <main class="page-content">

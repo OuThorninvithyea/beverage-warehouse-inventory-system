@@ -2,21 +2,43 @@
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import InputText from 'primevue/inputtext'
+import Message from 'primevue/message'
 import { ref } from 'vue'
-import { RouterLink } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+
+import { ApiClientError } from '@/api/client'
+import { useAuthStore } from '@/stores/auth'
 
 const email = ref('')
 const password = ref('')
+const errorMessage = ref('')
+const auth = useAuthStore()
+const route = useRoute()
+const router = useRouter()
+
+async function submit() {
+  errorMessage.value = ''
+  try {
+    await auth.signIn(email.value, password.value)
+    const redirect =
+      typeof route.query.redirect === 'string' ? route.query.redirect : '/'
+    await router.push(redirect)
+  } catch (error) {
+    errorMessage.value =
+      error instanceof ApiClientError
+        ? error.message
+        : 'Sign in could not be completed. Please try again.'
+  }
+}
 </script>
 
 <template>
   <main class="auth-page">
-    <RouterLink to="/" class="back-link">← Back to dashboard</RouterLink>
     <Card class="login-card">
       <template #title>Welcome to BWIMS</template>
-      <template #subtitle>Sign-in screen foundation</template>
+      <template #subtitle>Use your assigned warehouse account</template>
       <template #content>
-        <form class="login-form" @submit.prevent>
+        <form class="login-form" @submit.prevent="submit">
           <label for="email">Email address</label>
           <InputText id="email" v-model="email" type="email" autocomplete="email" />
 
@@ -28,8 +50,14 @@ const password = ref('')
             autocomplete="current-password"
           />
 
-          <Button type="submit" label="Sign in" disabled />
-          <small>Authentication is implemented with the Week 7–8 API.</small>
+          <Message v-if="errorMessage" severity="error">{{ errorMessage }}</Message>
+          <Button
+            type="submit"
+            label="Sign in"
+            :loading="auth.loading"
+            :disabled="!email.trim() || !password"
+          />
+          <small>Access is controlled by your admin, manager, picker or viewer role.</small>
         </form>
       </template>
     </Card>

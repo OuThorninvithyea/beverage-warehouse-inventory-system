@@ -1,6 +1,11 @@
 import type { ApiFailure, ApiResponse } from '@/types/api'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1'
+let accessToken = ''
+
+export function setApiAccessToken(token: string) {
+  accessToken = token
+}
 
 export class ApiClientError extends Error {
   readonly status: number
@@ -23,9 +28,14 @@ export async function apiRequest<T>(
     headers: {
       Accept: 'application/json',
       ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       ...options.headers,
     },
   })
+
+  if (response.status === 204) {
+    return undefined as T
+  }
 
   const payload = (await response.json()) as ApiResponse<T>
 

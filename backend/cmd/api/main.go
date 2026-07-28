@@ -35,7 +35,11 @@ func main() {
 	}
 	defer db.Close()
 
-	server := app.New(cfg, db, logger)
+	server, err := app.New(cfg, db, logger)
+	if err != nil {
+		logger.Error("compose application", "error", err)
+		os.Exit(1)
+	}
 	go waitForShutdown(server, cfg.Server.ShutdownTimeout, logger)
 
 	logger.Info("starting API", "environment", cfg.Environment, "address", cfg.Server.Address())

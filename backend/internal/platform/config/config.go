@@ -15,6 +15,7 @@ type Config struct {
 	Environment string
 	Server      ServerConfig
 	Database    DatabaseConfig
+	Auth        AuthConfig
 }
 
 type ServerConfig struct {
@@ -32,6 +33,15 @@ type DatabaseConfig struct {
 	MaxConnections int32
 	MinConnections int32
 	ConnectTimeout time.Duration
+}
+
+type AuthConfig struct {
+	Issuer               string
+	AccessTokenTTL       time.Duration
+	RefreshTokenTTL      time.Duration
+	PrivateKeyBase64     string
+	PublicKeyBase64      string
+	AllowDevelopmentKeys bool
 }
 
 func Load() (Config, error) {
@@ -70,6 +80,14 @@ func LoadFromEnvironment() (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
+	accessTokenTTL, err := durationValue("JWT_ACCESS_TTL", 15*time.Minute)
+	if err != nil {
+		return Config{}, err
+	}
+	refreshTokenTTL, err := durationValue("JWT_REFRESH_TTL", 7*24*time.Hour)
+	if err != nil {
+		return Config{}, err
+	}
 
 	databaseURL := strings.TrimSpace(os.Getenv("DATABASE_URL"))
 	if databaseURL == "" {
@@ -88,6 +106,14 @@ func LoadFromEnvironment() (Config, error) {
 			MaxConnections: maxConnections,
 			MinConnections: minConnections,
 			ConnectTimeout: connectTimeout,
+		},
+		Auth: AuthConfig{
+			Issuer:               stringValue("JWT_ISSUER", "bwims-api"),
+			AccessTokenTTL:       accessTokenTTL,
+			RefreshTokenTTL:      refreshTokenTTL,
+			PrivateKeyBase64:     strings.TrimSpace(os.Getenv("JWT_PRIVATE_KEY_BASE64")),
+			PublicKeyBase64:      strings.TrimSpace(os.Getenv("JWT_PUBLIC_KEY_BASE64")),
+			AllowDevelopmentKeys: stringValue("APP_ENV", "development") == "development",
 		},
 	}, nil
 }
