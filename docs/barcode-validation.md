@@ -1,30 +1,26 @@
-# Barcode approach and device validation
+# Hardware barcode approach and device validation
 
-## Library comparison
+## Primary decision
 
-Versions were checked against npm on 28 July 2026.
+Use a USB or Bluetooth hardware barcode scanner in keyboard-wedge mode as the
+default BWIMS scanning method. The scanner writes digits into the focused
+barcode field and sends Enter as a suffix. Manual entry is the fallback.
+Phone-camera scanning is optional and is not required for Week 6 acceptance.
 
-| Option | Version | Strengths | Limitations |
-| --- | --- | --- | --- |
-| `@zxing/browser` | 0.2.1 | Focused browser API, EAN/UPC support, camera selection, maintained ZXing core | UI and duplicate handling must be built by the application |
-| `html5-qrcode` | 2.3.8 | Built-in scanner UI, camera and image-file modes, broad format support | Larger opinionated UI and more integration styling |
-| `@teckel/vue-barcode-reader` | 1.1.8 | Vue wrapper named in the proposal | Older Vue-oriented package and less control than direct ZXing integration |
-| Native `BarcodeDetector` | Browser-dependent | No additional decoding dependency | Inconsistent Safari/device support; requires feature detection |
+## Hardware scanner behavior
 
-Decision: use `@zxing/browser` for the Week 6 test route because it gives direct
-control over camera lifecycle, confirmation, duplicate suppression and the
-responsive UI. Keep manual entry and USB keyboard-wedge input as fallbacks.
+Most USB and Bluetooth scanners can operate as keyboard-wedge devices:
 
-## Permission and deployment requirements
+- focus the barcode input before scanning;
+- the scanner sends characters as keyboard events;
+- configure an Enter suffix so one scan submits one value;
+- accept EAN-13 and UPC-A digits only;
+- ordinary typing must continue to work as a fallback;
+- no browser camera permission or scanning SDK is required.
 
-- Camera access requires a secure context: HTTPS in deployed environments.
-- `http://localhost` is allowed by browsers for local development.
-- The user must explicitly grant camera permission.
-- Camera access can fail because of denial, OS privacy settings, another active
-  application, missing rear camera, or embedded-browser restrictions.
-- Prefer the rear/environment camera on phones, but allow users to choose.
-- Stop the camera stream when leaving the scanner view.
-- Never log camera frames or store images.
+USB scanners connect directly or through USB-OTG where required. Bluetooth
+scanners must be paired with the operating system and configured in HID keyboard
+mode. The application does not depend on a scanner vendor SDK.
 
 ## Supported validation
 
@@ -33,45 +29,51 @@ responsive UI. Keep manual entry and USB keyboard-wedge input as fallbacks.
 - The decoded value is trimmed and validated before lookup.
 - An unknown or invalid value shows an error and does not call a stock mutation.
 
-## Duplicate and confirmation behavior
+## Submission and confirmation behavior
 
-1. The first valid scan locks the result.
-2. Repeated frames with the same barcode are ignored.
-3. The operator chooses **Use value** or **Rescan**.
-4. **Use value** only creates a lookup intent.
+1. The focused field receives one barcode and the Enter suffix.
+2. The value is trimmed and checksum validated.
+3. One submitted scan produces one lookup intent.
+4. Repeated submissions do not create stock movements.
 5. Receive, pick, transfer or adjustment requires a separate authenticated API
    request and explicit confirmation.
 
-## USB scanner behavior
+## Optional phone-camera scanning
 
-Most USB scanners use keyboard-wedge mode:
+The `/barcode-test` route retains `@zxing/browser` as an optional alternative.
+Versions were checked against npm on 28 July 2026.
 
-- focus the barcode input;
-- scanner sends characters as keyboard events;
-- scanner normally sends Enter as a suffix;
-- debounce incomplete input and submit on Enter;
-- no browser camera or scanning SDK is required.
+| Option | Version | Strengths | Limitations |
+| --- | --- | --- | --- |
+| `@zxing/browser` | 0.2.1 | Focused browser API, EAN/UPC support and camera selection | Requires HTTPS, camera permission and device-specific testing |
+| `html5-qrcode` | 2.3.8 | Built-in scanner UI, camera and image-file modes | Larger opinionated UI |
+| `@teckel/vue-barcode-reader` | 1.1.8 | Vue wrapper named in the original proposal | Older package and less control |
+| Native `BarcodeDetector` | Browser-dependent | No decoding dependency | Inconsistent browser support |
 
-Configure the scanner for EAN-13/UPC-A and an Enter suffix. Test that ordinary
-typing still works and that one scan produces one lookup.
+Camera access requires HTTPS outside `localhost`, explicit permission and safe
+camera lifecycle cleanup. Camera frames and images must never be stored.
 
-## Real phone test record
+## Required hardware test record
 
-This must be completed using an actual beverage package; it cannot be truthfully
-replaced by an emulator.
+Complete this record using an actual hardware scanner and beverage package.
+Keyboard simulation or manual typing cannot replace this evidence.
 
 | Field | Result |
 | --- | --- |
-| Device and OS | Pending |
+| Scanner make/model | Pending |
+| Connection | USB, USB-OTG or Bluetooth |
+| Scanner mode | HID keyboard-wedge |
+| Host device and OS | Pending |
 | Browser and version | Pending |
-| Connection | HTTPS or localhost |
 | Beverage/product | Pending |
 | Printed barcode value | Pending |
 | Captured value | Pending |
-| First-scan time | Pending |
-| Duplicate suppressed | Pending |
+| Enter suffix submitted | Pending |
+| Scan-to-validation time | Pending |
+| Inventory unchanged | Pending |
 | Screenshot/video link | Pending |
 | Result | Pending |
 
 Acceptance requires printed and captured values to match, a screenshot or short
-recording, and confirmation that the scan alone did not change inventory.
+recording, confirmation that the Enter suffix submitted one lookup value, and
+evidence that the scan alone did not change inventory.

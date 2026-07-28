@@ -12,8 +12,8 @@ or documented setup.
 | --- | --- |
 | Local Go process | Unit tests, service tests and static analysis |
 | Docker Compose | PostgreSQL migrations and integrated smoke tests |
-| Desktop browser | Responsive shell, routing and USB-scanner behavior |
-| Real HTTPS phone browser | Camera permission, EAN/UPC scan and timing |
+| Desktop or Android browser with USB/Bluetooth scanner | Required hardware-scanner behavior and timing |
+| Real HTTPS phone browser | Optional camera permission and EAN/UPC scan |
 
 ## Week 6–7 acceptance tests
 
@@ -38,9 +38,9 @@ or documented setup.
 | AUTH-05 | Auth | Refresh valid token | Old refresh token rotates | Integration test |
 | AUTH-06 | Auth | Reuse rotated refresh token | HTTP 401 | Integration test |
 | BC-01 | Barcode | Validate known EAN-13/UPC-A values | Valid checksum accepted | Automated test |
-| BC-02 | Barcode | Scan same value repeatedly | One result until confirmation/reset | Screen recording |
-| BC-03 | Barcode | Scan real beverage on phone | Value matches printed barcode | Phone evidence |
-| BC-04 | Barcode | Use USB keyboard-wedge scanner | Input receives value plus Enter | Desktop evidence |
+| BC-02 | Barcode | Submit the same scanned value repeatedly | Each submission remains lookup-only | Screen recording |
+| BC-03 | Barcode | Scan a real beverage using a USB/Bluetooth keyboard-wedge scanner | Input receives the printed value plus Enter | Hardware-scanner evidence |
+| BC-04 | Barcode | Optionally scan a real beverage with a phone camera | Value matches printed barcode | Optional phone evidence |
 | BC-05 | Barcode | Scan without confirming movement | Inventory remains unchanged | API/DB evidence |
 
 ## Test levels
@@ -50,8 +50,9 @@ or documented setup.
 - Integration tests cover PostgreSQL migrations, refresh-token rotation,
   constraints, transactions, and API/database behavior.
 - Smoke tests verify Compose startup, readiness, routes and frontend proxying.
-- Manual exploratory tests cover camera permissions, real devices, responsive
-  layouts, accessibility and scanner ergonomics.
+- Manual exploratory tests cover hardware-scanner input, real devices,
+  responsive layouts, accessibility and scanner ergonomics. Camera permission
+  testing is optional.
 
 ## Defect severity
 

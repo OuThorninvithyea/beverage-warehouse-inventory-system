@@ -123,21 +123,18 @@ Role visibility:
 └───────────────┴─────────────────────────────────────────────┘
 ```
 
-## Phone scanner and confirmation wireframes
+## Hardware scanner and confirmation wireframes
 
 ```text
 ┌──────────────────────┐
 │ ← Barcode test       │
-│ ┌──────────────────┐ │
-│ │                  │ │
-│ │  camera preview  │ │
-│ │   [scan frame]   │ │
-│ │                  │ │
-│ └──────────────────┘ │
+│ Hardware scanner     │
+│ [__________________] │
+│ Scan sends Enter     │
 │ Result: 8851234567890 │
 │ ✓ Valid EAN-13       │
-│ [Use value] [Rescan] │
-│ Manual [__________]  │
+│ [Use value] [Clear]  │
+│ Camera scan (optional)│
 └──────────────────────┘
 
 ┌──────────────────────┐
@@ -160,5 +157,6 @@ Role visibility:
 - Text and interactive controls meet WCAG AA contrast targets.
 - Touch controls are at least 44 × 44 CSS pixels.
 - Color is never the only indicator of status.
-- Scanner screens provide manual entry and USB-scanner fallback.
+- Scanner screens use USB/Bluetooth hardware input by default, provide manual
+  entry as fallback and offer phone-camera scanning only as an optional method.
 - Destructive or stock-changing operations require explicit confirmation.

@@ -26,7 +26,7 @@ This document assigns each BWIMS presentation slide to a team member and provide
 | 6 | Backend implementation and API foundation | Ou Thorninvithyea |
 | 7 | Frontend structure and implemented screens | Chanraksa |
 | 8 | UI/UX design, wireframes and responsive layout | Hong |
-| 9 | Phone-camera barcode workflow and evidence | Phal Monyvan |
+| 9 | Hardware barcode-scanner workflow and evidence | Phal Monyvan |
 | 10 | Testing strategy, results and QA evidence | Sinat Chantha |
 | 11 | Gantt progress from Week 6 to Week 15 | Ou and Sinat |
 | 12 | Current status, next steps and conclusion | Ou Thorninvithyea |

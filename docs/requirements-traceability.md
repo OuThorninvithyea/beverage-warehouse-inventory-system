@@ -28,7 +28,7 @@ not GitHub issue status.
 | FR-18 | FIFO cost layers | 1.2, 3.2 | `cost_layers` | Oldest-layer consumption tests | Schema ready |
 | FR-19 | Prevent expired-lot picking | 3.2 | Week 9–10 movement service | Boundary-date tests | Planned |
 | FR-20 | Barcode label generation | 4.1 | Week 11 barcode phase | Image response tests | Planned |
-| FR-21 | Phone-camera barcode scanning | 1.4, 4.1 | `/barcode-test` | Real device/browser evidence | Implementation ready |
+| FR-21 | Hardware barcode scanning with optional phone camera | 1.4, 4.1 | `/barcode-test` | Real USB/Bluetooth scanner evidence | Implementation ready |
 
 ## Non-functional requirements
 
@@ -38,7 +38,7 @@ not GitHub issue status.
 | NFR-2 Reliability | Atomic stock operations | PostgreSQL transactions and constraints | Failure/rollback integration tests |
 | NFR-3 Security | RS256 JWT, bcrypt, rate limiting, HTTPS | Week 7 auth and deployment configuration | Auth negative tests and security review |
 | NFR-4 Maintainability | Modular, testable architecture | Route → Handler → Service → Repository | Tests, vet and code review |
-| NFR-5 Usability | Scan-to-operation below 10 seconds | Responsive scanner and confirmation flow | Timed phone test |
+| NFR-5 Usability | Scan-to-operation below 10 seconds | Focused hardware-scanner input and confirmation flow | Timed hardware-scanner test |
 | NFR-6 Auditability | Immutable history | Append-only movement and audit triggers | Update/delete rejection tests |
 | NFR-7 Accessibility | Correct role boundaries and usable UI | RBAC plus responsive/accessibility notes | Keyboard, contrast and role tests |
 
