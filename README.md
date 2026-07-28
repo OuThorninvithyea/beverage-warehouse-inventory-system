@@ -46,9 +46,16 @@ Development is planned from **Week 6 through Week 15**. The approved Google Gant
 
 Detailed working agreements are in [CONTRIBUTING.md](CONTRIBUTING.md), and the progress workflow is in [docs/project-management.md](docs/project-management.md).
 
-## Current Week 6 goal
+Backend setup and architecture are documented in [backend/README.md](backend/README.md),
+and frontend setup is documented in [frontend/README.md](frontend/README.md).
+The [database ERD](docs/database-erd.md) and
+[API contract](docs/api-contract.md) define the shared backend, frontend, and QA
+foundation. The latest command evidence is recorded in
+[Week 6 foundation validation](docs/week-6-foundation-validation.md).
 
-The first technical milestone is a runnable foundation:
+## Current Week 7 goal
+
+Week 6 foundation work is implemented and Week 7 completes authentication:
 
 - Docker Compose starts the backend and PostgreSQL.
 - Database migrations run successfully.
@@ -56,12 +63,20 @@ The first technical milestone is a runnable foundation:
 - The Vue frontend loads.
 - The API response format is agreed.
 - ERD, wireframes, acceptance criteria and the QA plan are ready.
-- A real beverage barcode is tested using a phone camera.
+- RS256 JWT login, rotating refresh tokens and four-role RBAC are working.
+- The barcode test route is ready for physical phone-camera evidence.
+
+The real beverage phone scan remains a manual evidence requirement and is not
+marked complete until the printed and captured barcode values are recorded.
 
 ## Documents
 
 - `Beverage_Warehouse_Proposal.pdf` — project proposal
 - `beverage_standalone.html` and `proposal.html` — proposal source/export versions
 - `plan.md` — detailed technical backlog
+- `docs/requirements-traceability.md` — proposal-to-test traceability
+- `docs/qa-test-plan.md` — QA strategy and Week 6–7 acceptance tests
+- `docs/user-journeys-and-wireframes.md` — approved journeys and wireframes
+- `docs/barcode-validation.md` — scanner decision and phone evidence form
 
 Do not commit secrets. Copy future `.env.example` files to `.env` locally and keep real credentials outside Git.
