@@ -76,6 +76,13 @@ func TestPostgresRepositoryWarehouseAndLocationLifecycle(t *testing.T) {
 		t.Fatalf("duplicate barcode error = %v, want ErrLocationBarcodeConflict", err)
 	}
 
+	_, err = repository.CreateLocation(ctx, testOtherWarehouseID, LocationInput{
+		Code: "MISSING-" + suffix, IsPickable: &active, IsActive: &active,
+	})
+	if !errors.Is(err, ErrWarehouseNotFound) {
+		t.Fatalf("missing warehouse error = %v, want ErrWarehouseNotFound", err)
+	}
+
 	if _, err := repository.GetLocation(ctx, testOtherWarehouseID, createdLocation.ID); !errors.Is(err, ErrLocationNotFound) {
 		t.Fatalf("cross-warehouse location error = %v, want ErrLocationNotFound", err)
 	}

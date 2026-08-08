@@ -11,8 +11,8 @@ not GitHub issue status.
 | FR-1 | JWT authentication and refresh tokens | 2.1 | Week 7 auth module | Auth service and HTTP tests | Implemented |
 | FR-2 | Four-role RBAC | 2.1 | Week 7 auth module | Role middleware tests | Implemented |
 | FR-3 | Admin user management | 2.2 | Week 8 domain APIs | API integration tests | Planned |
-| FR-4 | Warehouse management | 2.2 | Week 7–8 domain APIs | API integration tests | Planned |
-| FR-5 | Hierarchical locations with barcodes | 1.2, 2.2 | `database-erd.md` | Migration plus CRUD tests | Schema ready |
+| FR-4 | Warehouse management | 2.2 | PRO-8 warehouse module | Service, handler and PostgreSQL repository tests | Implemented |
+| FR-5 | Hierarchical locations with barcodes | 1.2, 2.2 | PRO-8 warehouse module and `database-erd.md` | Migration, scoped CRUD and barcode-conflict tests | Implemented |
 | FR-6 | Product CRUD | 2.2 | Week 7–8 domain APIs | API integration tests | Planned |
 | FR-7 | Categories | 1.2, 2.2 | `database-erd.md` | Migration plus CRUD tests | Schema ready |
 | FR-8 | Barcode product lookup | 1.4, 2.2 | `barcode-validation.md` | EAN validation and API tests | Test setup ready |

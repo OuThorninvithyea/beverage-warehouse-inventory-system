@@ -247,6 +247,27 @@ func TestListWarehousesDefaultsAndCapsLimit(t *testing.T) {
 	}
 }
 
+func TestEmptyListsReturnJSONArraysInsteadOfNull(t *testing.T) {
+	service := NewService(&fakeRepository{})
+	admin := Actor{Role: auth.RoleAdmin}
+
+	warehouses, err := service.ListWarehouses(context.Background(), admin, ListFilter{})
+	if err != nil {
+		t.Fatalf("ListWarehouses() error = %v", err)
+	}
+	if warehouses.Items == nil {
+		t.Fatal("warehouse items = nil, want empty slice")
+	}
+
+	locations, err := service.ListLocations(context.Background(), admin, testWarehouseID, ListFilter{})
+	if err != nil {
+		t.Fatalf("ListLocations() error = %v", err)
+	}
+	if locations.Items == nil {
+		t.Fatal("location items = nil, want empty slice")
+	}
+}
+
 func TestWarehouseReadScopeRejectsMissingOrDifferentAssignment(t *testing.T) {
 	tests := []struct {
 		name       string

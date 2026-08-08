@@ -283,6 +283,9 @@ func requireWarehouseAccess(actor Actor, warehouseID string) error {
 }
 
 func warehousePage(items []Warehouse, requestedLimit int) Page[Warehouse] {
+	if items == nil {
+		items = make([]Warehouse, 0)
+	}
 	hasMore := len(items) > requestedLimit
 	if hasMore {
 		items = items[:requestedLimit]
@@ -300,6 +303,9 @@ func warehousePage(items []Warehouse, requestedLimit int) Page[Warehouse] {
 }
 
 func locationPage(items []Location, requestedLimit int) Page[Location] {
+	if items == nil {
+		items = make([]Location, 0)
+	}
 	hasMore := len(items) > requestedLimit
 	if hasMore {
 		items = items[:requestedLimit]

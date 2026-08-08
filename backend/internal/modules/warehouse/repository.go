@@ -320,6 +320,8 @@ func mapWriteError(operation string, err error) error {
 			return ErrLocationCodeConflict
 		case "locations_barcode_unique_idx":
 			return ErrLocationBarcodeConflict
+		case "locations_warehouse_id_fkey":
+			return ErrWarehouseNotFound
 		}
 	}
 	return fmt.Errorf("%s: %w", operation, err)
