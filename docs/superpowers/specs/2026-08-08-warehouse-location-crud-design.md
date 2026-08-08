@@ -61,7 +61,7 @@ All endpoints require a valid Bearer access token.
 | `GET` | `/api/v1/warehouses` | all authenticated roles | Admin lists all; other roles receive only their assigned warehouse |
 | `POST` | `/api/v1/warehouses` | admin | Create a warehouse |
 | `GET` | `/api/v1/warehouses/:warehouse_id` | all authenticated roles | Get an accessible warehouse |
-| `PUT` | `/api/v1/warehouses/:warehouse_id` | admin | Replace editable warehouse fields |
+| `PUT` | `/api/v1/warehouses/:warehouse_id` | admin | Update editable warehouse fields |
 | `DELETE` | `/api/v1/warehouses/:warehouse_id` | admin | Soft-deactivate the warehouse |
 
 ### Locations
@@ -71,7 +71,7 @@ All endpoints require a valid Bearer access token.
 | `GET` | `/api/v1/warehouses/:warehouse_id/locations` | all authenticated roles | List accessible locations in the warehouse |
 | `POST` | `/api/v1/warehouses/:warehouse_id/locations` | admin, warehouse manager | Create a location |
 | `GET` | `/api/v1/warehouses/:warehouse_id/locations/:location_id` | all authenticated roles | Get an accessible location |
-| `PUT` | `/api/v1/warehouses/:warehouse_id/locations/:location_id` | admin, warehouse manager | Replace editable location fields |
+| `PUT` | `/api/v1/warehouses/:warehouse_id/locations/:location_id` | admin, warehouse manager | Update editable location fields |
 | `DELETE` | `/api/v1/warehouses/:warehouse_id/locations/:location_id` | admin, warehouse manager | Soft-deactivate the location |
 
 `DELETE` never physically removes a warehouse or location. It sets
@@ -91,7 +91,8 @@ All endpoints require a valid Bearer access token.
 ```
 
 `code` and `name` are required. Codes are trimmed and normalized to uppercase.
-An empty address is stored as `NULL`. `is_active` defaults to `true` on create.
+An empty address is stored as `NULL`. `is_active` defaults to `true` on create
+and preserves its stored value when omitted from an update.
 
 ### Location write request
 
@@ -110,7 +111,7 @@ An empty address is stored as `NULL`. `is_active` defaults to `true` on create.
 
 `code` is required and normalized to uppercase. Optional text values are
 trimmed; empty optional values are stored as `NULL`. Boolean fields default to
-`true` on create.
+`true` on create and preserve their stored values when omitted from an update.
 
 Resource responses expose string UUIDs and RFC 3339 UTC timestamps through the
 existing success envelope:
