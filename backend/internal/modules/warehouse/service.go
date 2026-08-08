@@ -27,6 +27,11 @@ type Service interface {
 	CreateWarehouse(context.Context, Actor, WarehouseInput) (Warehouse, error)
 	UpdateWarehouse(context.Context, Actor, string, WarehouseInput) (Warehouse, error)
 	DeactivateWarehouse(context.Context, Actor, string) error
+	ListLocations(context.Context, Actor, string, ListFilter) (Page[Location], error)
+	GetLocation(context.Context, Actor, string, string) (Location, error)
+	CreateLocation(context.Context, Actor, string, LocationInput) (Location, error)
+	UpdateLocation(context.Context, Actor, string, string, LocationInput) (Location, error)
+	DeactivateLocation(context.Context, Actor, string, string) error
 }
 
 type service struct {
@@ -114,6 +119,110 @@ func (s *service) DeactivateWarehouse(ctx context.Context, actor Actor, id strin
 	return s.repository.DeactivateWarehouse(ctx, id)
 }
 
+func (s *service) ListLocations(
+	ctx context.Context,
+	actor Actor,
+	warehouseID string,
+	filter ListFilter,
+) (Page[Location], error) {
+	if !validUUID(warehouseID) {
+		return Page[Location]{}, ErrInvalidID
+	}
+	if err := requireWarehouseAccess(actor, warehouseID); err != nil {
+		return Page[Location]{}, err
+	}
+
+	requestedLimit := normalizeLimit(filter.Limit)
+	filter.Limit = requestedLimit + 1
+	filter.Search = strings.TrimSpace(filter.Search)
+
+	locations, err := s.repository.ListLocations(ctx, warehouseID, filter)
+	if err != nil {
+		return Page[Location]{}, err
+	}
+	return locationPage(locations, requestedLimit), nil
+}
+
+func (s *service) GetLocation(
+	ctx context.Context,
+	actor Actor,
+	warehouseID string,
+	locationID string,
+) (Location, error) {
+	if !validUUID(warehouseID) || !validUUID(locationID) {
+		return Location{}, ErrInvalidID
+	}
+	if err := requireWarehouseAccess(actor, warehouseID); err != nil {
+		return Location{}, err
+	}
+	return s.repository.GetLocation(ctx, warehouseID, locationID)
+}
+
+func (s *service) CreateLocation(
+	ctx context.Context,
+	actor Actor,
+	warehouseID string,
+	input LocationInput,
+) (Location, error) {
+	if !canMutateLocations(actor.Role) {
+		return Location{}, ErrForbidden
+	}
+	if !validUUID(warehouseID) {
+		return Location{}, ErrInvalidID
+	}
+	if err := requireWarehouseAccess(actor, warehouseID); err != nil {
+		return Location{}, err
+	}
+
+	normalized, err := normalizeLocationInput(input, true)
+	if err != nil {
+		return Location{}, err
+	}
+	return s.repository.CreateLocation(ctx, warehouseID, normalized)
+}
+
+func (s *service) UpdateLocation(
+	ctx context.Context,
+	actor Actor,
+	warehouseID string,
+	locationID string,
+	input LocationInput,
+) (Location, error) {
+	if !canMutateLocations(actor.Role) {
+		return Location{}, ErrForbidden
+	}
+	if !validUUID(warehouseID) || !validUUID(locationID) {
+		return Location{}, ErrInvalidID
+	}
+	if err := requireWarehouseAccess(actor, warehouseID); err != nil {
+		return Location{}, err
+	}
+
+	normalized, err := normalizeLocationInput(input, false)
+	if err != nil {
+		return Location{}, err
+	}
+	return s.repository.UpdateLocation(ctx, warehouseID, locationID, normalized)
+}
+
+func (s *service) DeactivateLocation(
+	ctx context.Context,
+	actor Actor,
+	warehouseID string,
+	locationID string,
+) error {
+	if !canMutateLocations(actor.Role) {
+		return ErrForbidden
+	}
+	if !validUUID(warehouseID) || !validUUID(locationID) {
+		return ErrInvalidID
+	}
+	if err := requireWarehouseAccess(actor, warehouseID); err != nil {
+		return err
+	}
+	return s.repository.DeactivateLocation(ctx, warehouseID, locationID)
+}
+
 func normalizeWarehouseInput(input WarehouseInput, defaultActive bool) (WarehouseInput, error) {
 	input.Code = strings.ToUpper(strings.TrimSpace(input.Code))
 	input.Name = strings.TrimSpace(input.Name)
@@ -124,6 +233,28 @@ func normalizeWarehouseInput(input WarehouseInput, defaultActive bool) (Warehous
 	input.Address = optionalText(input.Address)
 	if defaultActive && input.IsActive == nil {
 		input.IsActive = boolPointer(true)
+	}
+	return input, nil
+}
+
+func normalizeLocationInput(input LocationInput, defaults bool) (LocationInput, error) {
+	input.Code = strings.ToUpper(strings.TrimSpace(input.Code))
+	if input.Code == "" {
+		return LocationInput{}, ErrValidation
+	}
+
+	input.Zone = optionalText(input.Zone)
+	input.Aisle = optionalText(input.Aisle)
+	input.Rack = optionalText(input.Rack)
+	input.Shelf = optionalText(input.Shelf)
+	input.Barcode = optionalText(input.Barcode)
+	if defaults {
+		if input.IsPickable == nil {
+			input.IsPickable = boolPointer(true)
+		}
+		if input.IsActive == nil {
+			input.IsActive = boolPointer(true)
+		}
 	}
 	return input, nil
 }
@@ -166,6 +297,27 @@ func warehousePage(items []Warehouse, requestedLimit int) Page[Warehouse] {
 		page.Page.NextCursor = &cursor
 	}
 	return page
+}
+
+func locationPage(items []Location, requestedLimit int) Page[Location] {
+	hasMore := len(items) > requestedLimit
+	if hasMore {
+		items = items[:requestedLimit]
+	}
+
+	page := Page[Location]{
+		Items: items,
+		Page:  PageInfo{HasMore: hasMore},
+	}
+	if hasMore && len(items) > 0 {
+		cursor := EncodeCursor(items[len(items)-1].CreatedAt, items[len(items)-1].ID)
+		page.Page.NextCursor = &cursor
+	}
+	return page
+}
+
+func canMutateLocations(role string) bool {
+	return role == auth.RoleAdmin || role == auth.RoleWarehouseManager
 }
 
 func normalizeLimit(limit int) int {

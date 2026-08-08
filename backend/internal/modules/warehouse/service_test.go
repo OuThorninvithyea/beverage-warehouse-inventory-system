@@ -16,15 +16,27 @@ const (
 )
 
 type fakeRepository struct {
-	warehouses            []Warehouse
-	warehouse             Warehouse
-	warehouseErr          error
-	createdWarehouseInput WarehouseInput
-	updatedWarehouseID    string
-	updatedWarehouseInput WarehouseInput
-	deactivatedWarehouse  string
-	warehouseScope        *string
-	warehouseFilter       ListFilter
+	warehouses                     []Warehouse
+	warehouse                      Warehouse
+	warehouseErr                   error
+	createdWarehouseInput          WarehouseInput
+	updatedWarehouseID             string
+	updatedWarehouseInput          WarehouseInput
+	deactivatedWarehouse           string
+	warehouseScope                 *string
+	warehouseFilter                ListFilter
+	locations                      []Location
+	location                       Location
+	locationErr                    error
+	createdLocationWarehouseID     string
+	createdLocationInput           LocationInput
+	updatedLocationWarehouseID     string
+	updatedLocationID              string
+	updatedLocationInput           LocationInput
+	deactivatedLocationWarehouseID string
+	deactivatedLocationID          string
+	locationListWarehouseID        string
+	locationFilter                 ListFilter
 }
 
 func (r *fakeRepository) ListWarehouses(_ context.Context, scope *string, filter ListFilter) ([]Warehouse, error) {
@@ -59,24 +71,49 @@ func (r *fakeRepository) DeactivateWarehouse(_ context.Context, id string) error
 	return r.warehouseErr
 }
 
-func (r *fakeRepository) ListLocations(context.Context, string, ListFilter) ([]Location, error) {
-	return nil, nil
+func (r *fakeRepository) ListLocations(_ context.Context, warehouseID string, filter ListFilter) ([]Location, error) {
+	r.locationListWarehouseID = warehouseID
+	r.locationFilter = filter
+	return r.locations, r.locationErr
 }
 
-func (r *fakeRepository) GetLocation(context.Context, string, string) (Location, error) {
-	return Location{}, nil
+func (r *fakeRepository) GetLocation(_ context.Context, _, _ string) (Location, error) {
+	return r.location, r.locationErr
 }
 
-func (r *fakeRepository) CreateLocation(context.Context, string, LocationInput) (Location, error) {
-	return Location{}, nil
+func (r *fakeRepository) CreateLocation(_ context.Context, warehouseID string, input LocationInput) (Location, error) {
+	r.createdLocationWarehouseID = warehouseID
+	r.createdLocationInput = input
+	if r.locationErr != nil {
+		return Location{}, r.locationErr
+	}
+	return Location{
+		WarehouseID: warehouseID,
+		Code:        input.Code,
+		Zone:        input.Zone,
+		Aisle:       input.Aisle,
+		Rack:        input.Rack,
+		Shelf:       input.Shelf,
+		Barcode:     input.Barcode,
+		IsPickable:  *input.IsPickable,
+		IsActive:    *input.IsActive,
+	}, nil
 }
 
-func (r *fakeRepository) UpdateLocation(context.Context, string, string, LocationInput) (Location, error) {
-	return Location{}, nil
+func (r *fakeRepository) UpdateLocation(_ context.Context, warehouseID, locationID string, input LocationInput) (Location, error) {
+	r.updatedLocationWarehouseID = warehouseID
+	r.updatedLocationID = locationID
+	r.updatedLocationInput = input
+	if r.locationErr != nil {
+		return Location{}, r.locationErr
+	}
+	return Location{ID: locationID, WarehouseID: warehouseID, Code: input.Code}, nil
 }
 
-func (r *fakeRepository) DeactivateLocation(context.Context, string, string) error {
-	return nil
+func (r *fakeRepository) DeactivateLocation(_ context.Context, warehouseID, locationID string) error {
+	r.deactivatedLocationWarehouseID = warehouseID
+	r.deactivatedLocationID = locationID
+	return r.locationErr
 }
 
 func TestCreateWarehouseNormalizesBusinessFields(t *testing.T) {
@@ -268,6 +305,153 @@ func TestGetWarehouseRejectsInvalidUUID(t *testing.T) {
 	_, err := NewService(&fakeRepository{}).GetWarehouse(context.Background(), Actor{Role: auth.RoleAdmin}, "not-a-uuid")
 	if !errors.Is(err, ErrInvalidID) {
 		t.Fatalf("GetWarehouse() error = %v, want ErrInvalidID", err)
+	}
+}
+
+func TestManagerCreatesLocationOnlyInAssignedWarehouse(t *testing.T) {
+	assigned := testWarehouseID
+	manager := Actor{Role: auth.RoleWarehouseManager, WarehouseID: &assigned}
+	service := NewService(&fakeRepository{})
+
+	_, err := service.CreateLocation(context.Background(), manager, testOtherWarehouseID, LocationInput{Code: "A-01"})
+	if !errors.Is(err, ErrForbidden) {
+		t.Fatalf("CreateLocation() error = %v, want ErrForbidden", err)
+	}
+}
+
+func TestCreateLocationNormalizesFieldsAndDefaultsBooleans(t *testing.T) {
+	assigned := testWarehouseID
+	zone := "  Ambient  "
+	empty := "   "
+	barcode := "  LOC000001  "
+	repository := &fakeRepository{}
+
+	got, err := NewService(repository).CreateLocation(context.Background(), Actor{
+		Role: auth.RoleWarehouseManager, WarehouseID: &assigned,
+	}, assigned, LocationInput{
+		Code: " a-01-r02-s03 ", Zone: &zone, Aisle: &empty, Barcode: &barcode,
+	})
+	if err != nil {
+		t.Fatalf("CreateLocation() error = %v", err)
+	}
+	if repository.createdLocationWarehouseID != assigned {
+		t.Fatalf("warehouse id = %q, want %q", repository.createdLocationWarehouseID, assigned)
+	}
+	if repository.createdLocationInput.Code != "A-01-R02-S03" {
+		t.Fatalf("code = %q, want A-01-R02-S03", repository.createdLocationInput.Code)
+	}
+	if got.Zone == nil || *got.Zone != "Ambient" {
+		t.Fatalf("zone = %#v, want Ambient", got.Zone)
+	}
+	if got.Aisle != nil {
+		t.Fatalf("aisle = %#v, want nil", got.Aisle)
+	}
+	if got.Barcode == nil || *got.Barcode != "LOC000001" {
+		t.Fatalf("barcode = %#v, want LOC000001", got.Barcode)
+	}
+	if !got.IsPickable || !got.IsActive {
+		t.Fatalf("is_pickable=%v is_active=%v, want true true", got.IsPickable, got.IsActive)
+	}
+}
+
+func TestLocationMutationsEnforceRoles(t *testing.T) {
+	assigned := testWarehouseID
+	picker := Actor{Role: auth.RolePicker, WarehouseID: &assigned}
+	service := NewService(&fakeRepository{})
+
+	if _, err := service.CreateLocation(context.Background(), picker, assigned, LocationInput{Code: "A-01"}); !errors.Is(err, ErrForbidden) {
+		t.Fatalf("CreateLocation() error = %v, want ErrForbidden", err)
+	}
+	if _, err := service.UpdateLocation(context.Background(), picker, assigned, testLocationID, LocationInput{Code: "A-01"}); !errors.Is(err, ErrForbidden) {
+		t.Fatalf("UpdateLocation() error = %v, want ErrForbidden", err)
+	}
+	if err := service.DeactivateLocation(context.Background(), picker, assigned, testLocationID); !errors.Is(err, ErrForbidden) {
+		t.Fatalf("DeactivateLocation() error = %v, want ErrForbidden", err)
+	}
+}
+
+func TestLocationReadsAllowAssignedViewer(t *testing.T) {
+	assigned := testWarehouseID
+	repository := &fakeRepository{location: Location{ID: testLocationID, WarehouseID: assigned, Code: "A-01"}}
+	service := NewService(repository)
+	viewer := Actor{Role: auth.RoleViewer, WarehouseID: &assigned}
+
+	got, err := service.GetLocation(context.Background(), viewer, assigned, testLocationID)
+	if err != nil {
+		t.Fatalf("GetLocation() error = %v", err)
+	}
+	if got.ID != testLocationID {
+		t.Fatalf("location id = %q, want %q", got.ID, testLocationID)
+	}
+}
+
+func TestListLocationsBuildsCursorPage(t *testing.T) {
+	assigned := testWarehouseID
+	now := time.Date(2026, 8, 8, 8, 0, 0, 0, time.UTC)
+	repository := &fakeRepository{locations: []Location{
+		{ID: testLocationID, CreatedAt: now},
+		{ID: testOtherWarehouseID, CreatedAt: now.Add(-time.Minute)},
+		{ID: testWarehouseID, CreatedAt: now.Add(-2 * time.Minute)},
+	}}
+	pickable := true
+
+	page, err := NewService(repository).ListLocations(context.Background(), Actor{
+		Role: auth.RoleWarehouseManager, WarehouseID: &assigned,
+	}, assigned, ListFilter{Limit: 2, Search: " rack ", IsPickable: &pickable})
+	if err != nil {
+		t.Fatalf("ListLocations() error = %v", err)
+	}
+	if repository.locationListWarehouseID != assigned {
+		t.Fatalf("warehouse id = %q, want %q", repository.locationListWarehouseID, assigned)
+	}
+	if repository.locationFilter.Limit != 3 || repository.locationFilter.Search != "rack" {
+		t.Fatalf("filter = %#v, want limit 3 search rack", repository.locationFilter)
+	}
+	if len(page.Items) != 2 || !page.Page.HasMore || page.Page.NextCursor == nil {
+		t.Fatalf("page = %#v, want two items and next cursor", page)
+	}
+}
+
+func TestUpdateLocationPreservesOmittedBooleans(t *testing.T) {
+	assigned := testWarehouseID
+	repository := &fakeRepository{}
+	service := NewService(repository)
+	manager := Actor{Role: auth.RoleWarehouseManager, WarehouseID: &assigned}
+
+	_, err := service.UpdateLocation(context.Background(), manager, assigned, testLocationID, LocationInput{Code: " a-01 "})
+	if err != nil {
+		t.Fatalf("UpdateLocation() error = %v", err)
+	}
+	if repository.updatedLocationInput.IsPickable != nil || repository.updatedLocationInput.IsActive != nil {
+		t.Fatalf("update booleans = %#v, %#v; want nil, nil", repository.updatedLocationInput.IsPickable, repository.updatedLocationInput.IsActive)
+	}
+	if repository.updatedLocationWarehouseID != assigned || repository.updatedLocationID != testLocationID {
+		t.Fatalf("update ids = %q %q", repository.updatedLocationWarehouseID, repository.updatedLocationID)
+	}
+}
+
+func TestLocationConflictsAndNotFoundArePreserved(t *testing.T) {
+	assigned := testWarehouseID
+	manager := Actor{Role: auth.RoleWarehouseManager, WarehouseID: &assigned}
+
+	for _, wantErr := range []error{ErrLocationCodeConflict, ErrLocationBarcodeConflict, ErrLocationNotFound} {
+		service := NewService(&fakeRepository{locationErr: wantErr})
+		_, err := service.CreateLocation(context.Background(), manager, assigned, LocationInput{Code: "A-01"})
+		if !errors.Is(err, wantErr) {
+			t.Fatalf("CreateLocation() error = %v, want %v", err, wantErr)
+		}
+	}
+}
+
+func TestLocationOperationsRejectInvalidIDs(t *testing.T) {
+	service := NewService(&fakeRepository{})
+	admin := Actor{Role: auth.RoleAdmin}
+
+	if _, err := service.GetLocation(context.Background(), admin, "bad", testLocationID); !errors.Is(err, ErrInvalidID) {
+		t.Fatalf("GetLocation() warehouse error = %v, want ErrInvalidID", err)
+	}
+	if _, err := service.GetLocation(context.Background(), admin, testWarehouseID, "bad"); !errors.Is(err, ErrInvalidID) {
+		t.Fatalf("GetLocation() location error = %v, want ErrInvalidID", err)
 	}
 }
 
