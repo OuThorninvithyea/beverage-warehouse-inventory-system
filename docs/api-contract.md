@@ -140,6 +140,122 @@ Requires a valid access token and returns the current public user claims.
 Requires a valid access token and the `admin` role. It is the Week 7 RBAC
 acceptance probe; non-admin roles receive HTTP 403 with `FORBIDDEN`.
 
+## Warehouse and location endpoints
+
+Every endpoint in this section requires a valid Bearer access token.
+
+### Access rules
+
+| Role | Warehouses | Locations |
+| --- | --- | --- |
+| `admin` | Read and manage every warehouse | Read and manage every location |
+| `warehouse_manager` | Read the assigned warehouse | Read and manage locations in the assigned warehouse |
+| `picker` | Read the assigned warehouse | Read locations in the assigned warehouse |
+| `viewer` | Read the assigned warehouse | Read locations in the assigned warehouse |
+
+Non-admin users cannot access another warehouse. A non-admin token without an
+assigned `warehouse_id` receives HTTP 403 with `FORBIDDEN`.
+
+### Warehouse routes
+
+| Method | Route | Result |
+| --- | --- | --- |
+| `GET` | `/api/v1/warehouses` | List accessible warehouses |
+| `POST` | `/api/v1/warehouses` | Create a warehouse; admin only |
+| `GET` | `/api/v1/warehouses/:warehouse_id` | Read an accessible warehouse |
+| `PUT` | `/api/v1/warehouses/:warehouse_id` | Update a warehouse; admin only |
+| `DELETE` | `/api/v1/warehouses/:warehouse_id` | Soft-deactivate a warehouse; admin only |
+
+Create or update body:
+
+```json
+{
+  "code": "PP-01",
+  "name": "Phnom Penh Main Warehouse",
+  "address": "Sen Sok, Phnom Penh",
+  "is_active": true
+}
+```
+
+`code` and `name` are required. Codes are trimmed, normalized to uppercase and
+unique without regard to letter case. `is_active` defaults to `true` on create
+and preserves its stored value when omitted from an update.
+
+### Location routes
+
+| Method | Route | Result |
+| --- | --- | --- |
+| `GET` | `/api/v1/warehouses/:warehouse_id/locations` | List accessible locations |
+| `POST` | `/api/v1/warehouses/:warehouse_id/locations` | Create a location; admin or assigned manager |
+| `GET` | `/api/v1/warehouses/:warehouse_id/locations/:location_id` | Read an accessible location |
+| `PUT` | `/api/v1/warehouses/:warehouse_id/locations/:location_id` | Update a location; admin or assigned manager |
+| `DELETE` | `/api/v1/warehouses/:warehouse_id/locations/:location_id` | Soft-deactivate a location; admin or assigned manager |
+
+Create or update body:
+
+```json
+{
+  "code": "A-01-R02-S03",
+  "zone": "Ambient",
+  "aisle": "A-01",
+  "rack": "R02",
+  "shelf": "S03",
+  "barcode": "LOC000001",
+  "is_pickable": true,
+  "is_active": true
+}
+```
+
+Location codes are case-insensitively unique inside their warehouse. A
+non-null location barcode is globally unique. `is_pickable` and `is_active`
+default to `true` on create and preserve their stored values when omitted from
+an update.
+
+### List queries and response
+
+Warehouse and location lists accept:
+
+- `limit`: 1–100; default 20.
+- `after`: opaque cursor returned by the previous page.
+- `search`: case-insensitive business-field search.
+- `is_active`: optional `true` or `false`.
+- `is_pickable`: optional location-only `true` or `false`.
+
+Lists use stable `(created_at DESC, id DESC)` ordering:
+
+```json
+{
+  "success": true,
+  "data": {
+    "items": [],
+    "page": {
+      "next_cursor": null,
+      "has_more": false
+    }
+  }
+}
+```
+
+Clients must treat `next_cursor` as opaque.
+
+### Deactivation and errors
+
+`DELETE` sets `is_active=false`, updates `updated_at` and returns HTTP 204. It
+is idempotent for an existing inactive resource and never physically deletes
+the row.
+
+| HTTP status | Code | Meaning |
+| --- | --- | --- |
+| 400 | `INVALID_REQUEST` | Invalid JSON, UUID, filter, limit or cursor |
+| 403 | `FORBIDDEN` | Role or assigned warehouse does not permit access |
+| 404 | `WAREHOUSE_NOT_FOUND` | Warehouse does not exist |
+| 404 | `LOCATION_NOT_FOUND` | Location does not exist under the warehouse |
+| 409 | `WAREHOUSE_CODE_CONFLICT` | Warehouse code already exists |
+| 409 | `LOCATION_CODE_CONFLICT` | Location code already exists in the warehouse |
+| 409 | `LOCATION_BARCODE_CONFLICT` | Location barcode already exists |
+| 422 | `VALIDATION_ERROR` | Required business data is missing or invalid |
+| 500 | `WAREHOUSE_OPERATION_FAILED` | Unexpected operation failure |
+
 ## Initial HTTP status policy
 
 | HTTP status | Usage |
