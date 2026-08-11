@@ -11,6 +11,7 @@ import (
 
 	"github.com/OuThorninvithyea/beverage-warehouse-inventory-system/backend/internal/modules/auth"
 	"github.com/OuThorninvithyea/beverage-warehouse-inventory-system/backend/internal/modules/health"
+	"github.com/OuThorninvithyea/beverage-warehouse-inventory-system/backend/internal/modules/warehouse"
 	"github.com/OuThorninvithyea/beverage-warehouse-inventory-system/backend/internal/platform/config"
 	"github.com/OuThorninvithyea/beverage-warehouse-inventory-system/backend/internal/platform/httpx"
 )
@@ -37,6 +38,10 @@ func New(cfg config.Config, db *pgxpool.Pool, appLogger *slog.Logger) (*fiber.Ap
 	authRepository := auth.NewPostgresRepository(db)
 	authService := auth.NewService(authRepository, tokenManager)
 	auth.RegisterRoutes(server, auth.NewHandler(authService), tokenManager)
+
+	warehouseRepository := warehouse.NewPostgresRepository(db)
+	warehouseService := warehouse.NewService(warehouseRepository)
+	warehouse.RegisterRoutes(server, warehouse.NewHandler(warehouseService), tokenManager)
 
 	server.Use(func(c fiber.Ctx) error {
 		return httpx.NewError(fiber.StatusNotFound, "ROUTE_NOT_FOUND", "route not found", nil)
