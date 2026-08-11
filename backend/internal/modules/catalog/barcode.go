@@ -1,6 +1,6 @@
 package catalog
 
-func ValidBarcode(value string) bool {
+func ValidateBarcode(value string) bool {
 	if len(value) != 12 && len(value) != 13 {
 		return false
 	}

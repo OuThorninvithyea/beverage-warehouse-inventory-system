@@ -8,7 +8,7 @@ type Actor struct {
 
 type Category struct {
 	ID        string    `json:"id"`
-	ParentID  *string   `json:"parent_id,omitempty"`
+	ParentID  *string   `json:"parent_id"`
 	Name      string    `json:"name"`
 	IsActive  bool      `json:"is_active"`
 	CreatedAt time.Time `json:"created_at"`
@@ -17,9 +17,9 @@ type Category struct {
 
 type Product struct {
 	ID           string    `json:"id"`
-	CategoryID   *string   `json:"category_id,omitempty"`
+	CategoryID   *string   `json:"category_id"`
 	SKU          string    `json:"sku"`
-	Barcode      *string   `json:"barcode,omitempty"`
+	Barcode      *string   `json:"barcode"`
 	Name         string    `json:"name"`
 	Unit         string    `json:"unit"`
 	IsLotTracked bool      `json:"is_lot_tracked"`
