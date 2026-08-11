@@ -12,6 +12,8 @@ import (
 const (
 	testCategoryID = "7e5d55b1-6356-492b-8296-2b981867fcf2"
 	testParentID   = "8e5d55b1-6356-492b-8296-2b981867fcf2"
+	testProductID  = "9e5d55b1-6356-492b-8296-2b981867fcf2"
+	testBarcode    = "4006381333931"
 )
 
 type fakeRepository struct {
@@ -260,3 +262,199 @@ func TestGetAndDeactivateCategoryValidateIDAndForward(t *testing.T) {
 }
 
 func stringPointer(value string) *string { return &value }
+
+func validProductInput() ProductInput {
+	return ProductInput{SKU: "COKE-330", Name: "Coca-Cola 330 ml", Unit: "case"}
+}
+
+func TestProductMutationRoles(t *testing.T) {
+	for _, role := range []string{auth.RoleAdmin, auth.RoleWarehouseManager} {
+		t.Run(role+" allowed", func(t *testing.T) {
+			repository := &fakeRepository{product: Product{ID: testProductID}}
+			service := NewService(repository)
+			if _, err := service.CreateProduct(context.Background(), Actor{Role: role}, validProductInput()); err != nil {
+				t.Fatalf("CreateProduct() error = %v", err)
+			}
+			if repository.productWrites != 1 {
+				t.Fatalf("repository writes = %d, want 1", repository.productWrites)
+			}
+		})
+	}
+
+	for _, role := range []string{auth.RolePicker, auth.RoleViewer} {
+		t.Run(role+" forbidden", func(t *testing.T) {
+			repository := &fakeRepository{}
+			service := NewService(repository)
+			if _, err := service.CreateProduct(context.Background(), Actor{Role: role}, validProductInput()); !errors.Is(err, ErrForbidden) {
+				t.Fatalf("CreateProduct() error = %v, want ErrForbidden", err)
+			}
+			if repository.productWrites != 0 {
+				t.Fatalf("repository writes = %d, want 0", repository.productWrites)
+			}
+		})
+	}
+}
+
+func TestCreateProductNormalizesDefaultsAndOptionalValues(t *testing.T) {
+	categoryID := "  " + testCategoryID + "  "
+	barcode := "  " + testBarcode + "  "
+	repository := &fakeRepository{product: Product{ID: testProductID}}
+	service := NewService(repository)
+
+	_, err := service.CreateProduct(context.Background(), Actor{Role: auth.RoleAdmin}, ProductInput{
+		CategoryID: OptionalString{Set: true, Value: &categoryID},
+		SKU:        "  coke-330  ",
+		Barcode:    OptionalString{Set: true, Value: &barcode},
+		Name:       "  Coca-Cola 330 ml  ",
+		Unit:       "  CASE  ",
+	})
+	if err != nil {
+		t.Fatalf("CreateProduct() error = %v", err)
+	}
+	input := repository.productInput
+	if input.SKU != "COKE-330" || input.Name != "Coca-Cola 330 ml" || input.Unit != "case" {
+		t.Fatalf("normalized input = %#v", input)
+	}
+	if input.CategoryID.Value == nil || *input.CategoryID.Value != testCategoryID {
+		t.Fatalf("CategoryID = %#v, want normalized UUID", input.CategoryID)
+	}
+	if input.Barcode.Value == nil || *input.Barcode.Value != testBarcode {
+		t.Fatalf("Barcode = %#v, want normalized barcode", input.Barcode)
+	}
+	if input.IsLotTracked == nil || !*input.IsLotTracked || input.IsActive == nil || !*input.IsActive {
+		t.Fatalf("booleans = %#v %#v, want true defaults", input.IsLotTracked, input.IsActive)
+	}
+}
+
+func TestCreateProductWithoutOptionalValuesWritesExplicitNull(t *testing.T) {
+	repository := &fakeRepository{}
+	service := NewService(repository)
+	if _, err := service.CreateProduct(context.Background(), Actor{Role: auth.RoleAdmin}, validProductInput()); err != nil {
+		t.Fatalf("CreateProduct() error = %v", err)
+	}
+	if !repository.productInput.CategoryID.Set || repository.productInput.CategoryID.Value != nil {
+		t.Fatalf("CategoryID = %#v, want explicit null", repository.productInput.CategoryID)
+	}
+	if !repository.productInput.Barcode.Set || repository.productInput.Barcode.Value != nil {
+		t.Fatalf("Barcode = %#v, want explicit null", repository.productInput.Barcode)
+	}
+}
+
+func TestProductValidationStopsRepositoryWrites(t *testing.T) {
+	tests := []struct {
+		name  string
+		input ProductInput
+		want  error
+	}{
+		{name: "blank sku", input: ProductInput{Name: "Water", Unit: "case"}, want: ErrValidation},
+		{name: "blank name", input: ProductInput{SKU: "WATER", Unit: "case"}, want: ErrValidation},
+		{name: "blank unit", input: ProductInput{SKU: "WATER", Name: "Water"}, want: ErrValidation},
+		{name: "invalid category", input: ProductInput{SKU: "WATER", Name: "Water", Unit: "case", CategoryID: OptionalString{Set: true, Value: stringPointer("bad-id")}}, want: ErrInvalidID},
+		{name: "invalid barcode", input: ProductInput{SKU: "WATER", Name: "Water", Unit: "case", Barcode: OptionalString{Set: true, Value: stringPointer("123")}}, want: ErrInvalidBarcode},
+		{name: "empty barcode", input: ProductInput{SKU: "WATER", Name: "Water", Unit: "case", Barcode: OptionalString{Set: true, Value: stringPointer("  ")}}, want: ErrInvalidBarcode},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			repository := &fakeRepository{}
+			service := NewService(repository)
+			_, err := service.CreateProduct(context.Background(), Actor{Role: auth.RoleAdmin}, test.input)
+			if !errors.Is(err, test.want) {
+				t.Fatalf("CreateProduct() error = %v, want %v", err, test.want)
+			}
+			if repository.productWrites != 0 {
+				t.Fatalf("repository writes = %d, want 0", repository.productWrites)
+			}
+		})
+	}
+}
+
+func TestUpdateProductPreservesOmittedOptionalValues(t *testing.T) {
+	repository := &fakeRepository{product: Product{ID: testProductID}}
+	service := NewService(repository)
+	if _, err := service.UpdateProduct(context.Background(), Actor{Role: auth.RoleWarehouseManager}, testProductID, validProductInput()); err != nil {
+		t.Fatalf("UpdateProduct() error = %v", err)
+	}
+	input := repository.productInput
+	if input.CategoryID.Set || input.Barcode.Set || input.IsLotTracked != nil || input.IsActive != nil {
+		t.Fatalf("optional fields = %#v, want omitted values preserved", input)
+	}
+}
+
+func TestUpdateProductPreservesExplicitNullClears(t *testing.T) {
+	repository := &fakeRepository{product: Product{ID: testProductID}}
+	service := NewService(repository)
+	input := validProductInput()
+	input.CategoryID = OptionalString{Set: true}
+	input.Barcode = OptionalString{Set: true}
+	if _, err := service.UpdateProduct(context.Background(), Actor{Role: auth.RoleAdmin}, testProductID, input); err != nil {
+		t.Fatalf("UpdateProduct() error = %v", err)
+	}
+	if !repository.productInput.CategoryID.Set || repository.productInput.CategoryID.Value != nil || !repository.productInput.Barcode.Set || repository.productInput.Barcode.Value != nil {
+		t.Fatalf("optional fields = %#v, want explicit null clears", repository.productInput)
+	}
+}
+
+func TestListProductsNormalizesPaginationAndCategory(t *testing.T) {
+	createdAt := time.Date(2026, 8, 11, 9, 0, 0, 0, time.UTC)
+	categoryID := "  " + testCategoryID + "  "
+	repository := &fakeRepository{products: []Product{
+		{ID: testProductID, CreatedAt: createdAt},
+		{ID: testParentID, CreatedAt: createdAt.Add(-time.Minute)},
+	}}
+	service := NewService(repository)
+
+	page, err := service.ListProducts(context.Background(), Actor{Role: auth.RoleViewer}, ListFilter{Limit: 1, Search: "  coke  ", CategoryID: &categoryID})
+	if err != nil {
+		t.Fatalf("ListProducts() error = %v", err)
+	}
+	if repository.filter.Limit != 2 || repository.filter.Search != "coke" || repository.filter.CategoryID == nil || *repository.filter.CategoryID != testCategoryID {
+		t.Fatalf("repository filter = %#v", repository.filter)
+	}
+	if len(page.Items) != 1 || !page.Page.HasMore || page.Page.NextCursor == nil {
+		t.Fatalf("page = %#v, want one item and next cursor", page)
+	}
+}
+
+func TestListProductsRejectsInvalidCategoryFilter(t *testing.T) {
+	categoryID := "bad-id"
+	repository := &fakeRepository{}
+	service := NewService(repository)
+	if _, err := service.ListProducts(context.Background(), Actor{Role: auth.RolePicker}, ListFilter{CategoryID: &categoryID}); !errors.Is(err, ErrInvalidID) {
+		t.Fatalf("ListProducts() error = %v, want ErrInvalidID", err)
+	}
+}
+
+func TestBarcodeLookupIsReadOnlyAndValidatesChecksum(t *testing.T) {
+	repository := &fakeRepository{product: Product{ID: testProductID, Barcode: stringPointer(testBarcode)}}
+	service := NewService(repository)
+	for _, role := range []string{auth.RoleAdmin, auth.RoleWarehouseManager, auth.RolePicker, auth.RoleViewer} {
+		product, err := service.GetProductByBarcode(context.Background(), Actor{Role: role}, "  "+testBarcode+"  ")
+		if err != nil || product.ID != testProductID {
+			t.Fatalf("role %s lookup = %#v, %v", role, product, err)
+		}
+	}
+	if repository.barcode != testBarcode || repository.productWrites != 0 {
+		t.Fatalf("barcode=%q writes=%d, want exact read-only lookup", repository.barcode, repository.productWrites)
+	}
+	if _, err := service.GetProductByBarcode(context.Background(), Actor{Role: auth.RoleViewer}, "123"); !errors.Is(err, ErrInvalidBarcode) {
+		t.Fatalf("invalid lookup error = %v, want ErrInvalidBarcode", err)
+	}
+}
+
+func TestGetUpdateDeactivateProductValidateIDAndPreserveErrors(t *testing.T) {
+	repository := &fakeRepository{product: Product{ID: testProductID}}
+	service := NewService(repository)
+	if _, err := service.GetProduct(context.Background(), Actor{Role: auth.RoleViewer}, testProductID); err != nil {
+		t.Fatalf("GetProduct() error = %v", err)
+	}
+	if err := service.DeactivateProduct(context.Background(), Actor{Role: auth.RoleAdmin}, testProductID); err != nil {
+		t.Fatalf("DeactivateProduct() error = %v", err)
+	}
+	if _, err := service.UpdateProduct(context.Background(), Actor{Role: auth.RoleAdmin}, "bad-id", validProductInput()); !errors.Is(err, ErrInvalidID) {
+		t.Fatalf("UpdateProduct() error = %v, want ErrInvalidID", err)
+	}
+	repository.err = ErrProductSKUConflict
+	if _, err := service.CreateProduct(context.Background(), Actor{Role: auth.RoleAdmin}, validProductInput()); !errors.Is(err, ErrProductSKUConflict) {
+		t.Fatalf("CreateProduct() error = %v, want ErrProductSKUConflict", err)
+	}
+}

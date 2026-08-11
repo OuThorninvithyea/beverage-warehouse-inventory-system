@@ -56,7 +56,7 @@ type service struct {
 	repository Repository
 }
 
-func NewService(repository Repository) *service {
+func NewService(repository Repository) Service {
 	return &service{repository: repository}
 }
 
@@ -142,6 +142,100 @@ func (service *service) DeactivateCategory(
 	return service.repository.DeactivateCategory(ctx, id)
 }
 
+func (service *service) ListProducts(
+	ctx context.Context,
+	_ Actor,
+	filter ListFilter,
+) (Page[Product], error) {
+	if filter.CategoryID != nil {
+		categoryID := strings.TrimSpace(*filter.CategoryID)
+		if !validUUID(categoryID) {
+			return Page[Product]{}, ErrInvalidID
+		}
+		filter.CategoryID = &categoryID
+	}
+	requestedLimit := normalizeLimit(filter.Limit)
+	filter.Limit = requestedLimit + 1
+	filter.Search = strings.TrimSpace(filter.Search)
+
+	items, err := service.repository.ListProducts(ctx, filter)
+	if err != nil {
+		return Page[Product]{}, err
+	}
+	return productPage(items, requestedLimit), nil
+}
+
+func (service *service) GetProduct(
+	ctx context.Context,
+	_ Actor,
+	id string,
+) (Product, error) {
+	if !validUUID(id) {
+		return Product{}, ErrInvalidID
+	}
+	return service.repository.GetProduct(ctx, id)
+}
+
+func (service *service) GetProductByBarcode(
+	ctx context.Context,
+	_ Actor,
+	barcode string,
+) (Product, error) {
+	barcode = strings.TrimSpace(barcode)
+	if !ValidateBarcode(barcode) {
+		return Product{}, ErrInvalidBarcode
+	}
+	return service.repository.GetProductByBarcode(ctx, barcode)
+}
+
+func (service *service) CreateProduct(
+	ctx context.Context,
+	actor Actor,
+	input ProductInput,
+) (Product, error) {
+	if !canMutateCatalog(actor.Role) {
+		return Product{}, ErrForbidden
+	}
+	normalized, err := normalizeProductInput(input, true)
+	if err != nil {
+		return Product{}, err
+	}
+	return service.repository.CreateProduct(ctx, normalized)
+}
+
+func (service *service) UpdateProduct(
+	ctx context.Context,
+	actor Actor,
+	id string,
+	input ProductInput,
+) (Product, error) {
+	if !canMutateCatalog(actor.Role) {
+		return Product{}, ErrForbidden
+	}
+	if !validUUID(id) {
+		return Product{}, ErrInvalidID
+	}
+	normalized, err := normalizeProductInput(input, false)
+	if err != nil {
+		return Product{}, err
+	}
+	return service.repository.UpdateProduct(ctx, id, normalized)
+}
+
+func (service *service) DeactivateProduct(
+	ctx context.Context,
+	actor Actor,
+	id string,
+) error {
+	if !canMutateCatalog(actor.Role) {
+		return ErrForbidden
+	}
+	if !validUUID(id) {
+		return ErrInvalidID
+	}
+	return service.repository.DeactivateProduct(ctx, id)
+}
+
 func normalizeCategoryInput(input CategoryInput, defaults bool) (CategoryInput, error) {
 	input.Name = strings.TrimSpace(input.Name)
 	if input.Name == "" {
@@ -159,6 +253,47 @@ func normalizeCategoryInput(input CategoryInput, defaults bool) (CategoryInput, 
 	}
 	if defaults && input.IsActive == nil {
 		input.IsActive = boolPointer(true)
+	}
+	return input, nil
+}
+
+func normalizeProductInput(input ProductInput, defaults bool) (ProductInput, error) {
+	input.SKU = strings.ToUpper(strings.TrimSpace(input.SKU))
+	input.Name = strings.TrimSpace(input.Name)
+	input.Unit = strings.ToLower(strings.TrimSpace(input.Unit))
+	if input.SKU == "" || input.Name == "" || input.Unit == "" {
+		return ProductInput{}, ErrValidation
+	}
+
+	if defaults && !input.CategoryID.Set {
+		input.CategoryID = OptionalString{Set: true}
+	}
+	if input.CategoryID.Set && input.CategoryID.Value != nil {
+		categoryID := strings.TrimSpace(*input.CategoryID.Value)
+		if !validUUID(categoryID) {
+			return ProductInput{}, ErrInvalidID
+		}
+		input.CategoryID.Value = &categoryID
+	}
+
+	if defaults && !input.Barcode.Set {
+		input.Barcode = OptionalString{Set: true}
+	}
+	if input.Barcode.Set && input.Barcode.Value != nil {
+		barcode := strings.TrimSpace(*input.Barcode.Value)
+		if !ValidateBarcode(barcode) {
+			return ProductInput{}, ErrInvalidBarcode
+		}
+		input.Barcode.Value = &barcode
+	}
+
+	if defaults {
+		if input.IsLotTracked == nil {
+			input.IsLotTracked = boolPointer(true)
+		}
+		if input.IsActive == nil {
+			input.IsActive = boolPointer(true)
+		}
 	}
 	return input, nil
 }
