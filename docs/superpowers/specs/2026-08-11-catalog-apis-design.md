@@ -221,9 +221,12 @@ Lookup is read-only. It never creates a movement or changes stock.
 - Product Category assignment is replaceable. Omitting `category_id` on update
   preserves the stored category; an explicit JSON `null` clears it.
 - Category parent assignment follows the same preserve-versus-clear behavior.
-- Update request decoding uses a small nullable-UUID input type with separate
-  `Set` and `Value` state. This avoids Go's ordinary pointer decoding ambiguity,
-  where omitted and explicit `null` would otherwise both become `nil`.
+- Product barcode assignment also supports preserve, replace, and explicit
+  `null` clearing.
+- Update request decoding uses a small optional-string input type with separate
+  `Set` and `Value` state for `parent_id`, `category_id`, and `barcode`. This
+  avoids Go's ordinary pointer decoding ambiguity, where omitted and explicit
+  `null` would otherwise both become `nil`.
 - `DELETE` is idempotent for an existing inactive resource and returns HTTP
   204.
 - Reading an inactive resource by ID remains possible to authenticated users;
