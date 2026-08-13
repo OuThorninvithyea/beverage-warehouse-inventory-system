@@ -1,8 +1,8 @@
 # Category, Product, and Barcode API Design
 
-**Status:** Approved for implementation on 2026-08-11  
-**Linear scope:** PRO-9  
-**Gantt scope:** Task 2.2, Product and Category portion  
+**Status:** Approved for implementation on 2026-08-11
+**Linear scope:** PRO-9
+**Gantt scope:** Task 2.2, Product and Category portion
 **Branch:** `codex/pro-9-catalog-apis`
 
 ## Goal
