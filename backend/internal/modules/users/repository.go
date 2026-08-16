@@ -148,7 +148,40 @@ func (repository *PostgresRepository) CreateUser(
 }
 
 func (repository *PostgresRepository) ListUsers(ctx context.Context, filter ListFilter) ([]User, error) {
-	panic("not implemented until Task 6")
+	afterTime, afterID := cursorArguments(filter.After)
+	rows, err := repository.pool.Query(ctx, `
+		SELECT u.id::text, u.email, u.full_name, r.code, u.warehouse_id::text, u.is_active, u.created_at, u.updated_at
+		FROM users u
+		JOIN roles r ON r.id = u.role_id
+		WHERE ($1 = '' OR u.email ILIKE '%' || $1 || '%' OR u.full_name ILIKE '%' || $1 || '%')
+		  AND ($2 = '' OR r.code = $2)
+		  AND ($3::uuid IS NULL OR u.warehouse_id = $3::uuid)
+		  AND ($4::boolean IS NULL OR u.is_active = $4)
+		  AND (
+			$5::timestamptz IS NULL
+			OR (u.created_at, u.id) < ($5::timestamptz, $6::uuid)
+		  )
+		ORDER BY u.created_at DESC, u.id DESC
+		LIMIT $7`,
+		filter.Search, filter.Role, nullableString(filter.WarehouseID), nullableBool(filter.IsActive),
+		afterTime, afterID, filter.Limit)
+	if err != nil {
+		return nil, fmt.Errorf("list users: %w", err)
+	}
+	defer rows.Close()
+
+	users := make([]User, 0)
+	for rows.Next() {
+		user, err := scanUser(rows)
+		if err != nil {
+			return nil, fmt.Errorf("scan user: %w", err)
+		}
+		users = append(users, user)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("list users: %w", err)
+	}
+	return users, nil
 }
 
 func (repository *PostgresRepository) GetUser(ctx context.Context, id string) (User, error) {

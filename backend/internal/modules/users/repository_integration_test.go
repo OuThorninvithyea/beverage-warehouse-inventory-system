@@ -95,6 +95,13 @@ func TestPostgresUsersLifecycle(t *testing.T) {
 		t.Fatalf("invalid role error = %v, want ErrInvalidRole", err)
 	}
 
-	_ = admin1
-	_ = picker
+	listed, err := repository.ListUsers(ctx, ListFilter{Limit: 10, Search: strings.ToLower(suffix)})
+	if err != nil || len(listed) != 2 {
+		t.Fatalf("ListUsers() = %#v, %v, want 2 users (admin1, picker)", listed, err)
+	}
+
+	adminOnly, err := repository.ListUsers(ctx, ListFilter{Limit: 10, Role: auth.RoleAdmin, Search: strings.ToLower(suffix)})
+	if err != nil || len(adminOnly) != 1 || adminOnly[0].ID != admin1.ID {
+		t.Fatalf("ListUsers(role=admin) = %#v, %v, want [admin1]", adminOnly, err)
+	}
 }
