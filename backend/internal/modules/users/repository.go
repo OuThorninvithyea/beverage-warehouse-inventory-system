@@ -185,11 +185,115 @@ func (repository *PostgresRepository) ListUsers(ctx context.Context, filter List
 }
 
 func (repository *PostgresRepository) GetUser(ctx context.Context, id string) (User, error) {
-	panic("not implemented until Task 7")
+	user, err := scanUser(repository.pool.QueryRow(ctx, `
+		SELECT u.id::text, u.email, u.full_name, r.code, u.warehouse_id::text, u.is_active, u.created_at, u.updated_at
+		FROM users u
+		JOIN roles r ON r.id = u.role_id
+		WHERE u.id = $1`, id))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return User{}, ErrUserNotFound
+	}
+	if err != nil {
+		return User{}, fmt.Errorf("get user: %w", err)
+	}
+	return user, nil
 }
 
-func (repository *PostgresRepository) UpdateUser(ctx context.Context, id string, input UserUpdateInput) (User, error) {
-	panic("not implemented until Task 7")
+// requireMoreThanOneActiveAdmin locks every currently-active admin row and fails
+// with ErrLastAdminProtected if fewer than two exist. It must be called inside the
+// same transaction as the write that would reduce the admin count, so a concurrent
+// deactivation of a different admin cannot race past this check.
+func requireMoreThanOneActiveAdmin(ctx context.Context, tx pgx.Tx) error {
+	rows, err := tx.Query(ctx, `
+		SELECT u.id::text
+		FROM users u
+		JOIN roles r ON r.id = u.role_id
+		WHERE r.code = 'admin' AND u.is_active = TRUE
+		FOR UPDATE OF u`)
+	if err != nil {
+		return fmt.Errorf("lock active admins: %w", err)
+	}
+	defer rows.Close()
+	count := 0
+	for rows.Next() {
+		count++
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("count active admins: %w", err)
+	}
+	if count <= 1 {
+		return ErrLastAdminProtected
+	}
+	return nil
+}
+
+func (repository *PostgresRepository) UpdateUser(
+	ctx context.Context,
+	id string,
+	input UserUpdateInput,
+) (User, error) {
+	tx, err := repository.pool.Begin(ctx)
+	if err != nil {
+		return User{}, fmt.Errorf("begin update user: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	var currentRoleCode string
+	var currentIsActive bool
+	err = tx.QueryRow(ctx, `
+		SELECT r.code, u.is_active
+		FROM users u
+		JOIN roles r ON r.id = u.role_id
+		WHERE u.id = $1
+		FOR UPDATE OF u`, id,
+	).Scan(&currentRoleCode, &currentIsActive)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return User{}, ErrUserNotFound
+	}
+	if err != nil {
+		return User{}, fmt.Errorf("lock user for update: %w", err)
+	}
+
+	roleID, err := resolveRoleID(ctx, tx, input.Role)
+	if err != nil {
+		return User{}, err
+	}
+
+	demotingActiveAdmin := currentRoleCode == "admin" && currentIsActive && input.Role != "admin"
+	deactivatingActiveAdmin := currentRoleCode == "admin" && currentIsActive &&
+		input.IsActive != nil && !*input.IsActive
+	if demotingActiveAdmin || deactivatingActiveAdmin {
+		if err := requireMoreThanOneActiveAdmin(ctx, tx); err != nil {
+			return User{}, err
+		}
+	}
+
+	if input.WarehouseID.Set && input.WarehouseID.Value != nil {
+		if err := lockActiveWarehouse(ctx, tx, *input.WarehouseID.Value); err != nil {
+			return User{}, err
+		}
+	}
+
+	user, err := scanUser(tx.QueryRow(ctx, `
+		UPDATE users
+		SET full_name = $2,
+		    role_id = $3,
+		    warehouse_id = CASE WHEN $4 THEN $5::uuid ELSE warehouse_id END,
+		    is_active = COALESCE($6, is_active),
+		    updated_at = NOW()
+		WHERE id = $1
+		RETURNING id::text, email, full_name, $7::text, warehouse_id::text, is_active, created_at, updated_at`,
+		id, input.FullName, roleID,
+		input.WarehouseID.Set, optionalStringValue(input.WarehouseID),
+		nullableBool(input.IsActive), input.Role))
+	if err != nil {
+		return User{}, mapUsersWriteError("update user", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return User{}, fmt.Errorf("commit update user: %w", err)
+	}
+	return user, nil
 }
 
 func (repository *PostgresRepository) DeactivateUser(ctx context.Context, id string) error {

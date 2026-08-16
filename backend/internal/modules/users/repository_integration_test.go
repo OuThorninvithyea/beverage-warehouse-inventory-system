@@ -104,4 +104,23 @@ func TestPostgresUsersLifecycle(t *testing.T) {
 	if err != nil || len(adminOnly) != 1 || adminOnly[0].ID != admin1.ID {
 		t.Fatalf("ListUsers(role=admin) = %#v, %v, want [admin1]", adminOnly, err)
 	}
+
+	fetched, err := repository.GetUser(ctx, admin1.ID)
+	if err != nil || fetched.Email != admin1.Email {
+		t.Fatalf("GetUser() = %#v, %v, want admin1", fetched, err)
+	}
+
+	if _, err := repository.GetUser(ctx, missingWarehouse); !errors.Is(err, ErrUserNotFound) {
+		t.Fatalf("GetUser(missing) error = %v, want ErrUserNotFound", err)
+	}
+
+	updated, err := repository.UpdateUser(ctx, picker.ID, UserUpdateInput{
+		FullName: "Picker One Updated", Role: auth.RoleWarehouseManager, WarehouseID: OptionalString{Set: true},
+	})
+	if err != nil {
+		t.Fatalf("UpdateUser() error = %v", err)
+	}
+	if updated.WarehouseID != nil || updated.Role != auth.RoleWarehouseManager || updated.FullName != "Picker One Updated" {
+		t.Fatalf("updated = %#v, want cleared warehouse, warehouse_manager role, new name", updated)
+	}
 }
