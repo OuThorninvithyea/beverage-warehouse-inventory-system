@@ -10,6 +10,9 @@
 .idea/
 .vscode/
 
+# Git worktrees (superpowers workflow)
+.worktrees/
+
 # Temporary and generated files
 tmp/
 temp/
