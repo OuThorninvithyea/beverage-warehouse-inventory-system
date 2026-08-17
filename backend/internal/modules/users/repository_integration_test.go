@@ -157,4 +157,36 @@ func TestPostgresUsersLifecycle(t *testing.T) {
 	if err := repository.DeactivateUser(ctx, missingWarehouse); !errors.Is(err, ErrUserNotFound) {
 		t.Fatalf("deactivate missing user error = %v, want ErrUserNotFound", err)
 	}
+
+	_, err = pool.Exec(ctx, `
+		INSERT INTO refresh_tokens (user_id, token_hash, expires_at)
+		VALUES ($1, $2, NOW() + interval '1 hour')`, picker.ID, "test-hash-picker-"+suffix)
+	if err != nil {
+		t.Fatalf("seed refresh token for picker error = %v", err)
+	}
+
+	newHash := "$2a$10$newhashnewhashnewhashnewhashnewhashnewhashnewhashnewh"
+	if err := repository.ResetPassword(ctx, picker.ID, newHash); err != nil {
+		t.Fatalf("ResetPassword() error = %v", err)
+	}
+
+	var storedHash string
+	if err := pool.QueryRow(ctx, `SELECT password_hash FROM users WHERE id = $1`, picker.ID).Scan(&storedHash); err != nil {
+		t.Fatalf("read password hash error = %v", err)
+	}
+	if storedHash != newHash {
+		t.Fatalf("storedHash = %q, want %q", storedHash, newHash)
+	}
+
+	var pickerTokenRevoked *time.Time
+	if err := pool.QueryRow(ctx, `SELECT revoked_at FROM refresh_tokens WHERE user_id = $1`, picker.ID).Scan(&pickerTokenRevoked); err != nil {
+		t.Fatalf("read picker refresh token error = %v", err)
+	}
+	if pickerTokenRevoked == nil {
+		t.Fatalf("picker refresh token was not revoked on password reset")
+	}
+
+	if err := repository.ResetPassword(ctx, missingWarehouse, newHash); !errors.Is(err, ErrUserNotFound) {
+		t.Fatalf("ResetPassword(missing) error = %v, want ErrUserNotFound", err)
+	}
 }

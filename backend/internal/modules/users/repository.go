@@ -343,5 +343,26 @@ func (repository *PostgresRepository) DeactivateUser(ctx context.Context, id str
 }
 
 func (repository *PostgresRepository) ResetPassword(ctx context.Context, id string, passwordHash string) error {
-	panic("not implemented until Task 9")
+	tx, err := repository.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin reset password: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	tag, err := tx.Exec(ctx, `
+		UPDATE users SET password_hash = $2, updated_at = NOW() WHERE id = $1`, id, passwordHash)
+	if err != nil {
+		return fmt.Errorf("reset password: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrUserNotFound
+	}
+
+	if _, err := tx.Exec(ctx, `
+		UPDATE refresh_tokens SET revoked_at = NOW()
+		WHERE user_id = $1 AND revoked_at IS NULL`, id); err != nil {
+		return fmt.Errorf("revoke refresh tokens on password reset: %w", err)
+	}
+
+	return tx.Commit(ctx)
 }
