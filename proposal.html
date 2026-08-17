@@ -961,7 +961,7 @@ Customers   — id, name, phone, email, address</pre>
 <div class="block">
   <p>The Beverage Warehouse Inventory Management System (BWIMS) is a full-stack web application designed specifically for beverage distributors and wholesale operations. It manages inventory across multiple warehouses, tracks stock movements, enforces expiry-based picking (FEFO), and supports barcode scanning — all tailored to the unique demands of the beverage industry.</p>
   <p>Beverage distribution involves thousands of SKUs across brands, flavors, sizes, and packaging types. Each product carries batch numbers and expiration dates that must be strictly tracked to prevent spoilage and ensure regulatory compliance. The system provides real-time inventory snapshots per warehouse, zone, and location — with automated alerts for near-expiry stock and low-stock thresholds.</p>
-  <p>The application supports four stock movement types (receive, pick, transfer, adjust) within database transactions, maintains an immutable audit trail, and uses FIFO/FEFO cost layers for accurate valuation. Barcode scanning via phone camera or USB scanner enables warehouse floor staff to complete receive and pick operations in under 10 seconds. The system is built for mid-size beverage distributors with: warehouse managers overseeing operations, pickers handling floor-level picking, admin users managing configuration and users, and viewers needing read-only access for auditing and planning.</p>
+  <p>The application supports four stock movement types (receive, pick, transfer, adjust) within database transactions, maintains an immutable audit trail, and uses FIFO/FEFO cost layers for accurate valuation. Barcode scanning uses USB or Bluetooth hardware scanners in keyboard-wedge mode by default, with manual entry as fallback and phone-camera scanning as an optional method. This enables warehouse floor staff to complete receive and pick operations in under 10 seconds. The system is built for mid-size beverage distributors with: warehouse managers overseeing operations, pickers handling floor-level picking, admin users managing configuration and users, and viewers needing read-only access for auditing and planning.</p>
 </div>
 
 <div class="page-break"></div>
@@ -992,7 +992,7 @@ Customers   — id, name, phone, email, address</pre>
     <li>Implement FEFO (First Expired, First Out) pick logic to minimize product spoilage and waste</li>
     <li>Support four stock movement types: receive, pick, transfer, and adjust — all within database transactions</li>
     <li>Automated expiry alerts — notify managers when products are approaching expiration (30/14/7 days)</li>
-    <li>Integrate barcode scanning (camera + USB scanner) for sub-10-second receive/pick operations</li>
+    <li>Integrate USB/Bluetooth hardware barcode scanning by default, with optional phone-camera support, for sub-10-second receive/pick operations</li>
     <li>Implement FIFO cost layer consumption for accurate beverage inventory valuation</li>
     <li>Maintain an immutable, append-only audit trail in stock_movements for regulatory compliance</li>
     <li>Support 50,000+ beverage SKU rows with virtual scrolling in the UI</li>
@@ -1080,7 +1080,7 @@ Customers   — id, name, phone, email, address</pre>
     <tr><td>FR-18</td><td>FIFO Cost Tracking</td><td>Automatic cost layer creation on receive and consumption on pick (oldest layers first)</td></tr>
     <tr><td>FR-19</td><td>FEFO Pick Logic</td><td>Picks automatically consume lots by nearest expiration date; prevents picking expired lots</td></tr>
     <tr><td>FR-20</td><td>Barcode Generation</td><td>Server-side barcode image generation for product and shelf/bin labels</td></tr>
-    <tr><td>FR-21</td><td>Camera Barcode Scan</td><td>Phone camera scanning for GS1/EAN-13 barcodes via @teckel/vue-barcode-reader</td></tr>
+    <tr><td>FR-21</td><td>Hardware Barcode Scan</td><td>USB/Bluetooth keyboard-wedge scanning for EAN-13 and UPC-A barcodes; phone-camera scanning is optional</td></tr>
     <tr><td>FR-22</td><td>USB Scanner Input</td><td>Keyboard wedge scanner support via composable (useScanner.ts)</td></tr>
     <tr><td>FR-23</td><td>Inventory Valuation</td><td>FIFO-based valuation report per warehouse and zone</td></tr>
     <tr><td>FR-24</td><td>Expiry Report</td><td>Report of stock by expiry status (fresh, approaching expiry, expired) with batch details</td></tr>
@@ -1475,7 +1475,7 @@ migrations/                         # *.up.sql, *.down.sql</pre>
     <li><strong>API Specification:</strong> OpenAPI/Swagger documentation for all ~25 endpoints</li>
     <li><strong>ER Diagram:</strong> Visual entity-relationship diagram for the database</li>
     <li><strong>System Architecture Diagram:</strong> 3-tier architecture with data flow</li>
-    <li><strong>Barcode Scan Flow Diagram:</strong> Camera/USB scan → lookup → movement → stock update</li>
+    <li><strong>Barcode Scan Flow Diagram:</strong> Hardware scan (default) or optional camera → lookup → movement → stock update</li>
     <li><strong>Auth Flow Diagram:</strong> JWT login, refresh, and RBAC middleware pipeline</li>
   </ul>
 </div>

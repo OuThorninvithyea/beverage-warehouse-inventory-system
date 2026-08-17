@@ -105,14 +105,58 @@ onBeforeUnmount(stopScanner)
     <div class="page-heading">
       <div>
         <span class="status-pill">Week 6 device test</span>
-        <h1>Barcode camera validation</h1>
-        <p>Decode and validate a barcode without changing inventory.</p>
+        <h1>Hardware barcode scanner validation</h1>
+        <p>
+          Validate a USB or Bluetooth scanner value without changing inventory.
+          Phone-camera scanning is optional.
+        </p>
       </div>
     </div>
 
     <div class="scanner-grid">
       <Card>
-        <template #title>Camera scanner</template>
+        <template #title>Hardware scanner (default)</template>
+        <template #content>
+          <div class="scanner-panel">
+            <label for="manual-barcode">USB, Bluetooth or manual input</label>
+            <InputText
+              id="manual-barcode"
+              v-model="manualValue"
+              inputmode="numeric"
+              autocomplete="off"
+              autofocus
+              placeholder="Scan or enter EAN-13 / UPC-A"
+              @keyup.enter="useManualValue"
+            />
+            <Button
+              label="Validate scanned value"
+              severity="secondary"
+              :disabled="manualValue.trim().length === 0"
+              @click="useManualValue"
+            />
+            <small>
+              Keep this field focused. A keyboard-wedge scanner sends the digits
+              and an Enter suffix.
+            </small>
+
+            <div v-if="candidate" class="barcode-result">
+              <small>Captured barcode</small>
+              <strong>{{ validation.normalized }}</strong>
+              <Message :severity="validation.valid ? 'success' : 'warn'">
+                {{ validation.message }}
+              </Message>
+            </div>
+
+            <Message severity="info">
+              This screen only produces a lookup value. It cannot receive, pick,
+              transfer or adjust inventory.
+            </Message>
+          </div>
+        </template>
+      </Card>
+
+      <Card>
+        <template #title>Phone camera (optional)</template>
         <template #content>
           <div class="scanner-panel">
             <video ref="video" class="scanner-video" muted playsinline />
@@ -147,44 +191,9 @@ onBeforeUnmount(stopScanner)
 
             <Message v-if="cameraError" severity="error">{{ cameraError }}</Message>
             <small>
-              Camera access requires HTTPS, except on <code>localhost</code>.
+              Optional camera access requires HTTPS, except on
+              <code>localhost</code>.
             </small>
-          </div>
-        </template>
-      </Card>
-
-      <Card>
-        <template #title>Captured value</template>
-        <template #content>
-          <div class="scanner-panel">
-            <label for="manual-barcode">Manual or USB scanner input</label>
-            <InputText
-              id="manual-barcode"
-              v-model="manualValue"
-              inputmode="numeric"
-              autocomplete="off"
-              placeholder="Scan or enter EAN-13 / UPC-A"
-              @keyup.enter="useManualValue"
-            />
-            <Button
-              label="Validate value"
-              severity="secondary"
-              :disabled="manualValue.trim().length === 0"
-              @click="useManualValue"
-            />
-
-            <div v-if="candidate" class="barcode-result">
-              <small>Captured barcode</small>
-              <strong>{{ validation.normalized }}</strong>
-              <Message :severity="validation.valid ? 'success' : 'warn'">
-                {{ validation.message }}
-              </Message>
-            </div>
-
-            <Message severity="info">
-              This screen only produces a lookup value. It cannot receive, pick,
-              transfer or adjust inventory.
-            </Message>
           </div>
         </template>
       </Card>

@@ -24,16 +24,16 @@
 - [x] Loading, empty, validation, error and success states specified
 - [x] Responsive and accessibility requirements documented
 - [x] Browser barcode libraries compared
-- [x] Camera permission, HTTPS and USB-scanner behavior documented
+- [x] USB/Bluetooth keyboard-wedge behavior and optional camera requirements documented
 - [x] Barcode scanner test route implemented
-- [ ] Real beverage barcode tested on a physical phone camera
+- [ ] Real beverage barcode tested with a USB/Bluetooth hardware scanner
 
 ## Validation and handoff
 
 - [x] Backend tests and vet pass
 - [x] Frontend type-check and production build pass
 - [x] Migration and Compose smoke tests pass
-- [ ] Phone device/browser evidence attached to Issue #6
+- [ ] Hardware scanner/device/browser evidence attached to Issue #6
 - [ ] Pull request reviewed
 - [ ] QA approval recorded
 - [ ] Approved changes merged

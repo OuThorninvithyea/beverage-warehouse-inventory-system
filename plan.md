@@ -281,7 +281,9 @@ refresh_tokens      — id, user_id, token_hash, expires_at
 
 ### Barcode Scan → Receive Flow
 ```
-[Camera/USB Scanner] → decode barcode → GET /api/products/by-barcode/{code}
+[USB/Bluetooth Hardware Scanner] → focused input + Enter → validate barcode
+  → GET /api/products/by-barcode/{code}
+  [Optional Phone Camera] ────────────────────────────────────────┘
   → Product found? No → "Unknown product" error
   → Yes → show product info → operator selects location + quantity
   → POST /api/movements/receive {product_id, warehouse_id, location_id, qty, lot_id?}
@@ -327,7 +329,8 @@ refresh_tokens      — id, user_id, token_hash, expires_at
 
 ## 6. Open Questions (to resolve before Phase 2)
 
-1. **Hardware:** USB barcode scanners (keyboard wedge — no code needed) or phone cameras only?
+1. **Hardware:** USB/Bluetooth barcode scanners use keyboard-wedge mode by
+   default; phone-camera scanning is optional.
 2. **Offline mode:** Does the warehouse need offline PWA support? If yes, add IndexedDB sync.
 3. **Mobile-first or desktop-first:** Floor staff on phones/tablets vs workstations?
 4. **SaaS or on-prem:** Multi-tenant SaaS vs single-company on-prem — affects auth, deployment, data isolation.

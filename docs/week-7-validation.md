@@ -30,8 +30,9 @@ npm run build     -> passed
 
 The barcode tests cover valid EAN-13, valid UPC-A, invalid checksums,
 unsupported lengths and non-digit input. The `/barcode-test` route supports
-camera capture, manual entry and USB keyboard-wedge input while explicitly
-preventing any inventory mutation.
+USB/Bluetooth keyboard-wedge input as the default, manual entry as fallback and
+camera capture as an optional method while explicitly preventing any inventory
+mutation.
 
 ## Docker and integrated API
 
@@ -65,5 +66,6 @@ The live smoke test used the frontend Nginx proxy and confirmed:
 
 The software side of the barcode test is complete. GitHub Issue #6 and the
 Week 6 review remain partially blocked until a real beverage barcode is scanned
-with a physical phone and the device/browser/value/screenshot evidence is
-recorded in `barcode-validation.md`.
+with a USB or Bluetooth hardware scanner and the
+scanner/device/browser/value/screenshot evidence is recorded in
+`barcode-validation.md`.

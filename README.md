@@ -64,10 +64,11 @@ Week 6 foundation work is implemented and Week 7 completes authentication:
 - The API response format is agreed.
 - ERD, wireframes, acceptance criteria and the QA plan are ready.
 - RS256 JWT login, rotating refresh tokens and four-role RBAC are working.
-- The barcode test route is ready for physical phone-camera evidence.
+- The barcode test route is hardware-scanner first and ready for physical
+  USB/Bluetooth scanner evidence. Phone-camera scanning is optional.
 
-The real beverage phone scan remains a manual evidence requirement and is not
-marked complete until the printed and captured barcode values are recorded.
+The real beverage hardware scan remains a manual evidence requirement and is
+not marked complete until the printed and captured barcode values are recorded.
 
 ## Documents
 
@@ -77,6 +78,6 @@ marked complete until the printed and captured barcode values are recorded.
 - `docs/requirements-traceability.md` — proposal-to-test traceability
 - `docs/qa-test-plan.md` — QA strategy and Week 6–7 acceptance tests
 - `docs/user-journeys-and-wireframes.md` — approved journeys and wireframes
-- `docs/barcode-validation.md` — scanner decision and phone evidence form
+- `docs/barcode-validation.md` — hardware-scanner decision and evidence form
 
 Do not commit secrets. Copy future `.env.example` files to `.env` locally and keep real credentials outside Git.
