@@ -3,6 +3,7 @@ package users
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -114,17 +115,18 @@ func TestUsersRoutesEnforceAdminOnlyAccess(t *testing.T) {
 	app, tokens := usersTestServer(t, trivialUsersService())
 
 	requests := []struct {
-		name   string
-		method string
-		path   string
-		body   string
+		name        string
+		method      string
+		path        string
+		body        string
+		adminStatus int
 	}{
-		{"list", http.MethodGet, "/api/v1/users", ""},
-		{"create", http.MethodPost, "/api/v1/users", `{"email":"a@bwims.test","full_name":"A","role":"picker","password":"at-least-12-chars"}`},
-		{"get", http.MethodGet, "/api/v1/users/11111111-1111-1111-1111-111111111111", ""},
-		{"update", http.MethodPut, "/api/v1/users/11111111-1111-1111-1111-111111111111", `{"full_name":"A","role":"picker","is_active":true}`},
-		{"deactivate", http.MethodDelete, "/api/v1/users/11111111-1111-1111-1111-111111111111", ""},
-		{"password-reset", http.MethodPost, "/api/v1/users/11111111-1111-1111-1111-111111111111/password-reset", `{"password":"at-least-12-chars"}`},
+		{"list", http.MethodGet, "/api/v1/users", "", fiber.StatusOK},
+		{"create", http.MethodPost, "/api/v1/users", `{"email":"a@bwims.test","full_name":"A","role":"picker","password":"at-least-12-chars"}`, fiber.StatusCreated},
+		{"get", http.MethodGet, "/api/v1/users/11111111-1111-1111-1111-111111111111", "", fiber.StatusOK},
+		{"update", http.MethodPut, "/api/v1/users/11111111-1111-1111-1111-111111111111", `{"full_name":"A","role":"picker","is_active":true}`, fiber.StatusOK},
+		{"deactivate", http.MethodDelete, "/api/v1/users/11111111-1111-1111-1111-111111111111", "", fiber.StatusNoContent},
+		{"password-reset", http.MethodPost, "/api/v1/users/11111111-1111-1111-1111-111111111111/password-reset", `{"password":"at-least-12-chars"}`, fiber.StatusNoContent},
 	}
 	roles := []string{auth.RoleAdmin, auth.RoleWarehouseManager, auth.RolePicker, auth.RoleViewer}
 
@@ -137,8 +139,8 @@ func TestUsersRoutesEnforceAdminOnlyAccess(t *testing.T) {
 				defer response.Body.Close()
 
 				if role == auth.RoleAdmin {
-					if response.StatusCode == fiber.StatusForbidden {
-						t.Fatalf("admin got 403 for %s %s, want non-403", req.method, req.path)
+					if response.StatusCode != req.adminStatus {
+						t.Fatalf("admin got %d for %s %s, want %d", response.StatusCode, req.method, req.path, req.adminStatus)
 					}
 				} else if response.StatusCode != fiber.StatusForbidden {
 					t.Fatalf("role %s got %d for %s %s, want 403", role, response.StatusCode, req.method, req.path)
@@ -200,5 +202,103 @@ func TestListUsersHandlerReturnsEnvelope(t *testing.T) {
 	body, _ := io.ReadAll(response.Body)
 	if !bytes.Contains(body, []byte(`"success":true`)) || !bytes.Contains(body, []byte(`"items":[]`)) {
 		t.Fatalf("body = %s, want success envelope with empty items", body)
+	}
+}
+
+func TestUsersHandlerMapsAllDomainErrors(t *testing.T) {
+	cases := []struct {
+		name       string
+		err        error
+		wantStatus int
+		wantCode   string
+	}{
+		{"invalid id", ErrInvalidID, fiber.StatusBadRequest, "INVALID_REQUEST"},
+		{"invalid cursor", ErrInvalidCursor, fiber.StatusBadRequest, "INVALID_REQUEST"},
+		{"forbidden", ErrForbidden, fiber.StatusForbidden, "FORBIDDEN"},
+		{"user not found", ErrUserNotFound, fiber.StatusNotFound, "USER_NOT_FOUND"},
+		{"warehouse not found", ErrWarehouseNotFound, fiber.StatusNotFound, "WAREHOUSE_NOT_FOUND"},
+		{"last admin protected", ErrLastAdminProtected, fiber.StatusConflict, "LAST_ADMIN_PROTECTED"},
+		{"invalid role", ErrInvalidRole, fiber.StatusUnprocessableEntity, "INVALID_ROLE"},
+		{"validation error", ErrValidation, fiber.StatusUnprocessableEntity, "VALIDATION_ERROR"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			service := &fakeHandlerService{
+				getFn: func(Actor, string) (User, error) { return User{}, tc.err },
+			}
+			app, tokens := usersTestServer(t, service)
+
+			response := authenticatedUsersRequest(t, app, tokens, auth.User{ID: "admin-1", Role: auth.RoleAdmin},
+				http.MethodGet, "/api/v1/users/11111111-1111-1111-1111-111111111111", "")
+			defer response.Body.Close()
+
+			if response.StatusCode != tc.wantStatus {
+				t.Fatalf("status = %d, want %d", response.StatusCode, tc.wantStatus)
+			}
+			body, _ := io.ReadAll(response.Body)
+			wantCodeField := []byte(`"code":"` + tc.wantCode + `"`)
+			if !bytes.Contains(body, wantCodeField) {
+				t.Fatalf("body = %s, want code %s", body, tc.wantCode)
+			}
+		})
+	}
+}
+
+func TestUsersHandlerHidesUnexpectedInternalErrors(t *testing.T) {
+	service := &fakeHandlerService{
+		getFn: func(Actor, string) (User, error) {
+			return User{}, errors.New("database password leaked: hunter2")
+		},
+	}
+	app, tokens := usersTestServer(t, service)
+
+	response := authenticatedUsersRequest(t, app, tokens, auth.User{ID: "admin-1", Role: auth.RoleAdmin},
+		http.MethodGet, "/api/v1/users/11111111-1111-1111-1111-111111111111", "")
+	defer response.Body.Close()
+
+	if response.StatusCode != fiber.StatusInternalServerError {
+		t.Fatalf("status = %d, want 500", response.StatusCode)
+	}
+	body, _ := io.ReadAll(response.Body)
+	if !bytes.Contains(body, []byte(`"code":"USER_OPERATION_FAILED"`)) {
+		t.Fatalf("body = %s, want USER_OPERATION_FAILED", body)
+	}
+	if bytes.Contains(body, []byte("hunter2")) || bytes.Contains(body, []byte("database password")) {
+		t.Fatalf("body = %s, must not leak internal error details", body)
+	}
+}
+
+func TestUsersHandlerRejectsMalformedInput(t *testing.T) {
+	app, tokens := usersTestServer(t, trivialUsersService())
+
+	cases := []struct {
+		name   string
+		method string
+		path   string
+		body   string
+	}{
+		{"non-numeric limit", http.MethodGet, "/api/v1/users?limit=abc", ""},
+		{"limit below range", http.MethodGet, "/api/v1/users?limit=0", ""},
+		{"limit above range", http.MethodGet, "/api/v1/users?limit=101", ""},
+		{"invalid is_active", http.MethodGet, "/api/v1/users?is_active=maybe", ""},
+		{"invalid cursor", http.MethodGet, "/api/v1/users?after=not-a-valid-cursor", ""},
+		{"malformed JSON body", http.MethodPost, "/api/v1/users", `{"email":`},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			response := authenticatedUsersRequest(t, app, tokens, auth.User{ID: "admin-1", Role: auth.RoleAdmin},
+				tc.method, tc.path, tc.body)
+			defer response.Body.Close()
+
+			if response.StatusCode != fiber.StatusBadRequest {
+				t.Fatalf("status = %d, want 400", response.StatusCode)
+			}
+			body, _ := io.ReadAll(response.Body)
+			if !bytes.Contains(body, []byte(`"code":"INVALID_REQUEST"`)) {
+				t.Fatalf("body = %s, want INVALID_REQUEST", body)
+			}
+		})
 	}
 }
