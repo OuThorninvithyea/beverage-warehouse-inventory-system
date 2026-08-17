@@ -10,7 +10,7 @@ not GitHub issue status.
 | --- | --- | --- | --- | --- | --- |
 | FR-1 | JWT authentication and refresh tokens | 2.1 | Week 7 auth module | Auth service and HTTP tests | Implemented |
 | FR-2 | Four-role RBAC | 2.1 | Week 7 auth module | Role middleware tests | Implemented |
-| FR-3 | Admin user management | 2.2 | Week 8 domain APIs | API integration tests | Planned |
+| FR-3 | Admin user management | 2.2 | Week 9 users module | Service, handler and PostgreSQL repository tests | Implemented |
 | FR-4 | Warehouse management | 2.2 | PRO-8 warehouse module | Service, handler and PostgreSQL repository tests | Implemented |
 | FR-5 | Hierarchical locations with barcodes | 1.2, 2.2 | PRO-8 warehouse module and `database-erd.md` | Migration, scoped CRUD and barcode-conflict tests | Implemented |
 | FR-6 | Product CRUD | 2.2 | PRO-9 catalog module | Service, handler and PostgreSQL lifecycle tests | Implemented |
