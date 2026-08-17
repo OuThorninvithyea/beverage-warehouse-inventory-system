@@ -370,6 +370,113 @@ inactive Product is unavailable through barcode lookup.
 | 422 | `VALIDATION_ERROR` | Required catalog data is missing or invalid |
 | 500 | `CATALOG_OPERATION_FAILED` | Unexpected operation failure |
 
+## Admin user management endpoints
+
+Every endpoint in this section requires a valid Bearer access token, and every
+endpoint — including reads — is restricted to the `admin` role. This is
+stricter than Catalog and Warehouse, where reads are open to all
+authenticated roles.
+
+### Access rules
+
+| Role | List/read users | Create/update/deactivate/reset password |
+| --- | --- | --- |
+| `admin` | Allowed | Allowed |
+| `warehouse_manager` | Forbidden | Forbidden |
+| `picker` | Forbidden | Forbidden |
+| `viewer` | Forbidden | Forbidden |
+
+### User routes
+
+| Method | Route | Result |
+| --- | --- | --- |
+| `GET` | `/api/v1/users` | List and search users; admin only |
+| `POST` | `/api/v1/users` | Create a user; admin only |
+| `GET` | `/api/v1/users/:user_id` | Read one user; admin only |
+| `PUT` | `/api/v1/users/:user_id` | Update a user; admin only |
+| `DELETE` | `/api/v1/users/:user_id` | Soft-deactivate a user; admin only |
+| `POST` | `/api/v1/users/:user_id/password-reset` | Admin sets a new password; admin only |
+
+Create request body:
+
+```json
+{
+  "email": "picker2@bwims.test",
+  "full_name": "New Picker",
+  "role": "picker",
+  "warehouse_id": null,
+  "password": "at-least-12-characters"
+}
+```
+
+`email` is required, trimmed, and compared case-insensitively against existing
+accounts. `full_name` is required and trimmed. `role` must be one of `admin`,
+`warehouse_manager`, `picker`, or `viewer`. `warehouse_id`, if supplied, must
+reference an existing, active warehouse. `password` is write-only, requires at
+least 12 characters, and is never returned in any response.
+
+Update request body (PUT is a full business-field replace; `warehouse_id` uses
+tri-state semantics — omit to keep the current value, send `null` to clear
+it, or send a UUID to replace it):
+
+```json
+{
+  "full_name": "New Picker Name",
+  "role": "picker",
+  "warehouse_id": null,
+  "is_active": true
+}
+```
+
+Email is not updatable through this endpoint in this slice.
+
+Password reset request body:
+
+```json
+{ "password": "at-least-12-characters" }
+```
+
+A successful `DELETE` or password reset returns `204 No Content` and
+immediately revokes every active refresh token for that user, forcing
+re-authentication.
+
+### List queries and response
+
+Accepts `limit` (1-100, default 20), `after` (opaque cursor), `search`
+(case-insensitive match across email and full name), `role`, `warehouse_id`,
+and `is_active`. Response shape matches Catalog and Warehouse:
+
+```json
+{
+  "success": true,
+  "data": {
+    "items": [],
+    "page": { "next_cursor": null, "has_more": false }
+  }
+}
+```
+
+### Deactivation, lockout protection, and errors
+
+Deactivating the sole active administrator, or updating the sole active
+administrator's role away from `admin`, is rejected with
+`LAST_ADMIN_PROTECTED`. An administrator can never deactivate or demote
+themselves — `SELF_DEACTIVATION_FORBIDDEN` — another administrator must do
+it; ordinary field updates and self password resets remain allowed.
+
+| HTTP status | Code | Meaning |
+| --- | --- | --- |
+| 400 | `INVALID_REQUEST` | Invalid JSON, UUID, filter, limit, or cursor |
+| 403 | `FORBIDDEN` | Caller is not `admin` |
+| 404 | `USER_NOT_FOUND` | User does not exist |
+| 404 | `WAREHOUSE_NOT_FOUND` | Supplied `warehouse_id` does not reference an active warehouse |
+| 409 | `EMAIL_CONFLICT` | Email already exists (case-insensitive) |
+| 409 | `LAST_ADMIN_PROTECTED` | Change would leave zero active administrators |
+| 409 | `SELF_DEACTIVATION_FORBIDDEN` | Admin cannot deactivate or demote themselves |
+| 422 | `INVALID_ROLE` | Role is not one of the four known role codes |
+| 422 | `VALIDATION_ERROR` | Required business data missing or invalid (e.g. password under 12 characters) |
+| 500 | `USER_OPERATION_FAILED` | Unexpected failure without storage details |
+
 ## Initial HTTP status policy
 
 | HTTP status | Usage |
