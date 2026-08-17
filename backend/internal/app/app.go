@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/OuThorninvithyea/beverage-warehouse-inventory-system/backend/internal/modules/auth"
+	"github.com/OuThorninvithyea/beverage-warehouse-inventory-system/backend/internal/modules/catalog"
 	"github.com/OuThorninvithyea/beverage-warehouse-inventory-system/backend/internal/modules/health"
 	"github.com/OuThorninvithyea/beverage-warehouse-inventory-system/backend/internal/modules/warehouse"
 	"github.com/OuThorninvithyea/beverage-warehouse-inventory-system/backend/internal/platform/config"
@@ -38,6 +39,10 @@ func New(cfg config.Config, db *pgxpool.Pool, appLogger *slog.Logger) (*fiber.Ap
 	authRepository := auth.NewPostgresRepository(db)
 	authService := auth.NewService(authRepository, tokenManager)
 	auth.RegisterRoutes(server, auth.NewHandler(authService), tokenManager)
+
+	catalogRepository := catalog.NewPostgresRepository(db)
+	catalogService := catalog.NewService(catalogRepository)
+	catalog.RegisterRoutes(server, catalog.NewHandler(catalogService), tokenManager)
 
 	warehouseRepository := warehouse.NewPostgresRepository(db)
 	warehouseService := warehouse.NewService(warehouseRepository)
