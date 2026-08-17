@@ -297,7 +297,49 @@ func (repository *PostgresRepository) UpdateUser(
 }
 
 func (repository *PostgresRepository) DeactivateUser(ctx context.Context, id string) error {
-	panic("not implemented until Task 8")
+	tx, err := repository.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin deactivate user: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	var roleCode string
+	var isActive bool
+	err = tx.QueryRow(ctx, `
+		SELECT r.code, u.is_active
+		FROM users u
+		JOIN roles r ON r.id = u.role_id
+		WHERE u.id = $1
+		FOR UPDATE OF u`, id,
+	).Scan(&roleCode, &isActive)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrUserNotFound
+	}
+	if err != nil {
+		return fmt.Errorf("lock user for deactivation: %w", err)
+	}
+
+	if roleCode == "admin" && isActive {
+		if err := requireMoreThanOneActiveAdmin(ctx, tx); err != nil {
+			return err
+		}
+	}
+
+	tag, err := tx.Exec(ctx, `UPDATE users SET is_active = FALSE, updated_at = NOW() WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("deactivate user: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrUserNotFound
+	}
+
+	if _, err := tx.Exec(ctx, `
+		UPDATE refresh_tokens SET revoked_at = NOW()
+		WHERE user_id = $1 AND revoked_at IS NULL`, id); err != nil {
+		return fmt.Errorf("revoke refresh tokens on deactivate: %w", err)
+	}
+
+	return tx.Commit(ctx)
 }
 
 func (repository *PostgresRepository) ResetPassword(ctx context.Context, id string, passwordHash string) error {

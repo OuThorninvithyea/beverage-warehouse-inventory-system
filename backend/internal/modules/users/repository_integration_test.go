@@ -123,4 +123,38 @@ func TestPostgresUsersLifecycle(t *testing.T) {
 	if updated.WarehouseID != nil || updated.Role != auth.RoleWarehouseManager || updated.FullName != "Picker One Updated" {
 		t.Fatalf("updated = %#v, want cleared warehouse, warehouse_manager role, new name", updated)
 	}
+
+	_, err = pool.Exec(ctx, `
+		INSERT INTO refresh_tokens (user_id, token_hash, expires_at)
+		VALUES ($1, $2, NOW() + interval '1 hour')`, admin1.ID, "test-hash-admin1-"+suffix)
+	if err != nil {
+		t.Fatalf("seed refresh token for admin1 error = %v", err)
+	}
+
+	admin2, err := repository.CreateUser(ctx, UserCreateInput{
+		Email: "admin2@" + emailDomain, FullName: "Admin Two", Role: auth.RoleAdmin,
+	}, passwordHash)
+	if err != nil {
+		t.Fatalf("CreateUser(admin2) error = %v", err)
+	}
+
+	if err := repository.DeactivateUser(ctx, admin1.ID); err != nil {
+		t.Fatalf("DeactivateUser(admin1) error = %v, want success (admin2 keeps one admin active)", err)
+	}
+
+	var admin1TokenRevoked *time.Time
+	if err := pool.QueryRow(ctx, `SELECT revoked_at FROM refresh_tokens WHERE user_id = $1`, admin1.ID).Scan(&admin1TokenRevoked); err != nil {
+		t.Fatalf("read admin1 refresh token error = %v", err)
+	}
+	if admin1TokenRevoked == nil {
+		t.Fatalf("admin1 refresh token was not revoked on deactivation")
+	}
+
+	if err := repository.DeactivateUser(ctx, admin2.ID); !errors.Is(err, ErrLastAdminProtected) {
+		t.Fatalf("deactivate sole remaining admin error = %v, want ErrLastAdminProtected", err)
+	}
+
+	if err := repository.DeactivateUser(ctx, missingWarehouse); !errors.Is(err, ErrUserNotFound) {
+		t.Fatalf("deactivate missing user error = %v, want ErrUserNotFound", err)
+	}
 }
