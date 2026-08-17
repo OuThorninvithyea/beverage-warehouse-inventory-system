@@ -256,6 +256,120 @@ the row.
 | 422 | `VALIDATION_ERROR` | Required business data is missing or invalid |
 | 500 | `WAREHOUSE_OPERATION_FAILED` | Unexpected operation failure |
 
+## Category, product, and barcode endpoints
+
+Every endpoint in this section requires a valid Bearer access token. Categories
+and Products are global catalog data rather than warehouse-scoped data.
+
+### Access rules
+
+| Role | Read, list, search, barcode lookup | Create, update, deactivate |
+| --- | --- | --- |
+| `admin` | Allowed | Allowed |
+| `warehouse_manager` | Allowed | Allowed |
+| `picker` | Allowed | Forbidden |
+| `viewer` | Allowed | Forbidden |
+
+### Category routes
+
+| Method | Route | Result |
+| --- | --- | --- |
+| `GET` | `/api/v1/categories` | List and search categories |
+| `POST` | `/api/v1/categories` | Create; admin or warehouse manager |
+| `GET` | `/api/v1/categories/:category_id` | Read one category |
+| `PUT` | `/api/v1/categories/:category_id` | Update; admin or warehouse manager |
+| `DELETE` | `/api/v1/categories/:category_id` | Soft-deactivate; admin or warehouse manager |
+
+Create or update body:
+
+```json
+{
+  "name": "Soft Drinks",
+  "parent_id": null,
+  "is_active": true
+}
+```
+
+`name` is required, trimmed, and unique without regard to letter case. A
+supplied `parent_id` must identify an active category and cannot create a
+hierarchy cycle. On update, omitting `parent_id` preserves the current parent;
+an explicit `null` clears it. Deactivation is rejected while an active child
+category or Product references the category.
+
+Category lists accept `limit`, `after`, `search`, `parent_id`, and `is_active`.
+
+### Product routes
+
+| Method | Route | Result |
+| --- | --- | --- |
+| `GET` | `/api/v1/products` | List and search Products |
+| `POST` | `/api/v1/products` | Create; admin or warehouse manager |
+| `GET` | `/api/v1/products/by-barcode/:barcode` | Exact active-Product barcode lookup |
+| `GET` | `/api/v1/products/:product_id` | Read one Product |
+| `PUT` | `/api/v1/products/:product_id` | Update; admin or warehouse manager |
+| `DELETE` | `/api/v1/products/:product_id` | Soft-deactivate; admin or warehouse manager |
+
+Create or update body:
+
+```json
+{
+  "category_id": "<uuid>",
+  "sku": "COKE-330-CAN",
+  "barcode": "4006381333931",
+  "name": "Coca-Cola 330 ml Can",
+  "unit": "case",
+  "is_lot_tracked": true,
+  "is_active": true
+}
+```
+
+`sku`, `name`, and `unit` are required. SKU is trimmed and normalized to
+uppercase; unit is trimmed and normalized to lowercase. SKU uniqueness is
+case-insensitive. `category_id` and `barcode` are optional. A supplied Category
+must be active. A supplied barcode must be a checksum-valid 12-digit UPC-A or
+13-digit EAN-13 value and must be globally unique. On create, `is_lot_tracked`
+and `is_active` default to `true`. On update, omitted booleans preserve their
+stored values. Omitting `category_id` or `barcode` on update preserves it;
+explicit `null` clears it.
+
+Product lists accept `limit`, `after`, `search`, `category_id`, and `is_active`.
+`search` performs case-insensitive matching across SKU, name, and barcode. All
+catalog lists use the same cursor response shape documented above, with a
+default limit of 20 and a maximum of 100.
+
+### Hardware barcode lookup
+
+The default USB/Bluetooth hardware scanner enters barcode digits like a
+keyboard and submits on Enter. The client sends the captured value to:
+
+`GET /api/v1/products/by-barcode/:barcode`
+
+The lookup validates the UPC-A/EAN-13 checksum before querying and returns only
+an active Product. It is read-only: it never creates a stock movement or
+changes inventory. Phone-camera scanning remains an optional client input
+method using the same endpoint.
+
+### Deactivation and errors
+
+`DELETE` sets `is_active=false` and returns HTTP 204. It is idempotent for an
+existing inactive resource. Inactive resources remain readable by ID, but an
+inactive Product is unavailable through barcode lookup.
+
+| HTTP status | Code | Meaning |
+| --- | --- | --- |
+| 400 | `INVALID_REQUEST` | Invalid JSON, UUID, filter, limit, or cursor |
+| 403 | `FORBIDDEN` | Role cannot mutate catalog data |
+| 404 | `CATEGORY_NOT_FOUND` | Category or requested parent does not exist |
+| 404 | `PRODUCT_NOT_FOUND` | Product or active barcode lookup does not exist |
+| 409 | `CATEGORY_NAME_CONFLICT` | Category name already exists |
+| 409 | `CATEGORY_IN_USE` | Active child or Product prevents deactivation |
+| 409 | `PRODUCT_SKU_CONFLICT` | Product SKU already exists |
+| 409 | `PRODUCT_BARCODE_CONFLICT` | Product barcode already exists |
+| 422 | `INVALID_BARCODE` | Barcode format or checksum is invalid |
+| 422 | `CATEGORY_CYCLE` | Parent change would create a hierarchy cycle |
+| 422 | `VALIDATION_ERROR` | Required catalog data is missing or invalid |
+| 500 | `CATALOG_OPERATION_FAILED` | Unexpected operation failure |
+
 ## Initial HTTP status policy
 
 | HTTP status | Usage |
