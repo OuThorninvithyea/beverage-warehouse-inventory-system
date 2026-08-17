@@ -118,13 +118,59 @@ func (service *service) GetUser(ctx context.Context, actor Actor, id string) (Us
 }
 
 func (service *service) UpdateUser(ctx context.Context, actor Actor, id string, input UserUpdateInput) (User, error) {
-	panic("not implemented until Task 11")
+	if !canManageUsers(actor.Role) {
+		return User{}, ErrForbidden
+	}
+	if !validUUID(id) {
+		return User{}, ErrInvalidID
+	}
+	input.FullName = strings.TrimSpace(input.FullName)
+	if input.FullName == "" {
+		return User{}, ErrValidation
+	}
+	if !isKnownRole(input.Role) {
+		return User{}, ErrInvalidRole
+	}
+	if input.WarehouseID.Set && input.WarehouseID.Value != nil && !validUUID(*input.WarehouseID.Value) {
+		return User{}, ErrInvalidID
+	}
+
+	selfTargeted := actor.ID == id
+	demoting := input.Role != auth.RoleAdmin
+	deactivating := input.IsActive != nil && !*input.IsActive
+	if selfTargeted && (demoting || deactivating) {
+		return User{}, ErrSelfDeactivationForbidden
+	}
+
+	return service.repository.UpdateUser(ctx, id, input)
 }
 
 func (service *service) DeactivateUser(ctx context.Context, actor Actor, id string) error {
-	panic("not implemented until Task 11")
+	if !canManageUsers(actor.Role) {
+		return ErrForbidden
+	}
+	if !validUUID(id) {
+		return ErrInvalidID
+	}
+	if actor.ID == id {
+		return ErrSelfDeactivationForbidden
+	}
+	return service.repository.DeactivateUser(ctx, id)
 }
 
 func (service *service) ResetPassword(ctx context.Context, actor Actor, id string, input PasswordResetInput) error {
-	panic("not implemented until Task 11")
+	if !canManageUsers(actor.Role) {
+		return ErrForbidden
+	}
+	if !validUUID(id) {
+		return ErrInvalidID
+	}
+	if len(input.Password) < 12 {
+		return ErrValidation
+	}
+	passwordHash, err := auth.HashPassword(input.Password)
+	if err != nil {
+		return ErrValidation
+	}
+	return service.repository.ResetPassword(ctx, id, passwordHash)
 }

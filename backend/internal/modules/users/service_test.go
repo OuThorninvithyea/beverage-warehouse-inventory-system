@@ -135,3 +135,131 @@ func TestListUsersAppliesDefaultAndOverflowLimit(t *testing.T) {
 		t.Fatalf("capturedLimit = %d, want 21 (default 20 + 1 overflow probe)", capturedLimit)
 	}
 }
+
+func TestUpdateUserRejectsSelfDeactivation(t *testing.T) {
+	service := NewService(&fakeRepository{})
+	actor := Actor{ID: "11111111-1111-1111-1111-111111111111", Role: auth.RoleAdmin}
+	inactive := false
+	_, err := service.UpdateUser(context.Background(), actor, actor.ID, UserUpdateInput{
+		FullName: "Admin", Role: auth.RoleAdmin, IsActive: &inactive,
+	})
+	if !errors.Is(err, ErrSelfDeactivationForbidden) {
+		t.Fatalf("err = %v, want ErrSelfDeactivationForbidden", err)
+	}
+}
+
+func TestUpdateUserRejectsSelfDemotion(t *testing.T) {
+	service := NewService(&fakeRepository{})
+	actor := Actor{ID: "11111111-1111-1111-1111-111111111111", Role: auth.RoleAdmin}
+	active := true
+	_, err := service.UpdateUser(context.Background(), actor, actor.ID, UserUpdateInput{
+		FullName: "Admin", Role: auth.RoleWarehouseManager, IsActive: &active,
+	})
+	if !errors.Is(err, ErrSelfDeactivationForbidden) {
+		t.Fatalf("err = %v, want ErrSelfDeactivationForbidden", err)
+	}
+}
+
+func TestUpdateUserAllowsSelfUpdateThatDoesNotDemoteOrDeactivate(t *testing.T) {
+	repo := &fakeRepository{
+		updateFn: func(id string, input UserUpdateInput) (User, error) {
+			return User{ID: id, FullName: input.FullName, Role: input.Role}, nil
+		},
+	}
+	service := NewService(repo)
+	actor := Actor{ID: "11111111-1111-1111-1111-111111111111", Role: auth.RoleAdmin}
+	active := true
+	_, err := service.UpdateUser(context.Background(), actor, actor.ID, UserUpdateInput{
+		FullName: "New Name", Role: auth.RoleAdmin, IsActive: &active,
+	})
+	if err != nil {
+		t.Fatalf("UpdateUser() error = %v, want nil for non-demoting self update", err)
+	}
+}
+
+func TestUpdateUserRejectsUnknownRole(t *testing.T) {
+	service := NewService(&fakeRepository{})
+	_, err := service.UpdateUser(context.Background(), adminActor(), "22222222-2222-2222-2222-222222222222", UserUpdateInput{
+		FullName: "A", Role: "supervisor",
+	})
+	if !errors.Is(err, ErrInvalidRole) {
+		t.Fatalf("err = %v, want ErrInvalidRole", err)
+	}
+}
+
+func TestUpdateUserPropagatesLastAdminProtection(t *testing.T) {
+	repo := &fakeRepository{
+		updateFn: func(string, UserUpdateInput) (User, error) { return User{}, ErrLastAdminProtected },
+	}
+	service := NewService(repo)
+	_, err := service.UpdateUser(context.Background(), adminActor(), "22222222-2222-2222-2222-222222222222", UserUpdateInput{
+		FullName: "A", Role: auth.RolePicker,
+	})
+	if !errors.Is(err, ErrLastAdminProtected) {
+		t.Fatalf("err = %v, want ErrLastAdminProtected", err)
+	}
+}
+
+func TestDeactivateUserRejectsSelfDeactivation(t *testing.T) {
+	service := NewService(&fakeRepository{})
+	actor := Actor{ID: "11111111-1111-1111-1111-111111111111", Role: auth.RoleAdmin}
+	err := service.DeactivateUser(context.Background(), actor, actor.ID)
+	if !errors.Is(err, ErrSelfDeactivationForbidden) {
+		t.Fatalf("err = %v, want ErrSelfDeactivationForbidden", err)
+	}
+}
+
+func TestDeactivateUserPropagatesLastAdminProtection(t *testing.T) {
+	repo := &fakeRepository{
+		deactivateFn: func(string) error { return ErrLastAdminProtected },
+	}
+	service := NewService(repo)
+	err := service.DeactivateUser(context.Background(), adminActor(), "22222222-2222-2222-2222-222222222222")
+	if !errors.Is(err, ErrLastAdminProtected) {
+		t.Fatalf("err = %v, want ErrLastAdminProtected", err)
+	}
+}
+
+func TestDeactivateUserRejectsNonAdmin(t *testing.T) {
+	service := NewService(&fakeRepository{})
+	err := service.DeactivateUser(context.Background(), Actor{ID: "x", Role: auth.RolePicker}, "22222222-2222-2222-2222-222222222222")
+	if !errors.Is(err, ErrForbidden) {
+		t.Fatalf("err = %v, want ErrForbidden", err)
+	}
+}
+
+func TestResetPasswordRejectsShortPassword(t *testing.T) {
+	service := NewService(&fakeRepository{})
+	err := service.ResetPassword(context.Background(), adminActor(), "22222222-2222-2222-2222-222222222222", PasswordResetInput{Password: "short"})
+	if !errors.Is(err, ErrValidation) {
+		t.Fatalf("err = %v, want ErrValidation", err)
+	}
+}
+
+func TestResetPasswordHashesBeforeCallingRepository(t *testing.T) {
+	var capturedHash string
+	repo := &fakeRepository{
+		resetFn: func(id string, hash string) error {
+			capturedHash = hash
+			return nil
+		},
+	}
+	service := NewService(repo)
+	err := service.ResetPassword(context.Background(), adminActor(), "22222222-2222-2222-2222-222222222222", PasswordResetInput{Password: "at-least-12-chars"})
+	if err != nil {
+		t.Fatalf("ResetPassword() error = %v", err)
+	}
+	if capturedHash == "" || capturedHash == "at-least-12-chars" {
+		t.Fatalf("capturedHash = %q, want a bcrypt hash", capturedHash)
+	}
+}
+
+func TestResetPasswordAllowsAdminToResetTheirOwnPassword(t *testing.T) {
+	repo := &fakeRepository{resetFn: func(string, string) error { return nil }}
+	service := NewService(repo)
+	actor := Actor{ID: "11111111-1111-1111-1111-111111111111", Role: auth.RoleAdmin}
+	err := service.ResetPassword(context.Background(), actor, actor.ID, PasswordResetInput{Password: "at-least-12-chars"})
+	if err != nil {
+		t.Fatalf("ResetPassword() error = %v, want nil (self password reset stays allowed)", err)
+	}
+}
