@@ -477,6 +477,119 @@ it; ordinary field updates and self password resets remain allowed.
 | 422 | `VALIDATION_ERROR` | Required business data missing or invalid (e.g. password under 12 characters) |
 | 500 | `USER_OPERATION_FAILED` | Unexpected failure without storage details |
 
+## Inventory and stock movement endpoints
+
+Every endpoint requires a valid Bearer access token. Reads are open to all
+four roles, scoped to the caller's assigned warehouse for non-admins (a
+non-admin token without an assigned `warehouse_id` receives `FORBIDDEN`).
+`admin` and `warehouse_manager` may receive, pick, transfer, and adjust;
+`picker` may receive and pick only; `viewer` may only read.
+
+### Balance and lot routes
+
+| Method | Route | Result |
+| --- | --- | --- |
+| `GET` | `/api/v1/inventory` | List balances; filters `location_id`, `product_id`, `warehouse_id`, `lot_id` |
+| `GET` | `/api/v1/inventory/products/:product_id/lots` | List lots for a product, FEFO order |
+
+### Movement write routes
+
+| Method | Route | Roles |
+| --- | --- | --- |
+| `POST` | `/api/v1/inventory/movements/receive` | admin, warehouse_manager, picker |
+| `POST` | `/api/v1/inventory/movements/pick` | admin, warehouse_manager, picker |
+| `POST` | `/api/v1/inventory/movements/transfer` | admin, warehouse_manager |
+| `POST` | `/api/v1/inventory/movements/adjust` | admin, warehouse_manager |
+| `GET` | `/api/v1/inventory/movements` | all authenticated roles |
+| `GET` | `/api/v1/inventory/movements/:movement_id` | all authenticated roles |
+
+Receive body:
+
+```json
+{
+  "location_id": "<uuid>", "product_id": "<uuid>",
+  "quantity": "50.000", "unit_cost": "1.2500",
+  "lot_number": "LOT-2026-08-18-A", "expiration_date": "2026-11-01",
+  "reference": "PO-1042", "notes": null
+}
+```
+
+`lot_number` is required when the product is lot-tracked, forbidden
+otherwise. Reusing an existing `(product_id, lot_number)` pair does not
+overwrite its stored `expiration_date`. Response:
+`{ "movement": {...}, "balance": {...} }`.
+
+Pick body:
+
+```json
+{
+  "location_id": "<uuid>", "product_id": "<uuid>", "quantity": "30.000",
+  "lot_id": null, "reference": "SO-2201", "notes": null
+}
+```
+
+`lot_id` omitted auto-selects lots by FEFO (earliest expiration first),
+splitting across lots as needed; a pick that cannot be fully satisfied
+fails atomically with `INSUFFICIENT_STOCK`. Response, since a pick can span
+multiple lots: `{ "movements": [...], "total_quantity": "30.000" }`.
+
+Transfer body:
+
+```json
+{
+  "product_id": "<uuid>", "lot_id": null, "quantity": "10.000",
+  "from_location_id": "<uuid>", "to_location_id": "<uuid>",
+  "reference": null, "notes": null
+}
+```
+
+`lot_id` is required when the product is lot-tracked. `from_location_id`
+must differ from `to_location_id`. Non-admins must have both locations
+inside their assigned warehouse. Response:
+`{ "movement": {...}, "source_balance": {...}, "destination_balance": {...} }`.
+
+Adjust body:
+
+```json
+{
+  "location_id": "<uuid>", "product_id": "<uuid>", "lot_id": null,
+  "direction": "increase", "quantity": "5.000", "notes": "cycle count"
+}
+```
+
+`direction` is `"increase"` or `"decrease"`. Adjustments never create
+`cost_layers` rows — an adjustment has no `unit_cost` input, so it cannot
+establish a real cost basis; it is a quantity-only audit correction.
+Response: `{ "movement": {...}, "balance": {...} }`.
+
+### List queries and response
+
+Balance and movement lists accept `limit` (1-100, default 20) and `after`
+(opaque cursor). Movement lists additionally accept `product_id`,
+`location_id` (matches either `from_location_id` or `to_location_id`),
+`movement_type`, and `from`/`to` (RFC3339 timestamps). Response shape
+matches every other module:
+
+```json
+{ "success": true, "data": { "items": [], "page": { "next_cursor": null, "has_more": false } } }
+```
+
+### Errors
+
+| HTTP status | Code | Meaning |
+| --- | --- | --- |
+| 400 | `INVALID_REQUEST` | Invalid JSON, UUID, filter, cursor, or limit |
+| 403 | `FORBIDDEN` | Role, or non-admin without/outside assigned warehouse |
+| 404 | `PRODUCT_NOT_FOUND` | Product does not exist or is inactive |
+| 404 | `LOCATION_NOT_FOUND` | Location does not exist |
+| 404 | `LOT_NOT_FOUND` | Referenced lot does not exist for the product |
+| 404 | `MOVEMENT_NOT_FOUND` | Movement does not exist |
+| 409 | `INSUFFICIENT_STOCK` | Not enough available quantity for pick/transfer/decrease |
+| 409 | `SAME_LOCATION_TRANSFER` | `from_location_id` equals `to_location_id` |
+| 422 | `WAREHOUSE_MISMATCH` | Non-admin location(s) fall outside their assigned warehouse |
+| 422 | `VALIDATION_ERROR` | Required business data missing/invalid |
+| 500 | `INVENTORY_OPERATION_FAILED` | Unexpected failure, including cost/balance ledger drift |
+
 ## Initial HTTP status policy
 
 | HTTP status | Usage |

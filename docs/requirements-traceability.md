@@ -17,16 +17,16 @@ not GitHub issue status.
 | FR-7 | Categories | 1.2, 2.2 | PRO-9 catalog module and `database-erd.md` | Hierarchy, cycle, conflict, RBAC and CRUD tests | Implemented |
 | FR-8 | Barcode product lookup | 1.4, 2.2 | PRO-9 barcode endpoint and `barcode-validation.md` | UPC-A/EAN-13 checksum, route-order and active lookup tests | Implemented |
 | FR-9 | Product search | 2.2 | PRO-9 catalog module | Search/filter and cursor-pagination tests | Implemented |
-| FR-10 | Inventory balances | 1.2, 3.1 | `inventory_balances` | Constraint and movement tests | Schema ready |
-| FR-11 | Lot and expiry tracking | 1.2, 3.1 | `lots` | Expiry ordering tests | Schema ready |
+| FR-10 | Inventory balances | 1.2, 3.1 | Week 9-10 inventory module | Repository and integration tests | Implemented |
+| FR-11 | Lot and expiry tracking | 1.2, 3.1 | Week 9-10 inventory module | Repository and integration tests | Implemented |
 | FR-12 | Expiry alerts | 4.2 | Week 11–12 reporting | Alert API tests | Planned |
-| FR-13 | Transactional receive | 3.1 | Week 9 inventory module | Transaction integration tests | Planned |
-| FR-14 | FEFO pick | 3.2 | Week 9–10 movement module | Mixed-lot ordering tests | Planned |
-| FR-15 | Transfer stock | 3.2 | Week 9–10 movement module | Atomic source/destination test | Planned |
-| FR-16 | Stock adjustment | 3.2 | Week 9–10 movement module | Reason and audit tests | Planned |
-| FR-17 | Movement history | 1.2, 3.6 | Immutable movement schema | Read and immutability tests | Schema ready |
-| FR-18 | FIFO cost layers | 1.2, 3.2 | `cost_layers` | Oldest-layer consumption tests | Schema ready |
-| FR-19 | Prevent expired-lot picking | 3.2 | Week 9–10 movement service | Boundary-date tests | Planned |
+| FR-13 | Transactional receive | 3.1 | Week 9-10 inventory module | Transaction integration tests | Implemented |
+| FR-14 | FEFO pick | 3.2 | Week 9-10 inventory module | Mixed-lot ordering tests | Implemented |
+| FR-15 | Transfer stock | 3.2 | Week 9-10 inventory module | Atomic source/destination test | Implemented |
+| FR-16 | Stock adjustment | 3.2 | Week 9-10 inventory module | Reason and audit tests | Implemented |
+| FR-17 | Movement history | 1.2, 3.6 | Immutable movement schema | Read and immutability tests | Implemented |
+| FR-18 | FIFO cost layers | 1.2, 3.2 | Week 9-10 inventory module | Oldest-layer consumption tests | Implemented |
+| FR-19 | Prevent expired-lot picking | 3.2 | Week 9-10 inventory module | Boundary-date tests | Partially implemented — FEFO ordering only, hard expired-lot block deferred, needs a product decision |
 | FR-20 | Barcode label generation | 4.1 | Week 11 barcode phase | Image response tests | Planned |
 | FR-21 | Phone-camera barcode scanning | 1.4, 4.1 | `/barcode-test` | Real device/browser evidence | Implementation ready |
 
