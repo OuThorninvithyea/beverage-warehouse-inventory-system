@@ -26,6 +26,16 @@ const router = createRouter({
           component: () => import('@/views/BarcodeTestView.vue'),
           meta: { public: true },
         },
+        {
+          path: 'warehouses',
+          name: 'warehouses',
+          component: () => import('@/views/WarehousesListView.vue'),
+        },
+        {
+          path: 'warehouses/:warehouseId',
+          name: 'warehouse-detail',
+          component: () => import('@/views/WarehouseDetailView.vue'),
+        },
       ],
     },
     {
