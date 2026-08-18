@@ -26,7 +26,7 @@ not GitHub issue status.
 | FR-16 | Stock adjustment | 3.2 | Week 9-10 inventory module | Reason and audit tests | Implemented |
 | FR-17 | Movement history | 1.2, 3.6 | Immutable movement schema | Read and immutability tests | Implemented |
 | FR-18 | FIFO cost layers | 1.2, 3.2 | Week 9-10 inventory module | Oldest-layer consumption tests | Implemented |
-| FR-19 | Prevent expired-lot picking | 3.2 | Week 9-10 inventory module | Boundary-date tests | Partially implemented — FEFO ordering only, hard expired-lot block deferred, needs a product decision |
+| FR-19 | Expired-lot picking policy | 3.2 | Week 9-10 inventory module | Boundary-date and audit-record tests | Implemented (policy revised) |
 | FR-20 | Barcode label generation | 4.1 | Week 11 barcode phase | Image response tests | Planned |
 | FR-21 | Phone-camera barcode scanning | 1.4, 4.1 | `/barcode-test` | Real device/browser evidence | Implementation ready |
 
@@ -53,3 +53,10 @@ not GitHub issue status.
   authenticated, validated and explicitly confirmed movement request.
 - The live Gantt chart, not the proposal's older phase numbering, controls the
   Week 6–15 delivery schedule.
+- FR-19 was originally titled "prevent expired-lot picking." On 2026-08-18 the
+  project owner explicitly changed this policy to "allow with an audit flag":
+  picking an already-expired lot succeeds (needed for disposal/internal-use
+  workflows) but writes an immutable `EXPIRED_LOT_PICK` entry to
+  `audit_records` for later review, rather than being silently permitted or
+  hard-blocked. The row name was updated to match; the original "prevent"
+  wording no longer reflects the implemented behavior.
