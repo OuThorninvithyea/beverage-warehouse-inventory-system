@@ -2,10 +2,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { apiRequest } from '@/api/client'
 import {
+  createLocation,
   createWarehouse,
+  deactivateLocation,
   deactivateWarehouse,
+  getLocation,
   getWarehouse,
+  listLocations,
   listWarehouses,
+  updateLocation,
   updateWarehouse,
 } from '@/api/warehouses'
 
@@ -59,5 +64,50 @@ describe('warehouses api', () => {
     expect(mockedApiRequest).toHaveBeenCalledWith('/warehouses/wh-1', {
       method: 'DELETE',
     })
+  })
+})
+
+describe('locations api', () => {
+  it('lists locations scoped to a warehouse', async () => {
+    await listLocations('wh-1', { is_pickable: true })
+    expect(mockedApiRequest).toHaveBeenCalledWith(
+      '/warehouses/wh-1/locations?is_pickable=true',
+    )
+  })
+
+  it('lists locations with no filters and no query string', async () => {
+    await listLocations('wh-1')
+    expect(mockedApiRequest).toHaveBeenCalledWith('/warehouses/wh-1/locations')
+  })
+
+  it('gets a single location', async () => {
+    await getLocation('wh-1', 'loc-1')
+    expect(mockedApiRequest).toHaveBeenCalledWith(
+      '/warehouses/wh-1/locations/loc-1',
+    )
+  })
+
+  it('creates a location scoped to a warehouse', async () => {
+    await createLocation('wh-1', { code: 'A-01' })
+    expect(mockedApiRequest).toHaveBeenCalledWith('/warehouses/wh-1/locations', {
+      method: 'POST',
+      body: JSON.stringify({ code: 'A-01' }),
+    })
+  })
+
+  it('updates a location', async () => {
+    await updateLocation('wh-1', 'loc-1', { code: 'A-02' })
+    expect(mockedApiRequest).toHaveBeenCalledWith(
+      '/warehouses/wh-1/locations/loc-1',
+      { method: 'PUT', body: JSON.stringify({ code: 'A-02' }) },
+    )
+  })
+
+  it('deactivates a location', async () => {
+    await deactivateLocation('wh-1', 'loc-1')
+    expect(mockedApiRequest).toHaveBeenCalledWith(
+      '/warehouses/wh-1/locations/loc-1',
+      { method: 'DELETE' },
+    )
   })
 })
