@@ -77,9 +77,17 @@ func setupFixture(t *testing.T) testFixture {
 		t.Fatalf("seed plain product error = %v", err)
 	}
 
+	// Deliberately not 'admin': stock_movements.performed_by will end up
+	// referencing this user, and stock_movements is append-only (see the
+	// stock_movements_immutable trigger), so this row can never actually be
+	// deleted once the test runs a movement. If it held the admin role it
+	// would permanently inflate the global active-admin count and silently
+	// break the users module's "last admin" invariant tests, which count
+	// admins across the whole table, not scoped to any one test's fixture
+	// (this exact failure mode was hit and diagnosed during development).
 	var roleID string
-	if err := pool.QueryRow(ctx, `SELECT id::text FROM roles WHERE code = 'admin'`).Scan(&roleID); err != nil {
-		t.Fatalf("look up admin role error = %v", err)
+	if err := pool.QueryRow(ctx, `SELECT id::text FROM roles WHERE code = 'picker'`).Scan(&roleID); err != nil {
+		t.Fatalf("look up picker role error = %v", err)
 	}
 	if err := pool.QueryRow(ctx, `
 		INSERT INTO users (role_id, email, password_hash, full_name, is_active)
@@ -89,16 +97,16 @@ func setupFixture(t *testing.T) testFixture {
 		t.Fatalf("seed actor user error = %v", err)
 	}
 
+	// Only cost_layers and inventory_balances are actually deletable here.
+	// stock_movements (and therefore any product/lot/location/user it
+	// references) is permanently retained by the append-only trigger — that
+	// is correct audit-trail behavior, not a cleanup bug, so this test
+	// database is expected to accumulate uniquely-suffixed rows across runs
+	// rather than being fully reset.
 	t.Cleanup(func() {
 		cleanupCtx := context.Background()
 		_, _ = pool.Exec(cleanupCtx, "DELETE FROM cost_layers WHERE product_id IN ($1, $2)", fixture.trackedProduct, fixture.plainProduct)
-		_, _ = pool.Exec(cleanupCtx, "DELETE FROM stock_movements WHERE product_id IN ($1, $2)", fixture.trackedProduct, fixture.plainProduct)
 		_, _ = pool.Exec(cleanupCtx, "DELETE FROM inventory_balances WHERE product_id IN ($1, $2)", fixture.trackedProduct, fixture.plainProduct)
-		_, _ = pool.Exec(cleanupCtx, "DELETE FROM lots WHERE product_id IN ($1, $2)", fixture.trackedProduct, fixture.plainProduct)
-		_, _ = pool.Exec(cleanupCtx, "DELETE FROM products WHERE id IN ($1, $2)", fixture.trackedProduct, fixture.plainProduct)
-		_, _ = pool.Exec(cleanupCtx, "DELETE FROM users WHERE id = $1", fixture.actorID)
-		_, _ = pool.Exec(cleanupCtx, "DELETE FROM locations WHERE warehouse_id = $1", fixture.warehouseID)
-		_, _ = pool.Exec(cleanupCtx, "DELETE FROM warehouses WHERE id = $1", fixture.warehouseID)
 	})
 
 	return fixture
