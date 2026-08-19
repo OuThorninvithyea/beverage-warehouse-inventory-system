@@ -27,14 +27,15 @@ async function signOut() {
 
       <nav aria-label="Primary navigation">
         <RouterLink to="/" class="nav-link">Dashboard</RouterLink>
+        <RouterLink to="/warehouses" class="nav-link">Warehouses</RouterLink>
         <RouterLink to="/barcode-test" class="nav-link">Barcode test</RouterLink>
         <span class="nav-link nav-link--disabled">Inventory</span>
         <span class="nav-link nav-link--disabled">Movements</span>
       </nav>
 
       <div class="sidebar-note">
-        <small>Week 6–7 foundation</small>
-        <span>Camera validation and authentication are the current milestone.</span>
+        <small>Week 11</small>
+        <span>Backend complete through inventory & movements. Warehouses is the first live frontend screen.</span>
       </div>
     </aside>
 

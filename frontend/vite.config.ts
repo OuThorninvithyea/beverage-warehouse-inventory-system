@@ -1,7 +1,7 @@
 import { fileURLToPath, URL } from 'node:url'
 
 import vue from '@vitejs/plugin-vue'
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
   plugins: [vue()],
@@ -18,5 +18,8 @@ export default defineConfig({
       '/health': 'http://localhost:8080',
       '/ready': 'http://localhost:8080',
     },
+  },
+  test: {
+    environment: 'jsdom',
   },
 })

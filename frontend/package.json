@@ -21,6 +21,8 @@
   "devDependencies": {
     "@types/node": "26.1.2",
     "@vitejs/plugin-vue": "6.0.8",
+    "@vue/test-utils": "^2.4.11",
+    "jsdom": "^30.0.1",
     "typescript": "6.0.2",
     "vite": "8.1.5",
     "vitest": "^4.1.10",
