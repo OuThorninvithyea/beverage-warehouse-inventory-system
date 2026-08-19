@@ -3,7 +3,6 @@ import Button from 'primevue/button'
 import Column from 'primevue/column'
 import DataTable from 'primevue/datatable'
 import InputText from 'primevue/inputtext'
-import Tag from 'primevue/tag'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
@@ -56,9 +55,9 @@ function openDetail(warehouse: Warehouse) {
 </script>
 
 <template>
-  <div class="page">
-    <div class="page-header">
-      <h1>Warehouses</h1>
+  <div class="flex flex-col gap-4">
+    <div class="flex items-center justify-between">
+      <h1 class="text-2xl font-semibold text-ink">Warehouses</h1>
       <Button
         v-if="canManageWarehouses"
         label="Add Warehouse"
@@ -71,43 +70,57 @@ function openDetail(warehouse: Warehouse) {
       v-model="search"
       placeholder="Search warehouses..."
       data-testid="warehouse-search"
-      class="search-field"
+      class="max-w-[320px]"
     />
 
-    <p v-if="store.error" class="error-banner" data-testid="warehouses-error">{{ store.error }}</p>
+    <p v-if="store.error" class="text-danger-text" data-testid="warehouses-error">{{ store.error }}</p>
 
     <DataTable
       v-else
       :value="store.warehouses"
       :loading="store.loading"
       data-key="id"
+      class="overflow-hidden rounded-[12px] border border-border"
       @row-click="(event: { data: Warehouse }) => openDetail(event.data)"
     >
       <template #empty>
         <p>No warehouses yet.</p>
       </template>
-      <Column field="code" header="Code" />
+      <Column field="code" header="Code">
+        <template #body="{ data }">
+          <span class="font-mono-code text-[0.85rem]">{{ data.code }}</span>
+        </template>
+      </Column>
       <Column field="name" header="Name" />
       <Column field="address" header="Address" />
       <Column header="Status">
         <template #body="{ data }">
-          <Tag :severity="data.is_active ? 'success' : 'danger'" :value="data.is_active ? 'Active' : 'Inactive'" />
+          <span
+            class="rounded-badge px-2 py-1 text-xs font-medium"
+            :class="data.is_active ? 'bg-success-bg text-success-text' : 'bg-danger-bg text-danger-text'"
+          >{{ data.is_active ? 'Active' : 'Inactive' }}</span>
         </template>
       </Column>
       <Column v-if="canManageWarehouses" header="Actions">
         <template #body="{ data }">
           <Button
-            label="Edit"
+            icon="pi pi-pencil"
             size="small"
             severity="secondary"
+            text
+            rounded
+            aria-label="Edit warehouse"
             data-testid="edit-warehouse"
             @click.stop="openEditDialog(data)"
           />
           <Button
             v-if="data.is_active"
-            label="Deactivate"
+            icon="pi pi-ban"
             size="small"
             severity="danger"
+            text
+            rounded
+            aria-label="Deactivate warehouse"
             data-testid="deactivate-warehouse"
             @click.stop="deactivate(data)"
           />
@@ -126,22 +139,3 @@ function openDetail(warehouse: Warehouse) {
     <WarehouseFormDialog v-model:visible="dialogVisible" :warehouse="editingWarehouse" />
   </div>
 </template>
-
-<style scoped>
-.page {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-.page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.search-field {
-  max-width: 320px;
-}
-.error-banner {
-  color: var(--p-red-600, #dc2626);
-}
-</style>

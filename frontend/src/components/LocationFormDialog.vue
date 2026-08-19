@@ -123,38 +123,38 @@ async function submit() {
     :header="isEdit ? 'Edit location' : 'Add location'"
     @update:visible="(value: boolean) => emit('update:visible', value)"
   >
-    <div class="form-field">
+    <div class="mb-4 flex flex-col gap-1">
       <label for="location-code">Code</label>
       <InputText id="location-code" v-model="form.code" :invalid="codeError !== null" />
       <Message v-if="codeError" severity="error" size="small" variant="simple">{{ codeError }}</Message>
     </div>
-    <div class="form-field">
+    <div class="mb-4 flex flex-col gap-1">
       <label for="location-zone">Zone</label>
       <InputText id="location-zone" v-model="form.zone" />
     </div>
-    <div class="form-field">
+    <div class="mb-4 flex flex-col gap-1">
       <label for="location-aisle">Aisle</label>
       <InputText id="location-aisle" v-model="form.aisle" />
     </div>
-    <div class="form-field">
+    <div class="mb-4 flex flex-col gap-1">
       <label for="location-rack">Rack</label>
       <InputText id="location-rack" v-model="form.rack" />
     </div>
-    <div class="form-field">
+    <div class="mb-4 flex flex-col gap-1">
       <label for="location-shelf">Shelf</label>
       <InputText id="location-shelf" v-model="form.shelf" />
     </div>
-    <div class="form-field">
+    <div class="mb-4 flex flex-col gap-1">
       <label for="location-barcode">Barcode</label>
       <InputText id="location-barcode" v-model="form.barcode" :invalid="barcodeError !== null" />
       <Message v-if="barcodeError" severity="error" size="small" variant="simple">{{ barcodeError }}</Message>
       <small v-else-if="barcodeHint" data-testid="barcode-hint">{{ barcodeHint }}</small>
     </div>
-    <div class="form-field form-field--inline">
+    <div class="mb-4 flex flex-row items-center gap-3">
       <label for="location-pickable">Pickable</label>
       <ToggleSwitch id="location-pickable" v-model="form.is_pickable" />
     </div>
-    <div class="form-field form-field--inline">
+    <div class="mb-4 flex flex-row items-center gap-3">
       <label for="location-active">Active</label>
       <ToggleSwitch id="location-active" v-model="form.is_active" />
     </div>
@@ -165,17 +165,3 @@ async function submit() {
     </template>
   </Dialog>
 </template>
-
-<style scoped>
-.form-field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-bottom: 16px;
-}
-.form-field--inline {
-  flex-direction: row;
-  align-items: center;
-  gap: 12px;
-}
-</style>

@@ -102,20 +102,20 @@ onBeforeUnmount(stopScanner)
 
 <template>
   <section>
-    <div class="page-heading">
+    <div class="mb-6 flex items-start justify-between">
       <div>
-        <span class="status-pill">Week 6 device test</span>
-        <h1>Barcode camera validation</h1>
-        <p>Decode and validate a barcode without changing inventory.</p>
+        <span class="inline-flex rounded-full bg-[#dff8eb] px-[0.65rem] py-[0.35rem] text-[0.8rem] font-bold text-[#176c43]">Week 6 device test</span>
+        <h1 class="mb-[0.35rem] mt-3 text-[clamp(1.8rem,4vw,2.6rem)]">Barcode camera validation</h1>
+        <p class="m-0 text-brand-muted">Decode and validate a barcode without changing inventory.</p>
       </div>
     </div>
 
-    <div class="scanner-grid">
+    <div class="grid grid-cols-2 gap-4 max-[800px]:grid-cols-1">
       <Card>
         <template #title>Camera scanner</template>
         <template #content>
-          <div class="scanner-panel">
-            <video ref="video" class="scanner-video" muted playsinline />
+          <div class="grid gap-[0.85rem]">
+            <video ref="video" class="min-h-[280px] w-full rounded-[12px] bg-[#091a2d] object-cover" muted playsinline />
 
             <label for="camera">Camera</label>
             <Select
@@ -128,7 +128,7 @@ onBeforeUnmount(stopScanner)
               :disabled="scanning"
             />
 
-            <div class="button-row">
+            <div class="flex flex-wrap gap-[0.65rem]">
               <Button v-if="!scanning" label="Start camera" @click="startScanner" />
               <Button
                 v-else
@@ -156,7 +156,7 @@ onBeforeUnmount(stopScanner)
       <Card>
         <template #title>Captured value</template>
         <template #content>
-          <div class="scanner-panel">
+          <div class="grid gap-[0.85rem]">
             <label for="manual-barcode">Manual or USB scanner input</label>
             <InputText
               id="manual-barcode"
@@ -173,9 +173,9 @@ onBeforeUnmount(stopScanner)
               @click="useManualValue"
             />
 
-            <div v-if="candidate" class="barcode-result">
+            <div v-if="candidate" class="grid gap-[0.4rem] rounded-[12px] bg-brand-surface p-4">
               <small>Captured barcode</small>
-              <strong>{{ validation.normalized }}</strong>
+              <strong class="[overflow-wrap:anywhere] text-[1.4rem] tracking-[0.08em] text-brand-navy">{{ validation.normalized }}</strong>
               <Message :severity="validation.valid ? 'success' : 'warn'">
                 {{ validation.message }}
               </Message>
