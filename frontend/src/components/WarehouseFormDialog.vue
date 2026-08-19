@@ -99,21 +99,21 @@ async function submit() {
     :header="isEdit ? 'Edit warehouse' : 'Add warehouse'"
     @update:visible="(value: boolean) => emit('update:visible', value)"
   >
-    <div class="form-field">
+    <div class="mb-4 flex flex-col gap-1">
       <label for="warehouse-code">Code</label>
       <InputText id="warehouse-code" v-model="form.code" :invalid="codeError !== null" />
       <Message v-if="codeError" severity="error" size="small" variant="simple">{{ codeError }}</Message>
     </div>
-    <div class="form-field">
+    <div class="mb-4 flex flex-col gap-1">
       <label for="warehouse-name">Name</label>
       <InputText id="warehouse-name" v-model="form.name" :invalid="nameError !== null" />
       <Message v-if="nameError" severity="error" size="small" variant="simple">{{ nameError }}</Message>
     </div>
-    <div class="form-field">
+    <div class="mb-4 flex flex-col gap-1">
       <label for="warehouse-address">Address</label>
       <InputText id="warehouse-address" v-model="form.address" />
     </div>
-    <div class="form-field form-field--inline">
+    <div class="mb-4 flex flex-row items-center gap-3">
       <label for="warehouse-active">Active</label>
       <ToggleSwitch id="warehouse-active" v-model="form.is_active" />
     </div>
@@ -124,17 +124,3 @@ async function submit() {
     </template>
   </Dialog>
 </template>
-
-<style scoped>
-.form-field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-bottom: 16px;
-}
-.form-field--inline {
-  flex-direction: row;
-  align-items: center;
-  gap: 12px;
-}
-</style>

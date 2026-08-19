@@ -11,6 +11,7 @@ import WarehouseDetailView from '@/views/WarehouseDetailView.vue'
 vi.mock('@/api/warehouses')
 vi.mock('vue-router', () => ({
   useRoute: () => ({ params: { warehouseId: 'wh-1' } }),
+  RouterLink: { template: '<a><slot /></a>' },
 }))
 
 const sampleWarehouse: warehousesApi.Warehouse = {

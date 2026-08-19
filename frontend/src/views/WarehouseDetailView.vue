@@ -2,9 +2,8 @@
 import Button from 'primevue/button'
 import Column from 'primevue/column'
 import DataTable from 'primevue/datatable'
-import Tag from 'primevue/tag'
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { RouterLink, useRoute } from 'vue-router'
 
 import type { Location, Warehouse } from '@/api/warehouses'
 import { getWarehouse } from '@/api/warehouses'
@@ -69,13 +68,22 @@ function handleWarehouseSaved() {
 </script>
 
 <template>
-  <div class="page">
-    <p v-if="warehouseError" class="error-banner" data-testid="warehouse-error">{{ warehouseError }}</p>
+  <div class="flex flex-col gap-4">
+    <p v-if="warehouseError" class="text-danger-text" data-testid="warehouse-error">{{ warehouseError }}</p>
     <template v-else-if="warehouse">
-      <div class="page-header">
+      <nav class="text-sm text-ink-faint">
+        <RouterLink to="/warehouses" class="hover:underline">Warehouses</RouterLink>
+        <span class="mx-1">›</span>
+        <span class="text-ink">{{ warehouse.name }}</span>
+      </nav>
+
+      <div class="flex items-center justify-between">
         <div>
-          <h1>{{ warehouse.name }}</h1>
-          <p>{{ warehouse.code }} · {{ warehouse.address ?? 'No address on file' }}</p>
+          <h1 class="text-2xl font-semibold text-ink">{{ warehouse.name }}</h1>
+          <p class="text-ink-muted">
+            <span class="font-mono-code">{{ warehouse.code }}</span>
+            · {{ warehouse.address ?? 'No address on file' }}
+          </p>
         </div>
         <Button
           v-if="canManageWarehouses"
@@ -85,8 +93,13 @@ function handleWarehouseSaved() {
         />
       </div>
 
-      <div class="page-header">
-        <h2>Locations</h2>
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <h2 class="text-lg font-semibold text-ink">Locations</h2>
+          <span class="rounded-full bg-surface px-2 py-0.5 text-xs font-medium text-ink-faint">
+            {{ store.locations.length }} shown
+          </span>
+        </div>
         <Button
           v-if="canManageLocations"
           label="Add Location"
@@ -95,43 +108,70 @@ function handleWarehouseSaved() {
         />
       </div>
 
-      <p v-if="store.locationsError" class="error-banner" data-testid="locations-error">
+      <p v-if="store.locationsError" class="text-danger-text" data-testid="locations-error">
         {{ store.locationsError }}
       </p>
-      <DataTable v-else :value="store.locations" :loading="store.locationsLoading" data-key="id">
+      <DataTable
+        v-else
+        :value="store.locations"
+        :loading="store.locationsLoading"
+        data-key="id"
+        class="overflow-hidden rounded-[12px] border border-border"
+      >
         <template #empty>
           <p>No locations yet.</p>
         </template>
-        <Column field="code" header="Code" />
+        <Column field="code" header="Location code">
+          <template #body="{ data }">
+            <span class="font-mono-code text-[0.85rem]">{{ data.code }}</span>
+          </template>
+        </Column>
         <Column field="zone" header="Zone" />
         <Column field="aisle" header="Aisle" />
         <Column field="rack" header="Rack" />
         <Column field="shelf" header="Shelf" />
-        <Column field="barcode" header="Barcode" />
+        <Column field="barcode" header="Barcode">
+          <template #body="{ data }">
+            <span v-if="data.barcode" class="font-mono-code text-[0.85rem]">{{ data.barcode }}</span>
+            <span v-else class="text-ink-faint">—</span>
+          </template>
+        </Column>
         <Column header="Pickable">
           <template #body="{ data }">
-            <Tag :severity="data.is_pickable ? 'info' : 'secondary'" :value="data.is_pickable ? 'Yes' : 'No'" />
+            <span
+              class="rounded-badge px-2 py-1 text-xs font-medium"
+              :class="data.is_pickable ? 'bg-success-bg text-success-text' : 'bg-danger-bg text-danger-text'"
+            >{{ data.is_pickable ? 'Yes' : 'No' }}</span>
           </template>
         </Column>
         <Column header="Status">
           <template #body="{ data }">
-            <Tag :severity="data.is_active ? 'success' : 'danger'" :value="data.is_active ? 'Active' : 'Inactive'" />
+            <span
+              class="rounded-badge px-2 py-1 text-xs font-medium"
+              :class="data.is_active ? 'bg-success-bg text-success-text' : 'bg-danger-bg text-danger-text'"
+            >{{ data.is_active ? 'Active' : 'Inactive' }}</span>
           </template>
         </Column>
         <Column v-if="canManageLocations" header="Actions">
           <template #body="{ data }">
             <Button
-              label="Edit"
+              icon="pi pi-pencil"
               size="small"
               severity="secondary"
+              text
+              rounded
+              aria-label="Edit location"
               data-testid="edit-location"
               @click="openEditLocationDialog(data)"
             />
             <Button
               v-if="data.is_active"
-              label="Deactivate"
+              icon="pi pi-ban"
               size="small"
               severity="danger"
+              text
+              rounded
+              aria-label="Deactivate location"
               data-testid="deactivate-location"
               @click="deactivateLocationRow(data)"
             />
@@ -160,19 +200,3 @@ function handleWarehouseSaved() {
     </template>
   </div>
 </template>
-
-<style scoped>
-.page {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-.page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.error-banner {
-  color: var(--p-red-600, #dc2626);
-}
-</style>

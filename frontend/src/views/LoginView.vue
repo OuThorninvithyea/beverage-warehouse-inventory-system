@@ -33,16 +33,19 @@ async function submit() {
 </script>
 
 <template>
-  <main class="auth-page">
-    <Card class="login-card">
+  <main
+    class="grid min-h-screen place-items-center content-center bg-brand-navy p-6"
+    style="background-image: radial-gradient(circle at top left, rgb(255 189 89 / 35%), transparent 35%)"
+  >
+    <Card class="w-full max-w-[430px]">
       <template #title>Welcome to BWIMS</template>
       <template #subtitle>Use your assigned warehouse account</template>
       <template #content>
-        <form class="login-form" @submit.prevent="submit">
-          <label for="email">Email address</label>
+        <form class="grid gap-3" @submit.prevent="submit">
+          <label for="email" class="mt-[0.4rem] font-[650]">Email address</label>
           <InputText id="email" v-model="email" type="email" autocomplete="email" />
 
-          <label for="password">Password</label>
+          <label for="password" class="mt-[0.4rem] font-[650]">Password</label>
           <InputText
             id="password"
             v-model="password"
@@ -57,7 +60,7 @@ async function submit() {
             :loading="auth.loading"
             :disabled="!email.trim() || !password"
           />
-          <small>Access is controlled by your admin, manager, picker or viewer role.</small>
+          <small class="text-center text-brand-muted">Access is controlled by your admin, manager, picker or viewer role.</small>
         </form>
       </template>
     </Card>
