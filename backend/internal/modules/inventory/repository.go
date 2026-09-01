@@ -2,6 +2,7 @@ package inventory
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -333,9 +334,10 @@ func (r *PostgresRepository) Pick(ctx context.Context, actorID string, actorWare
 	}
 
 	type candidate struct {
-		BalanceID string
-		LotID     *string
-		Available decimal.Decimal
+		BalanceID  string
+		LotID      *string
+		Available  decimal.Decimal
+		ExpiredLot bool
 	}
 	var candidates []candidate
 
@@ -344,12 +346,15 @@ func (r *PostgresRepository) Pick(ctx context.Context, actorID string, actorWare
 			return nil, err
 		}
 		var id, availableText string
+		var expiredLot bool
 		err := tx.QueryRow(ctx, `
-			SELECT id::text, (quantity - reserved_quantity)::text
-			FROM inventory_balances
-			WHERE location_id = $1 AND product_id = $2 AND lot_id = $3
-			FOR UPDATE`, input.LocationID, input.ProductID, *input.LotID.Value,
-		).Scan(&id, &availableText)
+			SELECT b.id::text, (b.quantity - b.reserved_quantity)::text,
+			       (l.expiration_date IS NOT NULL AND l.expiration_date < CURRENT_DATE)
+			FROM inventory_balances b
+			LEFT JOIN lots l ON l.id = b.lot_id
+			WHERE b.location_id = $1 AND b.product_id = $2 AND b.lot_id = $3
+			FOR UPDATE OF b`, input.LocationID, input.ProductID, *input.LotID.Value,
+		).Scan(&id, &availableText, &expiredLot)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrInsufficientStock
 		}
@@ -360,10 +365,11 @@ func (r *PostgresRepository) Pick(ctx context.Context, actorID string, actorWare
 		if err != nil {
 			return nil, fmt.Errorf("parse pick balance available quantity: %w", err)
 		}
-		candidates = append(candidates, candidate{BalanceID: id, LotID: input.LotID.Value, Available: available})
+		candidates = append(candidates, candidate{BalanceID: id, LotID: input.LotID.Value, Available: available, ExpiredLot: expiredLot})
 	} else {
 		rows, err := tx.Query(ctx, `
-			SELECT b.id::text, b.lot_id::text, (b.quantity - b.reserved_quantity)::text
+			SELECT b.id::text, b.lot_id::text, (b.quantity - b.reserved_quantity)::text,
+			       (l.expiration_date IS NOT NULL AND l.expiration_date < CURRENT_DATE)
 			FROM inventory_balances b
 			LEFT JOIN lots l ON l.id = b.lot_id
 			WHERE b.location_id = $1 AND b.product_id = $2
@@ -376,7 +382,7 @@ func (r *PostgresRepository) Pick(ctx context.Context, actorID string, actorWare
 		for rows.Next() {
 			var c candidate
 			var availableText string
-			if err := rows.Scan(&c.BalanceID, &c.LotID, &availableText); err != nil {
+			if err := rows.Scan(&c.BalanceID, &c.LotID, &availableText, &c.ExpiredLot); err != nil {
 				rows.Close()
 				return nil, fmt.Errorf("scan pick candidate: %w", err)
 			}
@@ -417,6 +423,11 @@ func (r *PostgresRepository) Pick(ctx context.Context, actorID string, actorWare
 		if err != nil {
 			return nil, err
 		}
+		if c.ExpiredLot {
+			if err := recordExpiredLotPick(ctx, tx, actorID, movement); err != nil {
+				return nil, err
+			}
+		}
 		movements = append(movements, movement)
 		remaining = remaining.Sub(take)
 	}
@@ -433,6 +444,32 @@ func (r *PostgresRepository) Pick(ctx context.Context, actorID string, actorWare
 		return nil, fmt.Errorf("commit pick: %w", err)
 	}
 	return movements, nil
+}
+
+// recordExpiredLotPick writes an append-only audit_records entry when a pick
+// draws from a lot whose expiration_date has already passed. Picking expired
+// stock is allowed (FR-19: allow-with-audit-flag, a deliberate product
+// decision — not blocked and not silent), so this never fails the pick
+// itself; it only fails the whole transaction if the audit write itself
+// errors, which would indicate a real problem worth surfacing.
+func recordExpiredLotPick(ctx context.Context, tx pgx.Tx, actorID string, movement Movement) error {
+	afterState, err := json.Marshal(map[string]any{
+		"movement_id": movement.ID,
+		"product_id":  movement.ProductID,
+		"lot_id":      movement.LotID,
+		"location_id": movement.FromLocationID,
+		"quantity":    movement.Quantity,
+	})
+	if err != nil {
+		return fmt.Errorf("marshal expired lot pick audit payload: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO audit_records (actor_user_id, action, entity_type, entity_id, after_state)
+		VALUES ($1, 'EXPIRED_LOT_PICK', 'stock_movements', $2, $3::jsonb)`,
+		actorID, movement.ID, afterState); err != nil {
+		return fmt.Errorf("record expired lot pick audit: %w", err)
+	}
+	return nil
 }
 
 func consumeCostLayers(ctx context.Context, tx pgx.Tx, warehouseID, productID string, quantity decimal.Decimal) error {
