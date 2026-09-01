@@ -330,4 +330,58 @@ func TestPostgresInventoryLifecycle(t *testing.T) {
 	if _, err := repository.GetMovement(ctx, missingMovement); !errors.Is(err, ErrMovementNotFound) {
 		t.Fatalf("GetMovement(missing) error = %v, want ErrMovementNotFound", err)
 	}
+
+	// --- FR-19: picking an already-expired lot is allowed, but flagged ---
+
+	_, _, err = repository.Receive(ctx, fixture.actorID, nil, ReceiveInput{
+		LocationID: fixture.locationBID, ProductID: fixture.trackedProduct,
+		Quantity: "10.000", UnitCost: "1.0000",
+		LotNumber:      OptionalString{Set: true, Value: strPointer("LOT-ALREADY-EXPIRED")},
+		ExpirationDate: OptionalString{Set: true, Value: strPointer("2020-01-01")},
+	})
+	if err != nil {
+		t.Fatalf("Receive(expired lot) error = %v", err)
+	}
+
+	expiredPickMovements, err := repository.Pick(ctx, fixture.actorID, nil, PickInput{
+		LocationID: fixture.locationBID, ProductID: fixture.trackedProduct, Quantity: "4.000",
+	})
+	if err != nil {
+		t.Fatalf("Pick(expired lot) error = %v, want success (FR-19 allows it with an audit flag)", err)
+	}
+	if len(expiredPickMovements) != 1 {
+		t.Fatalf("len(expiredPickMovements) = %d, want 1", len(expiredPickMovements))
+	}
+
+	var auditCount int
+	var auditAction, auditEntityType string
+	if err := fixture.pool.QueryRow(ctx, `
+		SELECT COUNT(*), MAX(action), MAX(entity_type) FROM audit_records
+		WHERE entity_id = $1`, expiredPickMovements[0].ID,
+	).Scan(&auditCount, &auditAction, &auditEntityType); err != nil {
+		t.Fatalf("query audit_records error = %v", err)
+	}
+	if auditCount != 1 {
+		t.Fatalf("auditCount = %d, want 1 audit_records row for the expired-lot pick", auditCount)
+	}
+	if auditAction != "EXPIRED_LOT_PICK" || auditEntityType != "stock_movements" {
+		t.Fatalf("audit action/entity_type = %s/%s, want EXPIRED_LOT_PICK/stock_movements", auditAction, auditEntityType)
+	}
+
+	// A non-expired pick must not create an audit_records row.
+	nonExpiredPickMovements, err := repository.Pick(ctx, fixture.actorID, nil, PickInput{
+		LocationID: fixture.locationAID, ProductID: fixture.plainProduct, Quantity: "1.000",
+	})
+	if err != nil {
+		t.Fatalf("Pick(non-expired) error = %v", err)
+	}
+	var nonExpiredAuditCount int
+	if err := fixture.pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM audit_records WHERE entity_id = $1`, nonExpiredPickMovements[0].ID,
+	).Scan(&nonExpiredAuditCount); err != nil {
+		t.Fatalf("query audit_records error = %v", err)
+	}
+	if nonExpiredAuditCount != 0 {
+		t.Fatalf("nonExpiredAuditCount = %d, want 0 (no false-positive audit flag)", nonExpiredAuditCount)
+	}
 }

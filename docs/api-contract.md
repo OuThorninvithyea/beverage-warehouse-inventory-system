@@ -533,6 +533,11 @@ splitting across lots as needed; a pick that cannot be fully satisfied
 fails atomically with `INSUFFICIENT_STOCK`. Response, since a pick can span
 multiple lots: `{ "movements": [...], "total_quantity": "30.000" }`.
 
+Picking a lot whose `expiration_date` has already passed is allowed, not
+blocked — it writes an immutable `EXPIRED_LOT_PICK` entry to
+`audit_records` (not returned in the pick response) for later review,
+rather than either silently permitting it or hard-rejecting it.
+
 Transfer body:
 
 ```json
