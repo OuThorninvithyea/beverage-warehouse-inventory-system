@@ -71,9 +71,11 @@ marked complete until the printed and captured barcode values are recorded.
 
 ## Documents
 
-- `Beverage_Warehouse_Proposal.pdf` — project proposal
-- `beverage_standalone.html` and `proposal.html` — proposal source/export versions
+- **[Project proposal](https://docs.google.com/document/d/1W3RpMaMu07kcW5PqxLLBuAT0Cw50cq0zI_7JEYpf2Mw/edit)** (Google Doc) — the single source of truth for the proposal, actively maintained. Also links to the [live Gantt chart](https://docs.google.com/spreadsheets/d/1jtSXGVpynfIRKzefgZDE0ybNN0OM2ZWCEsSwv1-Hs9I/edit).
+- `docs/archive/` — an early standalone draft of the proposal (PDF/HTML export, budget and barcode-approach sections have since been revised in the Google Doc above) and the generic proposal-format template. Kept for history only — do not treat as current.
 - `plan.md` — detailed technical backlog
+- `docs/deployment-guide.md` — how to run and deploy BWIMS
+- `docs/final-report-draft.md` — living final report, updated as the project progresses
 - `docs/requirements-traceability.md` — proposal-to-test traceability
 - `docs/qa-test-plan.md` — QA strategy and Week 6–7 acceptance tests
 - `docs/user-journeys-and-wireframes.md` — approved journeys and wireframes
