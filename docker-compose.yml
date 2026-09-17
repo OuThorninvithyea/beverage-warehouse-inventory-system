@@ -1,6 +1,7 @@
 services:
   postgres:
     image: postgres:16-alpine
+    container_name: postgres
     environment:
       POSTGRES_DB: bwims
       POSTGRES_USER: bwims
@@ -11,12 +12,15 @@ services:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U bwims -d bwims"]
-      interval: 5s
-      timeout: 5s
+      interval: 3s
+      timeout: 3s
       retries: 10
+    networks:
+      - bwims_net
 
   migrate:
     image: migrate/migrate:v4.18.3
+    container_name: migrate
     depends_on:
       postgres:
         condition: service_healthy
@@ -26,10 +30,13 @@ services:
       - "-path=/migrations"
       - "-database=postgres://bwims:bwims@postgres:5432/bwims?sslmode=disable"
       - "up"
+    networks:
+      - bwims_net
 
   api:
     build:
       context: ./backend
+    container_name: api
     environment:
       APP_ENV: development
       API_HOST: 0.0.0.0
@@ -47,10 +54,15 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - bwims_net
 
   seed:
     build:
       context: ./backend
+    container_name: seed
     entrypoint: ["bwims-seed"]
     environment:
       APP_ENV: development
@@ -64,16 +76,29 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - bwims_net
 
   frontend:
+    profiles:
+      - optional-frontend
     build:
       context: ./frontend
       args:
         VITE_API_BASE_URL: /api/v1
+    container_name: frontend
     ports:
       - "5173:80"
     depends_on:
       - api
+    networks:
+      - bwims_net
+
+networks:
+  bwims_net:
+    driver: bridge
 
 volumes:
   postgres_data:
