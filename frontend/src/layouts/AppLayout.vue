@@ -20,10 +20,8 @@ import {
   Download,
   Users,
 } from 'lucide-vue-next'
-import ConfirmDialog from 'primevue/confirmdialog'
-import Toast from 'primevue/toast'
-import { useToast } from 'primevue/usetoast'
 import { computed, onMounted, ref } from 'vue'
+import { toast } from 'vue-sonner'
 import { RouterLink, RouterView, useRouter } from 'vue-router'
 
 import AdjustFormDialog from '@/components/AdjustFormDialog.vue'
@@ -42,6 +40,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Separator } from '@/components/ui/separator'
+import { Toaster } from '@/components/ui/sonner'
 import type { Lot } from '@/api/inventory'
 import { useAuthStore } from '@/stores/auth'
 import { useCatalogStore } from '@/stores/catalog'
@@ -50,7 +49,6 @@ import { useWarehousesStore } from '@/stores/warehouses'
 
 const auth = useAuthStore()
 const router = useRouter()
-const toast = useToast()
 const catalogStore = useCatalogStore()
 const warehouseStore = useWarehousesStore()
 const inventoryStore = useInventoryStore()
@@ -186,22 +184,12 @@ function closeMobileMenu() {
 }
 
 function onBarcodeScanned(code: string) {
-  toast.add({
-    severity: 'info',
-    summary: 'Barcode Scanned',
-    detail: `Code: ${code}`,
-    life: 3000,
-  })
+  toast.info('Barcode Scanned', { description: `Code: ${code}` })
   void router.push({ name: 'products', query: { search: code } })
 }
 
 function onMovementSuccess(msg: string) {
-  toast.add({
-    severity: 'success',
-    summary: 'Operation Complete',
-    detail: msg,
-    life: 4000,
-  })
+  toast.success('Operation Complete', { description: msg })
   void inventoryStore.fetchBalances()
   void inventoryStore.fetchMovements()
 }
@@ -209,8 +197,7 @@ function onMovementSuccess(msg: string) {
 
 <template>
   <div class="grid min-h-screen grid-cols-[264px_minmax(0,1fr)] bg-muted/40 max-[900px]:grid-cols-1">
-    <Toast />
-    <ConfirmDialog />
+    <Toaster position="top-right" rich-colors close-button />
 
     <!-- Mobile top bar -->
     <div class="hidden items-center justify-between border-b bg-sidebar px-4 py-3 text-sidebar-foreground max-[900px]:flex">
