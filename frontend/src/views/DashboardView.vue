@@ -1,12 +1,19 @@
 <script setup lang="ts">
-import Button from 'primevue/button'
-import Card from 'primevue/card'
-import Chart from 'primevue/chart'
-import Column from 'primevue/column'
-import DataTable from 'primevue/datatable'
-import MeterGroup from 'primevue/metergroup'
-import Tag from 'primevue/tag'
-import Timeline from 'primevue/timeline'
+import {
+  AlertTriangle,
+  ArrowLeftRight,
+  ArrowRight,
+  BarChart3,
+  Boxes,
+  Building2,
+  Camera,
+  Database,
+  Download,
+  History,
+  PieChart,
+  Tags,
+  Upload,
+} from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
@@ -15,6 +22,23 @@ import BarcodeScannerModal from '@/components/BarcodeScannerModal.vue'
 import PickFormDialog from '@/components/PickFormDialog.vue'
 import ReceiveFormDialog from '@/components/ReceiveFormDialog.vue'
 import TransferFormDialog from '@/components/TransferFormDialog.vue'
+import BaseChart from '@/components/BaseChart.vue'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import type { Lot } from '@/api/inventory'
 import { useAuthStore } from '@/stores/auth'
 import { useCatalogStore } from '@/stores/catalog'
@@ -62,9 +86,9 @@ onMounted(async () => {
 
 // Warehouse occupancy meter data
 const occupancyMeters = computed(() => [
-  { label: 'Ambient Storage Zone', color: '#10b981', value: 72, icon: 'pi pi-box' },
-  { label: 'Cold Storage Room', color: '#3b82f6', value: 48, icon: 'pi pi-snowflake' },
-  { label: 'Pallet Staging Rack', color: '#f59e0b', value: 85, icon: 'pi pi-building' },
+  { label: 'Ambient Storage Zone', color: '#10b981', value: 72 },
+  { label: 'Cold Storage Room', color: '#3b82f6', value: 48 },
+  { label: 'Pallet Staging Rack', color: '#f59e0b', value: 85 },
 ])
 
 // Movement Velocity Chart Data (Receives vs Picks vs Transfers vs Adjustments)
@@ -126,7 +150,7 @@ const categoryChartOptions = {
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
-    legend: { position: 'bottom' },
+    legend: { position: 'bottom' as const },
   },
 }
 
@@ -137,9 +161,10 @@ function productName(productId: string): string {
 // Timeline feed
 const movementTimeline = computed(() => {
   return inventoryStore.movements.slice(0, 5).map((m) => ({
+    id: m.id,
     status: `${m.movement_type.toUpperCase()}: ${productName(m.product_id)} (${m.quantity})`,
     date: formatDate(m.created_at),
-    icon: m.movement_type === 'receive' ? 'pi pi-download' : m.movement_type === 'pick' ? 'pi pi-upload' : 'pi pi-arrows-h',
+    icon: m.movement_type === 'receive' ? Download : m.movement_type === 'pick' ? Upload : ArrowLeftRight,
     color: m.movement_type === 'receive' ? '#10b981' : m.movement_type === 'pick' ? '#f59e0b' : '#3b82f6',
     reference: m.reference ? `Ref: ${m.reference}` : '',
   }))
@@ -192,236 +217,233 @@ function formatDate(dateStr: string): string {
 <template>
   <div class="grid gap-6">
     <!-- Header -->
-    <div class="flex flex-wrap items-center justify-between gap-4">
-      <div>
-        <span class="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div class="grid gap-2">
+        <Badge variant="outline" class="w-fit border-emerald-500/30 bg-emerald-500/10 text-emerald-700">
           BWIMS Live Control Center
-        </span>
-        <h1 class="mb-1 mt-2 text-3xl font-extrabold text-brand-navy">Warehouse Analytics & Operations</h1>
-        <p class="m-0 text-sm text-brand-muted">Welcome back, {{ auth.user?.full_name }}. Real-time stock velocity, capacity, and FEFO expiry insights.</p>
+        </Badge>
+        <h1 class="text-3xl font-semibold tracking-tight">Warehouse Analytics &amp; Operations</h1>
+        <p class="text-sm text-muted-foreground">
+          Welcome back, {{ auth.user?.full_name }}. Real-time stock velocity, capacity, and FEFO expiry insights.
+        </p>
       </div>
 
       <div class="flex flex-wrap items-center gap-2">
-        <Button
-          label="Scan Barcode"
-          icon="pi pi-camera"
-          severity="secondary"
-          outlined
-          @click="scannerVisible = true"
-        />
-        <Button
-          v-if="canReceiveOrPick"
-          label="Receive Stock"
-          icon="pi pi-download"
-          severity="success"
-          @click="receiveVisible = true"
-        />
-        <Button
-          v-if="canReceiveOrPick"
-          label="FEFO Pick"
-          icon="pi pi-upload"
-          severity="warn"
-          @click="pickVisible = true"
-        />
+        <Button variant="outline" @click="scannerVisible = true">
+          <Camera class="size-4" />
+          Scan Barcode
+        </Button>
+        <Button v-if="canReceiveOrPick" @click="receiveVisible = true">
+          <Download class="size-4" />
+          Receive Stock
+        </Button>
+        <Button v-if="canReceiveOrPick" variant="secondary" @click="pickVisible = true">
+          <Upload class="size-4" />
+          FEFO Pick
+        </Button>
       </div>
     </div>
 
-    <!-- 1. Key Stat Cards -->
+    <!-- Stat cards -->
     <div class="grid grid-cols-4 gap-4 max-[1024px]:grid-cols-2 max-[640px]:grid-cols-1">
       <Card class="border-l-4 border-l-brand-amber">
-        <template #content>
-          <div class="flex items-center justify-between">
-            <div>
-              <span class="text-xs font-bold uppercase tracking-wider text-brand-muted">Active Warehouses</span>
-              <div class="mt-1 text-3xl font-extrabold text-brand-navy">{{ warehouseStore.warehouses.length }}</div>
-            </div>
-            <div class="grid h-12 w-12 place-items-center rounded-xl bg-brand-surface text-brand-navy">
-              <i class="pi pi-building text-xl" />
-            </div>
+        <CardContent class="flex items-center justify-between">
+          <div class="grid gap-1">
+            <span class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Active Warehouses</span>
+            <div class="text-3xl font-semibold">{{ warehouseStore.warehouses.length }}</div>
           </div>
-        </template>
+          <div class="grid size-12 place-items-center rounded-xl bg-muted">
+            <Building2 class="size-5" />
+          </div>
+        </CardContent>
       </Card>
 
-      <Card class="border-l-4 border-l-blue-500">
-        <template #content>
-          <div class="flex items-center justify-between">
-            <div>
-              <span class="text-xs font-bold uppercase tracking-wider text-brand-muted">Catalog Products</span>
-              <div class="mt-1 text-3xl font-extrabold text-brand-navy">{{ catalogStore.products.length }}</div>
-            </div>
-            <div class="grid h-12 w-12 place-items-center rounded-xl bg-blue-50 text-blue-600">
-              <i class="pi pi-box text-xl" />
-            </div>
+      <Card class="border-l-4 border-l-sky-500">
+        <CardContent class="flex items-center justify-between">
+          <div class="grid gap-1">
+            <span class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Catalog Products</span>
+            <div class="text-3xl font-semibold">{{ catalogStore.products.length }}</div>
           </div>
-        </template>
+          <div class="grid size-12 place-items-center rounded-xl bg-sky-500/10 text-sky-600">
+            <Boxes class="size-5" />
+          </div>
+        </CardContent>
       </Card>
 
       <Card class="border-l-4 border-l-emerald-500">
-        <template #content>
-          <div class="flex items-center justify-between">
-            <div>
-              <span class="text-xs font-bold uppercase tracking-wider text-brand-muted">Stock Balances</span>
-              <div class="mt-1 text-3xl font-extrabold text-brand-navy">{{ inventoryStore.balances.length }}</div>
-            </div>
-            <div class="grid h-12 w-12 place-items-center rounded-xl bg-emerald-50 text-emerald-600">
-              <i class="pi pi-database text-xl" />
-            </div>
+        <CardContent class="flex items-center justify-between">
+          <div class="grid gap-1">
+            <span class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Stock Balances</span>
+            <div class="text-3xl font-semibold">{{ inventoryStore.balances.length }}</div>
           </div>
-        </template>
+          <div class="grid size-12 place-items-center rounded-xl bg-emerald-500/10 text-emerald-600">
+            <Database class="size-5" />
+          </div>
+        </CardContent>
       </Card>
 
       <Card class="border-l-4 border-l-amber-500">
-        <template #content>
-          <div class="flex items-center justify-between">
-            <div>
-              <span class="text-xs font-bold uppercase tracking-wider text-brand-muted">Total Movements</span>
-              <div class="mt-1 text-3xl font-extrabold text-brand-navy">{{ inventoryStore.movements.length }}</div>
-            </div>
-            <div class="grid h-12 w-12 place-items-center rounded-xl bg-amber-50 text-amber-600">
-              <i class="pi pi-history text-xl" />
-            </div>
+        <CardContent class="flex items-center justify-between">
+          <div class="grid gap-1">
+            <span class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total Movements</span>
+            <div class="text-3xl font-semibold">{{ inventoryStore.movements.length }}</div>
           </div>
-        </template>
+          <div class="grid size-12 place-items-center rounded-xl bg-amber-500/10 text-amber-600">
+            <History class="size-5" />
+          </div>
+        </CardContent>
       </Card>
     </div>
 
-    <!-- 2. Warehouse Occupancy MeterGroup Component -->
+    <!-- Occupancy -->
     <Card>
-      <template #title>
-        <div class="flex items-center gap-2 text-base font-bold text-brand-navy">
-          <i class="pi pi-chart-pie text-brand-amber" /> Warehouse Storage Zone Occupancy
-        </div>
-      </template>
-      <template #content>
-        <div class="pt-2">
-          <MeterGroup :value="occupancyMeters" />
-        </div>
-      </template>
-    </Card>
-
-    <!-- 3. Analytical Charts Grid (Chart.js + PrimeVue Chart Component) -->
-    <div class="grid grid-cols-3 gap-6 max-[1024px]:grid-cols-1">
-      <!-- Movement Type Bar Chart -->
-      <Card class="col-span-2">
-        <template #title>
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2 text-base font-bold text-brand-navy">
-              <i class="pi pi-chart-bar text-emerald-600" /> Stock Movement Breakdown
-            </div>
-            <Tag value="Real-time" severity="success" class="text-[10px]" />
+      <CardHeader>
+        <CardTitle class="flex items-center gap-2 text-base">
+          <PieChart class="size-4 text-brand-amber" />
+          Warehouse Storage Zone Occupancy
+        </CardTitle>
+      </CardHeader>
+      <CardContent class="grid gap-4">
+        <div v-for="meter in occupancyMeters" :key="meter.label" class="grid gap-1.5">
+          <div class="flex items-center justify-between text-sm">
+            <span class="font-medium">{{ meter.label }}</span>
+            <span class="text-muted-foreground">{{ meter.value }}%</span>
           </div>
-        </template>
-        <template #content>
-          <div class="h-[260px] pt-2">
-            <Chart type="bar" :data="movementChartData" :options="movementChartOptions" class="h-full w-full" />
-          </div>
-        </template>
-      </Card>
-
-      <!-- Category Share Doughnut Chart -->
-      <Card class="col-span-1">
-        <template #title>
-          <div class="flex items-center gap-2 text-base font-bold text-brand-navy">
-            <i class="pi pi-tags text-blue-600" /> Product Categories
-          </div>
-        </template>
-        <template #content>
-          <div class="h-[260px] pt-2">
-            <Chart type="doughnut" :data="categoryChartData" :options="categoryChartOptions" class="h-full w-full" />
-          </div>
-        </template>
-      </Card>
-    </div>
-
-    <!-- 4. Activity Feed & Low Stock Watchlist Grid -->
-    <div class="grid grid-cols-3 gap-6 max-[1024px]:grid-cols-1">
-      <!-- Live Movement Timeline Component -->
-      <Card class="col-span-1">
-        <template #title>
-          <div class="flex items-center gap-2 text-base font-bold text-brand-navy">
-            <i class="pi pi-spin pi-cog text-brand-amber" /> Live Activity Feed
-          </div>
-        </template>
-        <template #content>
-          <div v-if="movementTimeline.length === 0" class="py-6 text-center text-xs text-brand-muted">
-            No recent activity recorded.
-          </div>
-          <Timeline v-else :value="movementTimeline" class="p-timeline-sm pt-2">
-            <template #content="slotProps">
-              <div class="grid gap-0.5 text-xs">
-                <strong class="text-brand-navy">{{ slotProps.item.status }}</strong>
-                <small class="text-brand-muted">{{ slotProps.item.date }}</small>
-                <small v-if="slotProps.item.reference" class="font-mono text-slate-500">{{ slotProps.item.reference }}</small>
-              </div>
-            </template>
-          </Timeline>
-        </template>
-      </Card>
-
-      <!-- Low Stock & Expiry Watchlist DataTable -->
-      <Card class="col-span-2">
-        <template #title>
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2 text-base font-bold text-brand-navy">
-              <i class="pi pi-exclamation-triangle text-amber-600" /> Low Stock & FEFO Expiry Watchlist
-            </div>
-            <Button
-              label="Inventory Control"
-              icon="pi pi-arrow-right"
-              text
-              size="small"
-              @click="router.push({ name: 'inventory' })"
+          <div class="h-2 overflow-hidden rounded-full bg-muted">
+            <div
+              class="h-full rounded-full transition-all"
+              :style="{ width: `${meter.value}%`, backgroundColor: meter.color }"
             />
           </div>
-        </template>
-        <template #content>
-          <DataTable
-            :value="lowStockWatchlist"
-            responsive-layout="scroll"
-            striped-rows
-            class="p-datatable-sm pt-2"
-          >
-            <template #empty>
-              <div class="py-6 text-center text-xs text-brand-muted">
-                All inventory levels and expiration dates are in optimal shape!
-              </div>
-            </template>
+        </div>
+      </CardContent>
+    </Card>
 
-            <Column field="product_name" header="Product">
-              <template #body="{ data }">
-                <div>
-                  <strong class="block text-brand-navy text-xs">{{ data.product_name || 'Product' }}</strong>
-                  <small class="font-mono text-[11px] text-brand-muted">SKU: {{ data.product_sku }}</small>
-                </div>
-              </template>
-            </Column>
+    <!-- Charts -->
+    <div class="grid grid-cols-3 gap-6 max-[1024px]:grid-cols-1">
+      <Card class="col-span-2 max-[1024px]:col-span-1">
+        <CardHeader class="flex-row items-center justify-between space-y-0">
+          <CardTitle class="flex items-center gap-2 text-base">
+            <BarChart3 class="size-4 text-emerald-600" />
+            Stock Movement Breakdown
+          </CardTitle>
+          <Badge variant="outline" class="border-emerald-500/30 bg-emerald-500/10 text-emerald-700">Real-time</Badge>
+        </CardHeader>
+        <CardContent>
+          <div class="h-[260px]">
+            <BaseChart type="bar" :data="movementChartData" :options="movementChartOptions" />
+          </div>
+        </CardContent>
+      </Card>
 
-            <Column field="location_code" header="Location">
-              <template #body="{ data }">
-                <span class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[11px] font-bold text-slate-800 border border-slate-200">
-                  {{ data.location_code || 'Loc' }}
-                </span>
-              </template>
-            </Column>
+      <Card>
+        <CardHeader>
+          <CardTitle class="flex items-center gap-2 text-base">
+            <Tags class="size-4 text-sky-600" />
+            Product Categories
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div class="h-[260px]">
+            <BaseChart type="doughnut" :data="categoryChartData" :options="categoryChartOptions" />
+          </div>
+        </CardContent>
+      </Card>
+    </div>
 
-            <Column field="quantity" header="Available Qty">
-              <template #body="{ data }">
-                <span class="font-bold text-xs" :class="parseFloat(data.quantity) < 10 ? 'text-red-600' : 'text-brand-navy'">
-                  {{ data.quantity }}
-                </span>
-              </template>
-            </Column>
+    <!-- Activity + watchlist -->
+    <div class="grid grid-cols-3 gap-6 max-[1024px]:grid-cols-1">
+      <Card>
+        <CardHeader>
+          <CardTitle class="flex items-center gap-2 text-base">
+            <History class="size-4 text-brand-amber" />
+            Live Activity Feed
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div v-if="movementTimeline.length === 0" class="py-6 text-center text-xs text-muted-foreground">
+            No recent activity recorded.
+          </div>
+          <ol v-else class="relative grid gap-4 border-l pl-6">
+            <li v-for="entry in movementTimeline" :key="entry.id" class="relative grid gap-0.5">
+              <span
+                class="absolute -left-[31px] grid size-5 place-items-center rounded-full text-white"
+                :style="{ backgroundColor: entry.color }"
+              >
+                <component :is="entry.icon" class="size-3" />
+              </span>
+              <strong class="text-xs">{{ entry.status }}</strong>
+              <small class="text-xs text-muted-foreground">{{ entry.date }}</small>
+              <small v-if="entry.reference" class="font-mono text-xs text-muted-foreground">{{ entry.reference }}</small>
+            </li>
+          </ol>
+        </CardContent>
+      </Card>
 
-            <Column field="expiration_date" header="Expiration Date">
-              <template #body="{ data }">
-                <span v-if="data.expiration_date" class="text-xs font-semibold" :class="isExpiringSoon(data.expiration_date) ? 'text-amber-600 font-bold' : 'text-slate-600'">
-                  {{ data.expiration_date }}
-                </span>
-                <span v-else class="text-xs text-slate-400">—</span>
-              </template>
-            </Column>
-          </DataTable>
-        </template>
+      <Card class="col-span-2 max-[1024px]:col-span-1">
+        <CardHeader class="flex-row items-center justify-between space-y-0">
+          <CardTitle class="flex items-center gap-2 text-base">
+            <AlertTriangle class="size-4 text-amber-600" />
+            Low Stock &amp; FEFO Expiry Watchlist
+          </CardTitle>
+          <Button variant="ghost" size="sm" @click="router.push({ name: 'inventory' })">
+            Inventory Control
+            <ArrowRight class="size-4" />
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <div class="overflow-hidden rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Product</TableHead>
+                  <TableHead>Location</TableHead>
+                  <TableHead>Available Qty</TableHead>
+                  <TableHead>Expiration Date</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow v-if="lowStockWatchlist.length === 0">
+                  <TableCell :colspan="4" class="py-8 text-center text-xs text-muted-foreground">
+                    All inventory levels and expiration dates are in optimal shape!
+                  </TableCell>
+                </TableRow>
+
+                <TableRow v-for="row in lowStockWatchlist" v-else :key="row.id">
+                  <TableCell>
+                    <div class="grid leading-tight">
+                      <strong class="text-xs">{{ row.product_name }}</strong>
+                      <small class="font-mono text-[11px] text-muted-foreground">SKU: {{ row.product_sku }}</small>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <span class="rounded border bg-muted px-1.5 py-0.5 font-mono text-[11px] font-semibold">
+                      {{ row.location_code }}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <span
+                      class="text-xs font-semibold"
+                      :class="parseFloat(row.quantity) < 10 ? 'text-destructive' : ''"
+                    >
+                      {{ row.quantity }}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <span
+                      v-if="row.expiration_date"
+                      class="text-xs font-medium"
+                      :class="isExpiringSoon(row.expiration_date) ? 'font-semibold text-amber-600' : 'text-muted-foreground'"
+                    >
+                      {{ row.expiration_date }}
+                    </span>
+                    <span v-else class="text-xs text-muted-foreground">&mdash;</span>
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
       </Card>
     </div>
 
@@ -454,9 +476,6 @@ function formatDate(dateStr: string): string {
       @submitted="inventoryStore.fetchMovements()"
     />
 
-    <BarcodeScannerModal
-      v-model:visible="scannerVisible"
-      @select="onBarcodeScanned"
-    />
+    <BarcodeScannerModal v-model:visible="scannerVisible" @select="onBarcodeScanned" />
   </div>
 </template>
