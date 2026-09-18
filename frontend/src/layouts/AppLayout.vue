@@ -197,7 +197,6 @@ function onMovementSuccess(msg: string) {
 
 <template>
   <div class="grid min-h-screen grid-cols-[264px_minmax(0,1fr)] bg-muted/40 max-[900px]:grid-cols-1">
-    <Toaster position="top-right" rich-colors close-button />
 
     <!-- Mobile top bar -->
     <div class="hidden items-center justify-between border-b bg-sidebar px-4 py-3 text-sidebar-foreground max-[900px]:flex">
@@ -391,4 +390,6 @@ function onMovementSuccess(msg: string) {
 
     <BarcodeScannerModal v-model:visible="scannerVisible" @select="onBarcodeScanned" />
   </div>
+
+  <Toaster position="top-right" rich-colors close-button />
 </template>
