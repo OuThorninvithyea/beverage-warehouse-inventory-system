@@ -1,17 +1,38 @@
 <script setup lang="ts">
-import Button from 'primevue/button'
-import Card from 'primevue/card'
-import Column from 'primevue/column'
-import DataTable from 'primevue/datatable'
-import Message from 'primevue/message'
-import Select from 'primevue/select'
-import Tag from 'primevue/tag'
+import {
+  AlertTriangle,
+  ArrowLeftRight,
+  Download,
+  FileSpreadsheet,
+  MapPin,
+  SlidersHorizontal,
+  Upload,
+} from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
 
 import AdjustFormDialog from '@/components/AdjustFormDialog.vue'
 import PickFormDialog from '@/components/PickFormDialog.vue'
 import ReceiveFormDialog from '@/components/ReceiveFormDialog.vue'
 import TransferFormDialog from '@/components/TransferFormDialog.vue'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { exportToCSV } from '@/lib/export'
 import { useAuthStore } from '@/stores/auth'
 import { useCatalogStore } from '@/stores/catalog'
@@ -24,8 +45,15 @@ const catalogStore = useCatalogStore()
 const warehouseStore = useWarehousesStore()
 
 const selectedWarehouseId = ref<string>()
-const selectedLocationId = ref<string>()
-const selectedProductId = ref<string>()
+const locationFilter = ref<string>('all')
+const productFilter = ref<string>('all')
+
+const selectedLocationId = computed(() =>
+  locationFilter.value === 'all' ? undefined : locationFilter.value,
+)
+const selectedProductId = computed(() =>
+  productFilter.value === 'all' ? undefined : productFilter.value,
+)
 
 const receiveVisible = ref(false)
 const pickVisible = ref(false)
@@ -123,7 +151,7 @@ onMounted(async () => {
 })
 
 watch(selectedWarehouseId, async (newWhId) => {
-  selectedLocationId.value = undefined
+  locationFilter.value = 'all'
   if (newWhId) {
     await warehouseStore.fetchLocations(newWhId)
   }
@@ -159,168 +187,159 @@ function isLowStock(qtyStr: string): boolean {
 
 <template>
   <div class="grid gap-6">
-    <div class="flex flex-wrap items-center justify-between gap-4">
-      <div>
-        <h1 class="m-0 text-2xl font-bold text-brand-navy">Inventory Stock Control</h1>
-        <p class="m-0 text-sm text-brand-muted">Real-time balances, lot FEFO expiry tracking, and movement actions</p>
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div class="grid gap-1">
+        <h1 class="text-2xl font-semibold tracking-tight">Inventory Stock Control</h1>
+        <p class="text-sm text-muted-foreground">
+          Real-time balances, lot FEFO expiry tracking, and movement actions.
+        </p>
       </div>
 
       <div class="flex flex-wrap items-center gap-2">
-        <Button
-          label="Export CSV"
-          icon="pi pi-file-excel"
-          severity="secondary"
-          outlined
-          @click="exportInventoryCSV"
-        />
-        <Button
-          v-if="canReceiveOrPick"
-          label="Receive"
-          icon="pi pi-download"
-          severity="success"
-          @click="receiveVisible = true"
-        />
-        <Button
-          v-if="canReceiveOrPick"
-          label="FEFO Pick"
-          icon="pi pi-upload"
-          severity="warn"
-          @click="pickVisible = true"
-        />
-        <Button
-          v-if="canTransferOrAdjust"
-          label="Transfer"
-          icon="pi pi-arrows-h"
-          severity="info"
-          @click="transferVisible = true"
-        />
-        <Button
-          v-if="canTransferOrAdjust"
-          label="Adjust"
-          icon="pi pi-sliders-h"
-          severity="secondary"
-          @click="adjustVisible = true"
-        />
+        <Button variant="outline" @click="exportInventoryCSV">
+          <FileSpreadsheet class="size-4" />
+          Export CSV
+        </Button>
+        <Button v-if="canReceiveOrPick" @click="receiveVisible = true">
+          <Download class="size-4" />
+          Receive
+        </Button>
+        <Button v-if="canReceiveOrPick" variant="secondary" @click="pickVisible = true">
+          <Upload class="size-4" />
+          FEFO Pick
+        </Button>
+        <Button v-if="canTransferOrAdjust" variant="outline" @click="transferVisible = true">
+          <ArrowLeftRight class="size-4" />
+          Transfer
+        </Button>
+        <Button v-if="canTransferOrAdjust" variant="outline" @click="adjustVisible = true">
+          <SlidersHorizontal class="size-4" />
+          Adjust
+        </Button>
       </div>
     </div>
 
     <Card>
-      <template #content>
-        <div class="mb-4 flex flex-wrap items-center justify-between gap-4">
-          <div class="flex flex-wrap items-center gap-3">
-            <Select
-              v-model="selectedWarehouseId"
-              :options="warehouseStore.warehouses"
-              option-label="name"
-              option-value="id"
-              placeholder="Select Warehouse"
-              class="w-[220px]"
-            />
+      <CardContent class="grid gap-4">
+        <div class="flex flex-wrap items-center gap-3">
+          <Select v-model="selectedWarehouseId">
+            <SelectTrigger class="w-[220px]">
+              <SelectValue placeholder="Select Warehouse" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem v-for="wh in warehouseStore.warehouses" :key="wh.id" :value="wh.id">
+                {{ wh.name }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
 
-            <Select
-              v-model="selectedLocationId"
-              :options="currentWarehouseLocations"
-              option-label="code"
-              option-value="id"
-              placeholder="All Locations"
-              show-clear
-              class="w-[180px]"
-            />
+          <Select v-model="locationFilter">
+            <SelectTrigger class="w-[190px]">
+              <SelectValue placeholder="All Locations" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Locations</SelectItem>
+              <SelectItem v-for="loc in currentWarehouseLocations" :key="loc.id" :value="loc.id">
+                {{ loc.code }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
 
-            <Select
-              v-model="selectedProductId"
-              :options="catalogStore.products"
-              option-label="name"
-              option-value="id"
-              placeholder="All Products"
-              show-clear
-              filter
-              class="w-[220px]"
-            />
-          </div>
+          <Select v-model="productFilter">
+            <SelectTrigger class="w-[220px]">
+              <SelectValue placeholder="All Products" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Products</SelectItem>
+              <SelectItem v-for="product in catalogStore.products" :key="product.id" :value="product.id">
+                {{ product.name }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
-        <Message v-if="inventoryStore.error" severity="error" class="mb-4">
-          {{ inventoryStore.error }}
-        </Message>
-
-        <DataTable
-          :value="enrichedBalances"
-          :loading="inventoryStore.loading"
-          data-key="id"
-          responsive-layout="scroll"
-          striped-rows
-          paginator
-          :rows="10"
-          :rows-per-page-options="[10, 20, 50]"
-          class="p-datatable-sm"
+        <p
+          v-if="inventoryStore.error"
+          role="alert"
+          class="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
         >
-          <template #empty>
-            <div class="py-8 text-center text-brand-muted">
-              No stock balances found for the selected location or filters.
-            </div>
-          </template>
+          {{ inventoryStore.error }}
+        </p>
 
-          <Column field="location_code" header="Location" sortable>
-            <template #body="{ data }">
-              <span class="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-0.5 font-mono text-xs font-bold text-slate-800 border border-slate-200">
-                <i class="pi pi-map-marker text-[10px] text-brand-navy" />
-                {{ data.location_code || data.location_id.substring(0, 8) }}
-              </span>
-            </template>
-          </Column>
+        <div class="overflow-x-auto rounded-lg border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Location</TableHead>
+                <TableHead>Product</TableHead>
+                <TableHead>Lot / Expiration</TableHead>
+                <TableHead>Available Qty</TableHead>
+                <TableHead>Reserved Qty</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow v-if="inventoryStore.loading">
+                <TableCell :colspan="5">
+                  <div class="grid gap-2 py-2">
+                    <Skeleton class="h-6 w-full" />
+                    <Skeleton class="h-6 w-full" />
+                    <Skeleton class="h-6 w-2/3" />
+                  </div>
+                </TableCell>
+              </TableRow>
 
-          <Column field="product_name" header="Product" sortable>
-            <template #body="{ data }">
-              <div>
-                <strong class="block text-brand-navy">{{ data.product_name || 'Product' }}</strong>
-                <small class="font-mono text-brand-muted">SKU: {{ data.product_sku }}</small>
-              </div>
-            </template>
-          </Column>
+              <TableRow v-else-if="enrichedBalances.length === 0">
+                <TableCell :colspan="5" class="py-10 text-center text-sm text-muted-foreground">
+                  No stock balances found for the selected location or filters.
+                </TableCell>
+              </TableRow>
 
-          <Column field="lot_number" header="Lot / Expiration">
-            <template #body="{ data }">
-              <div v-if="data.lot_number" class="grid gap-0.5">
-                <span class="font-mono text-xs font-semibold text-slate-800">
-                  Lot: {{ data.lot_number }}
-                </span>
-                <span
-                  v-if="data.expiration_date"
-                  class="text-[11px] font-medium"
-                  :class="isExpiringSoon(data.expiration_date) ? 'text-amber-600 font-bold' : 'text-slate-500'"
-                >
-                  Exp: {{ data.expiration_date }}
-                  <span v-if="isExpiringSoon(data.expiration_date)" class="ml-1 inline-flex items-center text-[10px] bg-amber-100 text-amber-800 rounded px-1">
-                    <i class="pi pi-exclamation-triangle mr-0.5 text-[9px]" /> Expiring
+              <TableRow v-for="row in enrichedBalances" v-else :key="row.id">
+                <TableCell>
+                  <span class="inline-flex items-center gap-1 rounded border bg-muted px-2 py-0.5 font-mono text-xs font-semibold">
+                    <MapPin class="size-3" />
+                    {{ row.location_code }}
                   </span>
-                </span>
-              </div>
-              <span v-else class="text-xs text-slate-400">Non-lot item</span>
-            </template>
-          </Column>
-
-          <Column field="quantity" header="Available Qty" sortable>
-            <template #body="{ data }">
-              <div class="flex items-center gap-2">
-                <span class="text-base font-extrabold text-brand-navy">{{ data.quantity }}</span>
-                <Tag
-                  v-if="isLowStock(data.quantity)"
-                  value="Low Stock"
-                  severity="warn"
-                  class="text-[10px]"
-                />
-              </div>
-            </template>
-          </Column>
-
-          <Column field="reserved_quantity" header="Reserved Qty">
-            <template #body="{ data }">
-              <span class="text-xs font-medium text-slate-500">{{ data.reserved_quantity || '0.000' }}</span>
-            </template>
-          </Column>
-        </DataTable>
-      </template>
+                </TableCell>
+                <TableCell>
+                  <div class="grid leading-tight">
+                    <strong class="text-sm">{{ row.product_name }}</strong>
+                    <small class="font-mono text-xs text-muted-foreground">SKU: {{ row.product_sku }}</small>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div v-if="row.lot_number" class="grid gap-0.5">
+                    <span class="font-mono text-xs font-semibold">Lot: {{ row.lot_number }}</span>
+                    <span
+                      v-if="row.expiration_date"
+                      class="inline-flex items-center gap-1 text-[11px]"
+                      :class="isExpiringSoon(row.expiration_date) ? 'font-semibold text-amber-600' : 'text-muted-foreground'"
+                    >
+                      Exp: {{ row.expiration_date }}
+                      <Badge v-if="isExpiringSoon(row.expiration_date)" variant="outline" class="gap-1 border-amber-500/30 bg-amber-500/10 text-amber-700">
+                        <AlertTriangle class="size-3" />
+                        Expiring
+                      </Badge>
+                    </span>
+                  </div>
+                  <span v-else class="text-xs text-muted-foreground">Non-lot item</span>
+                </TableCell>
+                <TableCell>
+                  <div class="flex items-center gap-2">
+                    <span class="text-base font-semibold">{{ row.quantity }}</span>
+                    <Badge v-if="isLowStock(row.quantity)" variant="outline" class="border-amber-500/30 bg-amber-500/10 text-amber-700">
+                      Low Stock
+                    </Badge>
+                  </div>
+                </TableCell>
+                <TableCell class="text-sm text-muted-foreground">
+                  {{ row.reserved_quantity || '0.000' }}
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
     </Card>
 
     <ReceiveFormDialog
