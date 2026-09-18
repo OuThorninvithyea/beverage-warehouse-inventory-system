@@ -1,12 +1,19 @@
 <script setup lang="ts">
-import Button from 'primevue/button'
-import Card from 'primevue/card'
-import InputText from 'primevue/inputtext'
-import Message from 'primevue/message'
+import { Loader2, Lock, Mail } from 'lucide-vue-next'
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { ApiClientError } from '@/api/client'
+import { Button } from '@/components/ui/button'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { useAuthStore } from '@/stores/auth'
 
 const email = ref('')
@@ -33,36 +40,84 @@ async function submit() {
 </script>
 
 <template>
-  <main
-    class="grid min-h-screen place-items-center content-center bg-brand-navy p-6"
-    style="background-image: radial-gradient(circle at top left, rgb(255 189 89 / 35%), transparent 35%)"
-  >
-    <Card class="w-full max-w-[430px]">
-      <template #title>Welcome to BWIMS</template>
-      <template #subtitle>Use your assigned warehouse account</template>
-      <template #content>
-        <form class="grid gap-3" @submit.prevent="submit">
-          <label for="email" class="mt-[0.4rem] font-[650]">Email address</label>
-          <InputText id="email" v-model="email" type="email" autocomplete="email" />
+  <main class="relative grid min-h-screen place-items-center overflow-hidden bg-brand-navy p-6">
+    <div
+      class="pointer-events-none absolute inset-0"
+      style="background-image: radial-gradient(60rem 40rem at 15% -10%, rgb(255 189 89 / 28%), transparent 60%), radial-gradient(50rem 30rem at 110% 110%, rgb(49 107 243 / 35%), transparent 55%)"
+    />
 
-          <label for="password" class="mt-[0.4rem] font-[650]">Password</label>
-          <InputText
-            id="password"
-            v-model="password"
-            type="password"
-            autocomplete="current-password"
-          />
+    <div class="relative w-full max-w-[420px]">
+      <div class="mb-6 flex items-center gap-3">
+        <span class="grid size-11 place-items-center rounded-xl bg-brand-amber text-lg font-extrabold text-brand-navy shadow-lg">
+          BW
+        </span>
+        <div class="grid leading-tight">
+          <strong class="text-base font-semibold tracking-tight text-white">BWIMS</strong>
+          <small class="text-xs text-white/60">Beverage Warehouse Control</small>
+        </div>
+      </div>
 
-          <Message v-if="errorMessage" severity="error">{{ errorMessage }}</Message>
-          <Button
-            type="submit"
-            label="Sign in"
-            :loading="auth.loading"
-            :disabled="!email.trim() || !password"
-          />
-          <small class="text-center text-brand-muted">Access is controlled by your admin, manager, picker or viewer role.</small>
-        </form>
-      </template>
-    </Card>
+      <Card class="border-white/10 bg-white/95 shadow-2xl backdrop-blur supports-[backdrop-filter]:bg-white/90">
+        <CardHeader>
+          <CardTitle class="text-xl">Welcome back</CardTitle>
+          <CardDescription>Sign in with your assigned warehouse account.</CardDescription>
+        </CardHeader>
+
+        <CardContent>
+          <form class="grid gap-4" @submit.prevent="submit">
+            <div class="grid gap-2">
+              <Label for="email">Email address</Label>
+              <div class="relative">
+                <Mail class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="email"
+                  v-model="email"
+                  type="email"
+                  autocomplete="email"
+                  placeholder="you@bwims.local"
+                  class="pl-9"
+                />
+              </div>
+            </div>
+
+            <div class="grid gap-2">
+              <Label for="password">Password</Label>
+              <div class="relative">
+                <Lock class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="password"
+                  v-model="password"
+                  type="password"
+                  autocomplete="current-password"
+                  placeholder="••••••••"
+                  class="pl-9"
+                />
+              </div>
+            </div>
+
+            <p
+              v-if="errorMessage"
+              role="alert"
+              class="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+            >
+              {{ errorMessage }}
+            </p>
+
+            <Button
+              type="submit"
+              class="w-full"
+              :disabled="auth.loading || !email.trim() || !password"
+            >
+              <Loader2 v-if="auth.loading" class="size-4 animate-spin" />
+              Sign in
+            </Button>
+
+            <p class="text-center text-xs text-muted-foreground">
+              Access is controlled by your admin, manager, picker or viewer role.
+            </p>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   </main>
 </template>

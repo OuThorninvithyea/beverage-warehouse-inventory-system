@@ -1,8 +1,26 @@
 <script setup lang="ts">
-import Button from 'primevue/button'
+import {
+  ArrowLeftRight,
+  Bell,
+  Boxes,
+  Building2,
+  Camera,
+  Database,
+  LayoutGrid,
+  LogOut,
+  Menu,
+  Moon,
+  Plus,
+  ScanLine,
+  SlidersHorizontal,
+  Sun,
+  Tags,
+  Truck,
+  Upload,
+  Download,
+  Users,
+} from 'lucide-vue-next'
 import ConfirmDialog from 'primevue/confirmdialog'
-import Popover from 'primevue/popover'
-import SpeedDial from 'primevue/speeddial'
 import Toast from 'primevue/toast'
 import { useToast } from 'primevue/usetoast'
 import { computed, onMounted, ref } from 'vue'
@@ -13,6 +31,17 @@ import BarcodeScannerModal from '@/components/BarcodeScannerModal.vue'
 import PickFormDialog from '@/components/PickFormDialog.vue'
 import ReceiveFormDialog from '@/components/ReceiveFormDialog.vue'
 import TransferFormDialog from '@/components/TransferFormDialog.vue'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Separator } from '@/components/ui/separator'
 import type { Lot } from '@/api/inventory'
 import { useAuthStore } from '@/stores/auth'
 import { useCatalogStore } from '@/stores/catalog'
@@ -28,7 +57,6 @@ const inventoryStore = useInventoryStore()
 
 const mobileMenuOpen = ref(false)
 const isDarkMode = ref(false)
-const notificationPanel = ref()
 const lotsByProduct = ref<Map<string, Lot[]>>(new Map())
 
 const receiveVisible = ref(false)
@@ -38,15 +66,49 @@ const adjustVisible = ref(false)
 const scannerVisible = ref(false)
 
 const isAdmin = computed(() => auth.user?.role === 'admin')
-const canReceiveOrPick = computed(() => {
-  return auth.user?.role === 'admin' || auth.user?.role === 'warehouse_manager' || auth.user?.role === 'picker'
+const isManager = computed(
+  () => auth.user?.role === 'admin' || auth.user?.role === 'warehouse_manager',
+)
+const canReceiveOrPick = computed(
+  () =>
+    auth.user?.role === 'admin' ||
+    auth.user?.role === 'warehouse_manager' ||
+    auth.user?.role === 'picker',
+)
+
+const navItems = computed(() => {
+  const items = [
+    { to: '/', label: 'Dashboard', icon: LayoutGrid, exact: true },
+    { to: '/inventory', label: 'Inventory Stock', icon: Database, exact: false },
+    { to: '/movements', label: 'Stock Movements', icon: Truck, exact: false },
+    { to: '/products', label: 'Products Catalog', icon: Boxes, exact: false },
+    { to: '/categories', label: 'Categories', icon: Tags, exact: false },
+    { to: '/warehouses', label: 'Warehouses', icon: Building2, exact: false },
+  ]
+  if (isAdmin.value) {
+    items.push({ to: '/users', label: 'User Management', icon: Users, exact: false })
+  }
+  items.push({ to: '/barcode-test', label: 'Barcode Test', icon: Camera, exact: false })
+  return items
+})
+
+const userInitials = computed(() => {
+  const name = auth.user?.full_name?.trim()
+  if (!name) return 'BW'
+  return name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('')
 })
 
 const activeAlerts = computed(() => {
   return inventoryStore.balances
     .map((b) => {
       const product = catalogStore.products.find((p) => p.id === b.product_id)
-      const lot = b.lot_id ? (lotsByProduct.value.get(b.product_id) ?? []).find((l) => l.id === b.lot_id) : undefined
+      const lot = b.lot_id
+        ? (lotsByProduct.value.get(b.product_id) ?? []).find((l) => l.id === b.lot_id)
+        : undefined
       return {
         id: b.id,
         product_name: product?.name ?? 'Item',
@@ -58,7 +120,9 @@ const activeAlerts = computed(() => {
       const isLow = parseFloat(b.quantity) < 10
       let isExp = false
       if (b.expiration_date) {
-        const diffDays = Math.ceil((new Date(b.expiration_date).getTime() - new Date().getTime()) / (1000 * 3600 * 24))
+        const diffDays = Math.ceil(
+          (new Date(b.expiration_date).getTime() - new Date().getTime()) / (1000 * 3600 * 24),
+        )
         isExp = diffDays <= 30
       }
       return isLow || isExp
@@ -69,7 +133,7 @@ onMounted(() => {
   const storedTheme = localStorage.getItem('bwims_theme')
   if (storedTheme === 'dark') {
     isDarkMode.value = true
-    document.documentElement.classList.add('bwims-dark')
+    document.documentElement.classList.add('dark', 'bwims-dark')
   }
 
   // Preload data the quick-action dialogs (Receive/Pick/Transfer/Adjust) need,
@@ -77,7 +141,9 @@ onMounted(() => {
   void catalogStore.fetchProducts()
   void warehouseStore.fetchAllLocations()
   inventoryStore.fetchBalances().then(async () => {
-    const productIds = new Set(inventoryStore.balances.filter((b) => b.lot_id).map((b) => b.product_id))
+    const productIds = new Set(
+      inventoryStore.balances.filter((b) => b.lot_id).map((b) => b.product_id),
+    )
     for (const productId of productIds) {
       const lots = await inventoryStore.fetchLots(productId)
       lotsByProduct.value.set(productId, lots)
@@ -87,65 +153,27 @@ onMounted(() => {
 
 function toggleTheme() {
   isDarkMode.value = !isDarkMode.value
-  if (isDarkMode.value) {
-    document.documentElement.classList.add('bwims-dark')
-    localStorage.setItem('bwims_theme', 'dark')
-  } else {
-    document.documentElement.classList.remove('bwims-dark')
-    localStorage.setItem('bwims_theme', 'light')
-  }
+  document.documentElement.classList.toggle('dark', isDarkMode.value)
+  document.documentElement.classList.toggle('bwims-dark', isDarkMode.value)
+  localStorage.setItem('bwims_theme', isDarkMode.value ? 'dark' : 'light')
 }
 
-const speedDialItems = computed(() => {
-  const items = [
-    {
-      label: 'Scan Barcode',
-      icon: 'pi pi-camera',
-      command: () => {
-        scannerVisible.value = true
-      },
-    },
-  ]
-
+const quickActions = computed(() => {
+  const actions: { label: string; icon: typeof Upload; run: () => void }[] = []
   if (canReceiveOrPick.value) {
-    items.unshift(
-      {
-        label: 'Receive Stock',
-        icon: 'pi pi-download',
-        command: () => {
-          receiveVisible.value = true
-        },
-      },
-      {
-        label: 'FEFO Pick',
-        icon: 'pi pi-upload',
-        command: () => {
-          pickVisible.value = true
-        },
-      },
+    actions.push(
+      { label: 'Receive Stock', icon: Download, run: () => (receiveVisible.value = true) },
+      { label: 'FEFO Pick', icon: Upload, run: () => (pickVisible.value = true) },
     )
   }
-
-  if (isAdmin.value || auth.user?.role === 'warehouse_manager') {
-    items.push(
-      {
-        label: 'Transfer',
-        icon: 'pi pi-arrows-h',
-        command: () => {
-          transferVisible.value = true
-        },
-      },
-      {
-        label: 'Adjust',
-        icon: 'pi pi-sliders-h',
-        command: () => {
-          adjustVisible.value = true
-        },
-      },
+  if (isManager.value) {
+    actions.push(
+      { label: 'Transfer', icon: ArrowLeftRight, run: () => (transferVisible.value = true) },
+      { label: 'Adjust', icon: SlidersHorizontal, run: () => (adjustVisible.value = true) },
     )
   }
-
-  return items
+  actions.push({ label: 'Scan Barcode', icon: ScanLine, run: () => (scannerVisible.value = true) })
+  return actions
 })
 
 async function signOut() {
@@ -180,203 +208,144 @@ function onMovementSuccess(msg: string) {
 </script>
 
 <template>
-  <div class="grid min-h-screen grid-cols-[260px_minmax(0,1fr)] max-[900px]:grid-cols-1">
+  <div class="grid min-h-screen grid-cols-[264px_minmax(0,1fr)] bg-muted/40 max-[900px]:grid-cols-1">
     <Toast />
     <ConfirmDialog />
 
-    <!-- Mobile top bar header -->
-    <div class="hidden min-[901px]:hidden flex items-center justify-between bg-brand-navy p-4 text-white max-[900px]:flex">
+    <!-- Mobile top bar -->
+    <div class="hidden items-center justify-between border-b bg-sidebar px-4 py-3 text-sidebar-foreground max-[900px]:flex">
       <div class="flex items-center gap-3">
-        <span class="grid h-8 w-8 place-items-center rounded-lg bg-brand-amber font-extrabold text-brand-navy text-xs">BW</span>
-        <strong class="text-sm">BWIMS</strong>
+        <span class="grid size-8 place-items-center rounded-lg bg-brand-amber text-xs font-extrabold text-brand-navy">BW</span>
+        <strong class="text-sm font-semibold">BWIMS</strong>
       </div>
-      <Button
-        icon="pi pi-bars"
-        severity="secondary"
-        text
-        class="!text-white"
-        @click="mobileMenuOpen = !mobileMenuOpen"
-      />
+      <Button variant="ghost" size="icon" aria-label="Toggle navigation" @click="mobileMenuOpen = !mobileMenuOpen">
+        <Menu class="size-5" />
+      </Button>
     </div>
 
-    <!-- Sidebar navigation -->
+    <!-- Sidebar -->
     <aside
-      class="flex flex-col gap-6 bg-brand-navy p-5 text-[#f7f9fc] max-[900px]:p-4"
+      class="flex flex-col gap-6 border-r bg-sidebar p-4 text-sidebar-foreground max-[900px]:border-r-0 max-[900px]:border-b"
       :class="{ 'max-[900px]:hidden': !mobileMenuOpen }"
     >
-      <div class="flex items-center gap-3 px-2">
-        <span class="grid h-[42px] w-[42px] place-items-center rounded-[12px] bg-brand-amber font-extrabold text-brand-navy text-lg shadow-sm">
+      <div class="flex items-center gap-3 px-2 pt-2">
+        <span class="grid size-10 place-items-center rounded-xl bg-brand-amber text-base font-extrabold text-brand-navy shadow-sm">
           BW
         </span>
-        <div class="grid">
-          <strong class="text-base tracking-tight text-white">BWIMS</strong>
-          <small class="text-xs text-[#a8bdd5]">Beverage Warehouse Control</small>
+        <div class="grid leading-tight">
+          <strong class="text-sm font-semibold tracking-tight">BWIMS</strong>
+          <small class="text-xs text-muted-foreground">Beverage Warehouse Control</small>
         </div>
       </div>
 
       <nav aria-label="Primary navigation" class="grid gap-1">
         <RouterLink
-          to="/"
-          class="flex items-center gap-3 rounded-[10px] px-[0.9rem] py-[0.7rem] text-sm font-medium text-[#d0e0f2] transition-colors hover:bg-white/10 [&.router-link-exact-active]:bg-brand-amber [&.router-link-exact-active]:font-bold [&.router-link-exact-active]:text-brand-navy"
+          v-for="item in navItems"
+          :key="item.to"
+          :to="item.to"
+          class="group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+          :class="
+            item.exact
+              ? '[&.router-link-exact-active]:bg-primary [&.router-link-exact-active]:text-primary-foreground'
+              : '[&.router-link-active]:bg-primary [&.router-link-active]:text-primary-foreground'
+          "
           @click="closeMobileMenu"
         >
-          <i class="pi pi-th-large text-base" />
-          <span>Dashboard</span>
-        </RouterLink>
-
-        <RouterLink
-          to="/inventory"
-          class="flex items-center gap-3 rounded-[10px] px-[0.9rem] py-[0.7rem] text-sm font-medium text-[#d0e0f2] transition-colors hover:bg-white/10 [&.router-link-active]:bg-brand-amber [&.router-link-active]:font-bold [&.router-link-active]:text-brand-navy"
-          @click="closeMobileMenu"
-        >
-          <i class="pi pi-database text-base" />
-          <span>Inventory Stock</span>
-        </RouterLink>
-
-        <RouterLink
-          to="/movements"
-          class="flex items-center gap-3 rounded-[10px] px-[0.9rem] py-[0.7rem] text-sm font-medium text-[#d0e0f2] transition-colors hover:bg-white/10 [&.router-link-active]:bg-brand-amber [&.router-link-active]:font-bold [&.router-link-active]:text-brand-navy"
-          @click="closeMobileMenu"
-        >
-          <i class="pi pi-truck text-base" />
-          <span>Stock Movements</span>
-        </RouterLink>
-
-        <RouterLink
-          to="/products"
-          class="flex items-center gap-3 rounded-[10px] px-[0.9rem] py-[0.7rem] text-sm font-medium text-[#d0e0f2] transition-colors hover:bg-white/10 [&.router-link-active]:bg-brand-amber [&.router-link-active]:font-bold [&.router-link-active]:text-brand-navy"
-          @click="closeMobileMenu"
-        >
-          <i class="pi pi-box text-base" />
-          <span>Products Catalog</span>
-        </RouterLink>
-
-        <RouterLink
-          to="/categories"
-          class="flex items-center gap-3 rounded-[10px] px-[0.9rem] py-[0.7rem] text-sm font-medium text-[#d0e0f2] transition-colors hover:bg-white/10 [&.router-link-active]:bg-brand-amber [&.router-link-active]:font-bold [&.router-link-active]:text-brand-navy"
-          @click="closeMobileMenu"
-        >
-          <i class="pi pi-tags text-base" />
-          <span>Categories</span>
-        </RouterLink>
-
-        <RouterLink
-          to="/warehouses"
-          class="flex items-center gap-3 rounded-[10px] px-[0.9rem] py-[0.7rem] text-sm font-medium text-[#d0e0f2] transition-colors hover:bg-white/10 [&.router-link-active]:bg-brand-amber [&.router-link-active]:font-bold [&.router-link-active]:text-brand-navy"
-          @click="closeMobileMenu"
-        >
-          <i class="pi pi-building text-base" />
-          <span>Warehouses</span>
-        </RouterLink>
-
-        <RouterLink
-          v-if="isAdmin"
-          to="/users"
-          class="flex items-center gap-3 rounded-[10px] px-[0.9rem] py-[0.7rem] text-sm font-medium text-[#d0e0f2] transition-colors hover:bg-white/10 [&.router-link-active]:bg-brand-amber [&.router-link-active]:font-bold [&.router-link-active]:text-brand-navy"
-          @click="closeMobileMenu"
-        >
-          <i class="pi pi-users text-base" />
-          <span>User Management</span>
-        </RouterLink>
-
-        <RouterLink
-          to="/barcode-test"
-          class="flex items-center gap-3 rounded-[10px] px-[0.9rem] py-[0.7rem] text-sm font-medium text-[#d0e0f2] transition-colors hover:bg-white/10 [&.router-link-active]:bg-brand-amber [&.router-link-active]:font-bold [&.router-link-active]:text-brand-navy"
-          @click="closeMobileMenu"
-        >
-          <i class="pi pi-camera text-base" />
-          <span>Barcode Test</span>
+          <component :is="item.icon" class="size-4" />
+          <span>{{ item.label }}</span>
         </RouterLink>
       </nav>
 
-      <div class="mt-auto grid gap-1 rounded-[12px] border border-white/10 bg-white/5 p-3 text-xs text-[#dce7f2] max-[900px]:hidden">
-        <div class="flex items-center justify-between text-[#a8bdd5] font-semibold">
+      <div class="mt-auto grid gap-1 rounded-xl border bg-card p-3 text-xs max-[900px]:hidden">
+        <div class="flex items-center justify-between font-semibold text-muted-foreground">
           <span>System Status</span>
-          <span class="inline-flex items-center gap-1 text-[10px] text-emerald-400">
-            <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" /> Live
+          <span class="inline-flex items-center gap-1 text-[10px] text-emerald-600">
+            <span class="size-1.5 animate-pulse rounded-full bg-emerald-500" /> Live
           </span>
         </div>
-        <p class="m-0 text-[11px] text-[#a8bdd5]/90 mt-1">Multi-warehouse stock control, FEFO picking, and audit trail active.</p>
+        <p class="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+          Multi-warehouse stock control, FEFO picking, and audit trail active.
+        </p>
       </div>
     </aside>
 
-    <!-- Main content container -->
-    <div class="min-w-0 flex flex-col bg-brand-surface relative">
-      <header class="flex min-h-[70px] items-center justify-between border-b border-[#dde4ee] bg-white px-8 py-3 max-[520px]:px-4">
+    <!-- Main -->
+    <div class="relative flex min-w-0 flex-col">
+      <header class="sticky top-0 z-30 flex min-h-[68px] items-center justify-between gap-4 border-b bg-background/85 px-6 py-3 backdrop-blur max-[520px]:px-4">
         <div class="grid gap-0.5">
-          <small class="uppercase tracking-wider text-[10px] font-bold text-brand-muted">Beverage Distributor</small>
-          <strong class="text-sm font-extrabold text-brand-navy max-[520px]:text-xs">Inventory Management System</strong>
+          <small class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Beverage Distributor</small>
+          <strong class="text-sm font-semibold max-[520px]:text-xs">Inventory Management System</strong>
         </div>
 
-        <div class="flex items-center gap-3">
-          <Button
-            :icon="isDarkMode ? 'pi pi-sun' : 'pi pi-moon'"
-            severity="secondary"
-            text
-            rounded
-            size="small"
-            :title="isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'"
-            @click="toggleTheme"
-          />
+        <div class="flex items-center gap-2">
+          <Button variant="ghost" size="icon" :title="isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'" @click="toggleTheme">
+            <Sun v-if="isDarkMode" class="size-4" />
+            <Moon v-else class="size-4" />
+          </Button>
 
-          <div class="relative">
-            <Button
-              icon="pi pi-bell"
-              severity="secondary"
-              text
-              rounded
-              size="small"
-              title="Notifications & Alerts"
-              @click="(event) => notificationPanel.toggle(event)"
-            />
-            <span
-              v-if="activeAlerts.length > 0"
-              class="absolute -top-1 -right-1 grid h-4 w-4 place-items-center rounded-full bg-red-600 text-[9px] font-bold text-white shadow"
-            >
-              {{ activeAlerts.length }}
-            </span>
-          </div>
-
-          <Popover ref="notificationPanel" class="w-[320px]">
-            <div class="grid gap-2">
-              <div class="flex items-center justify-between border-b border-slate-200 pb-2">
-                <strong class="text-xs font-bold text-brand-navy">Inventory Alerts ({{ activeAlerts.length }})</strong>
-                <span class="text-[10px] text-brand-muted">Real-time</span>
-              </div>
-              <div v-if="activeAlerts.length === 0" class="py-4 text-center text-xs text-brand-muted">
+          <DropdownMenu>
+            <DropdownMenuTrigger as-child>
+              <Button variant="ghost" size="icon" class="relative" title="Notifications & alerts">
+                <Bell class="size-4" />
+                <span
+                  v-if="activeAlerts.length > 0"
+                  class="absolute -right-0.5 -top-0.5 grid size-4 place-items-center rounded-full bg-destructive text-[9px] font-bold text-white"
+                >
+                  {{ activeAlerts.length }}
+                </span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" class="w-80">
+              <DropdownMenuLabel class="flex items-center justify-between">
+                <span>Inventory Alerts ({{ activeAlerts.length }})</span>
+                <span class="text-[10px] font-normal text-muted-foreground">Real-time</span>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <div v-if="activeAlerts.length === 0" class="px-2 py-6 text-center text-xs text-muted-foreground">
                 No active low stock or expiration alerts.
               </div>
-              <div v-else class="grid gap-2 max-h-[220px] overflow-y-auto pr-1">
-                <div
-                  v-for="alert in activeAlerts.slice(0, 5)"
+              <div v-else class="max-h-[240px] overflow-y-auto">
+                <DropdownMenuItem
+                  v-for="alert in activeAlerts.slice(0, 6)"
                   :key="alert.id"
-                  class="rounded bg-slate-50 p-2 text-xs border border-slate-200"
+                  class="flex-col items-start gap-1"
                 >
-                  <strong class="block text-brand-navy">{{ alert.product_name || 'Item' }}</strong>
-                  <div class="flex justify-between text-[11px] text-slate-600 mt-0.5">
-                    <span>Qty: <strong class="text-red-600">{{ alert.quantity }}</strong></span>
-                    <span v-if="alert.expiration_date" class="text-amber-700">Exp: {{ alert.expiration_date }}</span>
+                  <strong class="text-xs">{{ alert.product_name }}</strong>
+                  <div class="flex w-full justify-between text-[11px] text-muted-foreground">
+                    <span>Qty: <strong class="text-destructive">{{ alert.quantity }}</strong></span>
+                    <span v-if="alert.expiration_date" class="text-amber-600">Exp: {{ alert.expiration_date }}</span>
                   </div>
-                </div>
+                </DropdownMenuItem>
               </div>
-            </div>
-          </Popover>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-          <div v-if="auth.user" class="grid text-right text-xs">
-            <span class="font-bold text-brand-navy">{{ auth.user.full_name }}</span>
-            <span class="font-medium capitalize text-brand-muted text-[11px]">
-              {{ auth.user.role.replace('_', ' ') }}
-            </span>
-          </div>
+          <Separator orientation="vertical" class="mx-1 h-8 max-[520px]:hidden" />
 
-          <Button
-            label="Sign out"
-            icon="pi pi-sign-out"
-            size="small"
-            severity="secondary"
-            outlined
-            @click="signOut"
-          />
+          <DropdownMenu v-if="auth.user">
+            <DropdownMenuTrigger as-child>
+              <Button variant="ghost" class="h-10 gap-2 px-2">
+                <span class="grid size-8 place-items-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                  {{ userInitials }}
+                </span>
+                <span class="grid text-left leading-tight max-[640px]:hidden">
+                  <span class="text-xs font-semibold">{{ auth.user.full_name }}</span>
+                  <span class="text-[11px] capitalize text-muted-foreground">{{ auth.user.role.replace('_', ' ') }}</span>
+                </span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" class="w-56">
+              <DropdownMenuLabel class="grid gap-1">
+                <span class="text-sm">{{ auth.user.full_name }}</span>
+                <Badge variant="secondary" class="w-fit capitalize">{{ auth.user.role.replace('_', ' ') }}</Badge>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem variant="destructive" @click="signOut">
+                <LogOut class="size-4" />
+                Sign out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </header>
 
@@ -384,15 +353,23 @@ function onMovementSuccess(msg: string) {
         <RouterView />
       </main>
 
-      <!-- Floating SpeedDial Quick Action Button -->
+      <!-- Quick actions -->
       <div class="fixed bottom-6 right-6 z-50">
-        <SpeedDial
-          :model="speedDialItems"
-          direction="up"
-          :radius="80"
-          type="semi-circle"
-          button-class="!bg-brand-navy !text-white !h-14 !w-14 shadow-xl border-2 border-brand-amber"
-        />
+        <DropdownMenu>
+          <DropdownMenuTrigger as-child>
+            <Button size="icon" class="size-14 rounded-full shadow-xl" aria-label="Quick actions">
+              <Plus class="size-6" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" side="top" class="w-48">
+            <DropdownMenuLabel>Quick actions</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem v-for="action in quickActions" :key="action.label" @click="action.run()">
+              <component :is="action.icon" class="size-4" />
+              {{ action.label }}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
 
@@ -425,9 +402,6 @@ function onMovementSuccess(msg: string) {
       @submitted="onMovementSuccess('Cycle count adjustment recorded!')"
     />
 
-    <BarcodeScannerModal
-      v-model:visible="scannerVisible"
-      @select="onBarcodeScanned"
-    />
+    <BarcodeScannerModal v-model:visible="scannerVisible" @select="onBarcodeScanned" />
   </div>
 </template>
