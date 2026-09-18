@@ -1,17 +1,37 @@
 <script setup lang="ts">
-import Button from 'primevue/button'
-import Card from 'primevue/card'
-import Column from 'primevue/column'
-import DataTable from 'primevue/datatable'
-import Message from 'primevue/message'
-import Select from 'primevue/select'
-import Tag from 'primevue/tag'
+import {
+  ArrowLeftRight,
+  ArrowRight,
+  Download,
+  FileSpreadsheet,
+  SlidersHorizontal,
+  Upload,
+} from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
 
 import AdjustFormDialog from '@/components/AdjustFormDialog.vue'
 import PickFormDialog from '@/components/PickFormDialog.vue'
 import ReceiveFormDialog from '@/components/ReceiveFormDialog.vue'
 import TransferFormDialog from '@/components/TransferFormDialog.vue'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { exportToCSV } from '@/lib/export'
 import { useAuthStore } from '@/stores/auth'
 import { useCatalogStore } from '@/stores/catalog'
@@ -25,8 +45,17 @@ const catalogStore = useCatalogStore()
 const warehouseStore = useWarehousesStore()
 const usersStore = useUsersStore()
 
-const movementTypeFilter = ref<'receive' | 'pick' | 'transfer' | 'adjust'>()
-const selectedProductId = ref<string>()
+type MovementType = 'receive' | 'pick' | 'transfer' | 'adjust'
+
+const typeFilter = ref<'all' | MovementType>('all')
+const productFilter = ref<string>('all')
+
+const movementTypeFilter = computed(() =>
+  typeFilter.value === 'all' ? undefined : (typeFilter.value as MovementType),
+)
+const selectedProductId = computed(() =>
+  productFilter.value === 'all' ? undefined : productFilter.value,
+)
 
 const receiveVisible = ref(false)
 const pickVisible = ref(false)
@@ -108,18 +137,16 @@ watch([movementTypeFilter, selectedProductId], () => {
   })
 })
 
-function getMovementSeverity(type: string): 'success' | 'warn' | 'info' | 'secondary' {
+function getMovementClass(type: string): string {
   switch (type) {
     case 'receive':
-      return 'success'
+      return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700'
     case 'pick':
-      return 'warn'
+      return 'border-amber-500/30 bg-amber-500/10 text-amber-700'
     case 'transfer':
-      return 'info'
-    case 'adjust':
-      return 'secondary'
+      return 'border-sky-500/30 bg-sky-500/10 text-sky-700'
     default:
-      return 'secondary'
+      return 'bg-muted text-muted-foreground'
   }
 }
 
@@ -138,165 +165,155 @@ function formatDate(dateStr: string): string {
 
 <template>
   <div class="grid gap-6">
-    <div class="flex flex-wrap items-center justify-between gap-4">
-      <div>
-        <h1 class="m-0 text-2xl font-bold text-brand-navy">Stock Movement Audit Log</h1>
-        <p class="m-0 text-sm text-brand-muted">Immutable history of receives, FEFO picks, transfers, and adjustments</p>
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div class="grid gap-1">
+        <h1 class="text-2xl font-semibold tracking-tight">Stock Movement Audit Log</h1>
+        <p class="text-sm text-muted-foreground">
+          Immutable history of receives, FEFO picks, transfers, and adjustments.
+        </p>
       </div>
 
       <div class="flex flex-wrap items-center gap-2">
-        <Button
-          label="Export CSV"
-          icon="pi pi-file-excel"
-          severity="secondary"
-          outlined
-          @click="exportMovementsCSV"
-        />
-        <Button
-          v-if="canReceiveOrPick"
-          label="Receive"
-          icon="pi pi-download"
-          severity="success"
-          @click="receiveVisible = true"
-        />
-        <Button
-          v-if="canReceiveOrPick"
-          label="FEFO Pick"
-          icon="pi pi-upload"
-          severity="warn"
-          @click="pickVisible = true"
-        />
-        <Button
-          v-if="canTransferOrAdjust"
-          label="Transfer"
-          icon="pi pi-arrows-h"
-          severity="info"
-          @click="transferVisible = true"
-        />
-        <Button
-          v-if="canTransferOrAdjust"
-          label="Adjust"
-          icon="pi pi-sliders-h"
-          severity="secondary"
-          @click="adjustVisible = true"
-        />
+        <Button variant="outline" @click="exportMovementsCSV">
+          <FileSpreadsheet class="size-4" />
+          Export CSV
+        </Button>
+        <Button v-if="canReceiveOrPick" @click="receiveVisible = true">
+          <Download class="size-4" />
+          Receive
+        </Button>
+        <Button v-if="canReceiveOrPick" variant="secondary" @click="pickVisible = true">
+          <Upload class="size-4" />
+          FEFO Pick
+        </Button>
+        <Button v-if="canTransferOrAdjust" variant="outline" @click="transferVisible = true">
+          <ArrowLeftRight class="size-4" />
+          Transfer
+        </Button>
+        <Button v-if="canTransferOrAdjust" variant="outline" @click="adjustVisible = true">
+          <SlidersHorizontal class="size-4" />
+          Adjust
+        </Button>
       </div>
     </div>
 
     <Card>
-      <template #content>
-        <div class="mb-4 flex flex-wrap items-center gap-3">
-          <Select
-            v-model="movementTypeFilter"
-            :options="[
-              { label: 'Receive', value: 'receive' },
-              { label: 'Pick (FEFO)', value: 'pick' },
-              { label: 'Transfer', value: 'transfer' },
-              { label: 'Adjustment', value: 'adjust' },
-            ]"
-            option-label="label"
-            option-value="value"
-            placeholder="All Movement Types"
-            show-clear
-            class="w-[200px]"
-          />
+      <CardContent class="grid gap-4">
+        <div class="flex flex-wrap items-center gap-3">
+          <Select v-model="typeFilter">
+            <SelectTrigger class="w-[210px]">
+              <SelectValue placeholder="All Movement Types" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Movement Types</SelectItem>
+              <SelectItem value="receive">Receive</SelectItem>
+              <SelectItem value="pick">Pick (FEFO)</SelectItem>
+              <SelectItem value="transfer">Transfer</SelectItem>
+              <SelectItem value="adjust">Adjustment</SelectItem>
+            </SelectContent>
+          </Select>
 
-          <Select
-            v-model="selectedProductId"
-            :options="catalogStore.products"
-            option-label="name"
-            option-value="id"
-            placeholder="All Products"
-            show-clear
-            filter
-            class="w-[240px]"
-          />
+          <Select v-model="productFilter">
+            <SelectTrigger class="w-[240px]">
+              <SelectValue placeholder="All Products" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Products</SelectItem>
+              <SelectItem v-for="product in catalogStore.products" :key="product.id" :value="product.id">
+                {{ product.name }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
-        <Message v-if="inventoryStore.error" severity="error" class="mb-4">
-          {{ inventoryStore.error }}
-        </Message>
-
-        <DataTable
-          :value="enrichedMovements"
-          :loading="inventoryStore.loading"
-          data-key="id"
-          responsive-layout="scroll"
-          striped-rows
-          paginator
-          :rows="10"
-          :rows-per-page-options="[10, 20, 50]"
-          class="p-datatable-sm"
+        <p
+          v-if="inventoryStore.error"
+          role="alert"
+          class="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
         >
-          <template #empty>
-            <div class="py-8 text-center text-brand-muted">
-              No movement audit records found.
-            </div>
-          </template>
+          {{ inventoryStore.error }}
+        </p>
 
-          <Column field="created_at" header="Timestamp" sortable>
-            <template #body="{ data }">
-              <span class="text-xs font-semibold text-slate-700">{{ formatDate(data.created_at) }}</span>
-            </template>
-          </Column>
+        <div class="overflow-x-auto rounded-lg border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Timestamp</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Product</TableHead>
+                <TableHead>Quantity</TableHead>
+                <TableHead>Locations</TableHead>
+                <TableHead>Reference</TableHead>
+                <TableHead>Operator</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow v-if="inventoryStore.loading">
+                <TableCell :colspan="7">
+                  <div class="grid gap-2 py-2">
+                    <Skeleton class="h-6 w-full" />
+                    <Skeleton class="h-6 w-full" />
+                    <Skeleton class="h-6 w-2/3" />
+                  </div>
+                </TableCell>
+              </TableRow>
 
-          <Column field="type" header="Type" sortable>
-            <template #body="{ data }">
-              <Tag
-                :value="data.type.toUpperCase()"
-                :severity="getMovementSeverity(data.type)"
-                class="font-mono text-[10px]"
-              />
-            </template>
-          </Column>
+              <TableRow v-else-if="enrichedMovements.length === 0">
+                <TableCell :colspan="7" class="py-10 text-center text-sm text-muted-foreground">
+                  No movement audit records found.
+                </TableCell>
+              </TableRow>
 
-          <Column field="product_name" header="Product">
-            <template #body="{ data }">
-              <div>
-                <strong class="block text-brand-navy">{{ data.product_name || 'Product' }}</strong>
-                <small class="font-mono text-brand-muted">SKU: {{ data.product_sku }}</small>
-              </div>
-            </template>
-          </Column>
-
-          <Column field="quantity" header="Quantity" sortable>
-            <template #body="{ data }">
-              <span class="font-extrabold text-brand-navy">{{ data.quantity }}</span>
-            </template>
-          </Column>
-
-          <Column header="Locations">
-            <template #body="{ data }">
-              <div class="flex items-center gap-1 text-xs font-mono">
-                <span v-if="data.from_location_code" class="rounded bg-red-50 text-red-700 px-1 border border-red-200">
-                  {{ data.from_location_code }}
-                </span>
-                <i v-if="data.from_location_code && data.to_location_code" class="pi pi-arrow-right text-[10px] text-slate-400" />
-                <span v-if="data.to_location_code" class="rounded bg-green-50 text-green-700 px-1 border border-green-200">
-                  {{ data.to_location_code }}
-                </span>
-              </div>
-            </template>
-          </Column>
-
-          <Column field="reference" header="Reference">
-            <template #body="{ data }">
-              <span v-if="data.reference" class="font-mono text-xs font-semibold text-slate-700">
-                {{ data.reference }}
-              </span>
-              <span v-else class="text-xs text-slate-400">—</span>
-            </template>
-          </Column>
-
-          <Column field="performed_by" header="Operator">
-            <template #body="{ data }">
-              <span class="text-xs text-slate-600 font-medium">
-                {{ data.performer_name || 'System Operator' }}
-              </span>
-            </template>
-          </Column>
-        </DataTable>
-      </template>
+              <TableRow v-for="movement in enrichedMovements" v-else :key="movement.id">
+                <TableCell class="text-xs font-medium text-muted-foreground">
+                  {{ formatDate(movement.created_at) }}
+                </TableCell>
+                <TableCell>
+                  <Badge variant="outline" :class="['font-mono text-[10px] uppercase', getMovementClass(movement.type)]">
+                    {{ movement.type }}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <div class="grid leading-tight">
+                    <strong class="text-sm">{{ movement.product_name }}</strong>
+                    <small class="font-mono text-xs text-muted-foreground">SKU: {{ movement.product_sku }}</small>
+                  </div>
+                </TableCell>
+                <TableCell class="font-semibold">{{ movement.quantity }}</TableCell>
+                <TableCell>
+                  <div class="flex items-center gap-1 font-mono text-xs">
+                    <span
+                      v-if="movement.from_location_code"
+                      class="rounded border border-destructive/20 bg-destructive/10 px-1 text-destructive"
+                    >
+                      {{ movement.from_location_code }}
+                    </span>
+                    <ArrowRight
+                      v-if="movement.from_location_code && movement.to_location_code"
+                      class="size-3 text-muted-foreground"
+                    />
+                    <span
+                      v-if="movement.to_location_code"
+                      class="rounded border border-emerald-500/20 bg-emerald-500/10 px-1 text-emerald-700"
+                    >
+                      {{ movement.to_location_code }}
+                    </span>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <span v-if="movement.reference" class="font-mono text-xs font-semibold">
+                    {{ movement.reference }}
+                  </span>
+                  <span v-else class="text-xs text-muted-foreground">&mdash;</span>
+                </TableCell>
+                <TableCell class="text-xs text-muted-foreground">
+                  {{ movement.performer_name }}
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
     </Card>
 
     <ReceiveFormDialog
