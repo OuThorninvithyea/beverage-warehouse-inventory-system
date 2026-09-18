@@ -15,7 +15,7 @@ npm install
 npm run dev
 ```
 
-Open <http://localhost:5173>. Vite proxies `/api`, `/health`, and `/ready` to
+Open <http://localhost:6000>. Vite proxies `/api`, `/health`, and `/ready` to
 the Go API at <http://localhost:8080>, avoiding a separate development CORS
 configuration.
 
@@ -38,4 +38,4 @@ npm run build
 ```
 
 From the repository root, `docker compose up --build` serves the frontend at
-<http://localhost:5173> and proxies API requests to the `api` container.
+<http://localhost:6000> and proxies API requests to the `api` container.
