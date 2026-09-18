@@ -1,8 +1,18 @@
 <script setup lang="ts">
-import Button from 'primevue/button'
-import Dialog from 'primevue/dialog'
-import InputNumber from 'primevue/inputnumber'
+import { Printer } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
+
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
 import type { Product } from '@/api/catalog'
 import type { Location } from '@/api/warehouses'
@@ -47,67 +57,61 @@ function closeDialog() {
 </script>
 
 <template>
-  <Dialog
-    :visible="visible"
-    modal
-    header="Print Barcode & Shelf Labels"
-    :style="{ width: '90vw', maxWidth: '580px' }"
-    @update:visible="closeDialog"
-  >
-    <div class="grid gap-4 py-2">
-      <div class="flex items-center justify-between gap-4 rounded-[8px] bg-brand-surface p-3 border border-brand-border">
-        <div>
-          <strong class="block text-sm text-brand-navy">{{ itemTitle }}</strong>
-          <small class="text-brand-muted">{{ itemSubtitle }}</small>
-        </div>
+  <Dialog :open="visible" @update:open="(value: boolean) => emit('update:visible', value)">
+    <DialogContent class="sm:max-w-xl">
+      <DialogHeader>
+        <DialogTitle>Print Barcode &amp; Shelf Labels</DialogTitle>
+        <DialogDescription>Preview and print label sheets for this item.</DialogDescription>
+      </DialogHeader>
 
-        <div class="flex items-center gap-2">
-          <label for="copies" class="text-xs font-bold text-brand-muted">Copies:</label>
-          <InputNumber
-            id="copies"
-            v-model="labelCopies"
-            :min="1"
-            :max="24"
-            class="w-[80px]"
-          />
-        </div>
-      </div>
-
-      <!-- Printable Area -->
-      <div id="printable-labels-container" class="grid grid-cols-2 gap-3 max-h-[300px] overflow-y-auto p-2 border border-dashed border-slate-300 rounded-lg">
-        <div
-          v-for="n in labelCopies"
-          :key="n"
-          class="flex flex-col items-center justify-center p-3 border-2 border-slate-800 rounded bg-white text-center shadow-sm"
-        >
-          <span class="text-[10px] font-extrabold uppercase text-slate-700 tracking-tight line-clamp-1">{{ itemTitle }}</span>
-          
-          <!-- Barcode visual simulation -->
-          <div class="my-1.5 flex h-10 items-center justify-center gap-[2px]">
-            <div
-              v-for="(bar, i) in 32"
-              :key="i"
-              class="h-full bg-slate-900"
-              :style="{ width: i % 3 === 0 ? '3px' : '1.5px' }"
-            />
+      <div class="grid gap-4">
+        <div class="flex items-center justify-between gap-4 rounded-lg border bg-muted/40 p-3">
+          <div class="grid gap-0.5">
+            <strong class="text-sm">{{ itemTitle }}</strong>
+            <small class="text-xs text-muted-foreground">{{ itemSubtitle }}</small>
           </div>
 
-          <span class="font-mono text-xs font-extrabold text-slate-900 tracking-widest">{{ itemCode }}</span>
-          <span class="text-[9px] text-slate-500 font-medium">BWIMS Distributor Tag</span>
+          <div class="flex items-center gap-2">
+            <Label for="copies" class="text-xs">Copies</Label>
+            <Input id="copies" v-model.number="labelCopies" type="number" min="1" max="24" class="w-20" />
+          </div>
+        </div>
+
+        <div
+          id="printable-labels-container"
+          class="grid max-h-[300px] grid-cols-2 gap-3 overflow-y-auto rounded-lg border border-dashed p-2"
+        >
+          <div
+            v-for="n in labelCopies"
+            :key="n"
+            class="flex flex-col items-center justify-center rounded border-2 border-slate-800 bg-white p-3 text-center"
+          >
+            <span class="line-clamp-1 text-[10px] font-extrabold uppercase tracking-tight text-slate-700">
+              {{ itemTitle }}
+            </span>
+
+            <div class="my-1.5 flex h-10 items-center justify-center gap-[2px]">
+              <div
+                v-for="(bar, i) in 32"
+                :key="i"
+                class="h-full bg-slate-900"
+                :style="{ width: i % 3 === 0 ? '3px' : '1.5px' }"
+              />
+            </div>
+
+            <span class="font-mono text-xs font-extrabold tracking-widest text-slate-900">{{ itemCode }}</span>
+            <span class="text-[9px] font-medium text-slate-500">BWIMS Distributor Tag</span>
+          </div>
         </div>
       </div>
-    </div>
 
-    <template #footer>
-      <div class="flex justify-end gap-2">
-        <Button label="Close" severity="secondary" outlined @click="closeDialog" />
-        <Button
-          label="Print Labels"
-          icon="pi pi-print"
-          severity="success"
-          @click="triggerPrint"
-        />
-      </div>
-    </template>
+      <DialogFooter>
+        <Button variant="outline" @click="closeDialog">Close</Button>
+        <Button @click="triggerPrint">
+          <Printer class="size-4" />
+          Print Labels
+        </Button>
+      </DialogFooter>
+    </DialogContent>
   </Dialog>
 </template>

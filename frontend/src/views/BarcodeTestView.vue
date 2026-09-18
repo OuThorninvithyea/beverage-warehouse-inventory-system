@@ -1,12 +1,24 @@
 <script setup lang="ts">
 import { BrowserMultiFormatReader, type IScannerControls } from '@zxing/browser'
-import Button from 'primevue/button'
-import Card from 'primevue/card'
-import InputText from 'primevue/inputtext'
-import Message from 'primevue/message'
-import Select from 'primevue/select'
 import { computed, nextTick, onBeforeUnmount, ref } from 'vue'
 
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { validateBarcode } from '@/lib/barcode'
 
 interface CameraOption {
@@ -101,64 +113,63 @@ onBeforeUnmount(stopScanner)
 </script>
 
 <template>
-  <section>
-    <div class="mb-6 flex items-start justify-between">
-      <div>
-        <span class="inline-flex rounded-full bg-[#dff8eb] px-[0.65rem] py-[0.35rem] text-[0.8rem] font-bold text-[#176c43]">Week 6 device test</span>
-        <h1 class="mb-[0.35rem] mt-3 text-[clamp(1.8rem,4vw,2.6rem)]">Barcode camera validation</h1>
-        <p class="m-0 text-brand-muted">Decode and validate a barcode without changing inventory.</p>
-      </div>
+  <section class="grid gap-6">
+    <div class="grid gap-2">
+      <Badge variant="outline" class="w-fit border-emerald-500/30 bg-emerald-500/10 text-emerald-700">
+        Week 6 device test
+      </Badge>
+      <h1 class="text-3xl font-semibold tracking-tight">Barcode camera validation</h1>
+      <p class="text-sm text-muted-foreground">Decode and validate a barcode without changing inventory.</p>
     </div>
 
-    <div class="grid grid-cols-2 gap-4 max-[800px]:grid-cols-1">
+    <div class="grid grid-cols-2 gap-6 max-[800px]:grid-cols-1">
       <Card>
-        <template #title>Camera scanner</template>
-        <template #content>
-          <div class="grid gap-[0.85rem]">
-            <video ref="video" class="min-h-[280px] w-full rounded-[12px] bg-[#091a2d] object-cover" muted playsinline />
+        <CardHeader>
+          <CardTitle class="text-base">Camera scanner</CardTitle>
+        </CardHeader>
+        <CardContent class="grid gap-4">
+          <video ref="video" class="min-h-[280px] w-full rounded-xl bg-brand-navy object-cover" muted playsinline />
 
-            <label for="camera">Camera</label>
-            <Select
-              id="camera"
-              v-model="selectedCamera"
-              :options="cameras"
-              option-label="label"
-              option-value="value"
-              placeholder="Choose a camera"
-              :disabled="scanning"
-            />
-
-            <div class="flex flex-wrap gap-[0.65rem]">
-              <Button v-if="!scanning" label="Start camera" @click="startScanner" />
-              <Button
-                v-else
-                label="Stop camera"
-                severity="secondary"
-                @click="stopScanner"
-              />
-              <Button
-                v-if="locked"
-                label="Rescan"
-                severity="secondary"
-                outlined
-                @click="rescan"
-              />
-            </div>
-
-            <Message v-if="cameraError" severity="error">{{ cameraError }}</Message>
-            <small>
-              Camera access requires HTTPS, except on <code>localhost</code>.
-            </small>
+          <div class="grid gap-2">
+            <Label for="camera">Camera</Label>
+            <Select v-model="selectedCamera" :disabled="scanning">
+              <SelectTrigger id="camera" class="w-full">
+                <SelectValue placeholder="Choose a camera" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="camera in cameras" :key="camera.value" :value="camera.value">
+                  {{ camera.label }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-        </template>
+
+          <div class="flex flex-wrap gap-2">
+            <Button v-if="!scanning" @click="startScanner">Start camera</Button>
+            <Button v-else variant="secondary" @click="stopScanner">Stop camera</Button>
+            <Button v-if="locked" variant="outline" @click="rescan">Rescan</Button>
+          </div>
+
+          <p
+            v-if="cameraError"
+            class="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          >
+            {{ cameraError }}
+          </p>
+          <small class="text-xs text-muted-foreground">
+            Camera access requires HTTPS, except on <code>localhost</code>.
+          </small>
+        </CardContent>
       </Card>
 
       <Card>
-        <template #title>Captured value</template>
-        <template #content>
-          <div class="grid gap-[0.85rem]">
-            <label for="manual-barcode">Manual or USB scanner input</label>
-            <InputText
+        <CardHeader>
+          <CardTitle class="text-base">Captured value</CardTitle>
+        </CardHeader>
+        <CardContent class="grid gap-4">
+          <div class="grid gap-2">
+            <Label for="manual-barcode">Manual or USB scanner input</Label>
+            <Input
               id="manual-barcode"
               v-model="manualValue"
               inputmode="numeric"
@@ -166,27 +177,30 @@ onBeforeUnmount(stopScanner)
               placeholder="Scan or enter EAN-13 / UPC-A"
               @keyup.enter="useManualValue"
             />
-            <Button
-              label="Validate value"
-              severity="secondary"
-              :disabled="manualValue.trim().length === 0"
-              @click="useManualValue"
-            />
-
-            <div v-if="candidate" class="grid gap-[0.4rem] rounded-[12px] bg-brand-surface p-4">
-              <small>Captured barcode</small>
-              <strong class="[overflow-wrap:anywhere] text-[1.4rem] tracking-[0.08em] text-brand-navy">{{ validation.normalized }}</strong>
-              <Message :severity="validation.valid ? 'success' : 'warn'">
-                {{ validation.message }}
-              </Message>
-            </div>
-
-            <Message severity="info">
-              This screen only produces a lookup value. It cannot receive, pick,
-              transfer or adjust inventory.
-            </Message>
           </div>
-        </template>
+
+          <Button
+            variant="secondary"
+            :disabled="manualValue.trim().length === 0"
+            @click="useManualValue"
+          >
+            Validate value
+          </Button>
+
+          <div v-if="candidate" class="grid gap-1.5 rounded-xl border bg-muted/40 p-4">
+            <small class="text-xs text-muted-foreground">Captured barcode</small>
+            <strong class="text-2xl tracking-[0.08em] [overflow-wrap:anywhere]">
+              {{ validation.normalized }}
+            </strong>
+            <p class="text-sm" :class="validation.valid ? 'text-emerald-600' : 'text-amber-600'">
+              {{ validation.message }}
+            </p>
+          </div>
+
+          <p class="rounded-md border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-sm text-sky-700">
+            This screen only produces a lookup value. It cannot receive, pick, transfer or adjust inventory.
+          </p>
+        </CardContent>
       </Card>
     </div>
   </section>

@@ -1,12 +1,26 @@
 <script setup lang="ts">
 import { BrowserMultiFormatReader, type IScannerControls } from '@zxing/browser'
-import Button from 'primevue/button'
-import Dialog from 'primevue/dialog'
-import InputText from 'primevue/inputtext'
-import Message from 'primevue/message'
-import Select from 'primevue/select'
+import { Check, StopCircle, Video } from 'lucide-vue-next'
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { validateBarcode } from '@/lib/barcode'
 
 const props = defineProps<{
@@ -118,92 +132,78 @@ onBeforeUnmount(stopScanner)
 </script>
 
 <template>
-  <Dialog
-    :visible="visible"
-    modal
-    header="Scan Barcode"
-    :style="{ width: '90vw', maxWidth: '520px' }"
-    @update:visible="closeModal"
-  >
-    <div class="grid gap-4">
-      <div class="relative overflow-hidden rounded-[12px] bg-[#091a2d]">
-        <video
-          ref="video"
-          class="min-h-[220px] w-full object-cover"
-          muted
-          playsinline
-        />
-        <div
-          v-if="scanning"
-          class="pointer-events-none absolute inset-0 flex items-center justify-center"
-        >
-          <div class="h-[120px] w-[220px] rounded-[8px] border-2 border-dashed border-brand-amber/80 shadow-[0_0_20px_rgba(230,165,0,0.3)] animate-pulse" />
+  <Dialog :open="visible" @update:open="(value: boolean) => !value && closeModal()">
+    <DialogContent class="sm:max-w-lg">
+      <DialogHeader>
+        <DialogTitle>Scan Barcode</DialogTitle>
+        <DialogDescription>Use the camera, a USB scanner, or type the code manually.</DialogDescription>
+      </DialogHeader>
+
+      <div class="grid gap-4">
+        <div class="relative overflow-hidden rounded-xl bg-brand-navy">
+          <video ref="video" class="min-h-[220px] w-full object-cover" muted playsinline />
+          <div v-if="scanning" class="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <div class="h-[120px] w-[220px] animate-pulse rounded-lg border-2 border-dashed border-brand-amber/80" />
+          </div>
         </div>
-      </div>
 
-      <div class="flex items-center gap-2">
-        <Select
-          v-model="selectedCamera"
-          :options="cameras"
-          option-label="label"
-          option-value="value"
-          placeholder="Select camera"
-          class="w-full"
-          :disabled="scanning"
-        />
-        <Button
-          v-if="!scanning"
-          label="Start"
-          icon="pi pi-video"
-          size="small"
-          @click="startScanner"
-        />
-        <Button
-          v-else
-          label="Stop"
-          severity="secondary"
-          icon="pi pi-stop-circle"
-          size="small"
-          @click="stopScanner"
-        />
-      </div>
+        <div class="flex items-center gap-2">
+          <Select v-model="selectedCamera" :disabled="scanning">
+            <SelectTrigger class="flex-1">
+              <SelectValue placeholder="Select camera" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem v-for="camera in cameras" :key="camera.value" :value="camera.value">
+                {{ camera.label }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          <Button v-if="!scanning" size="sm" @click="startScanner">
+            <Video class="size-4" />
+            Start
+          </Button>
+          <Button v-else size="sm" variant="secondary" @click="stopScanner">
+            <StopCircle class="size-4" />
+            Stop
+          </Button>
+        </div>
 
-      <Message v-if="cameraError" severity="warn" class="text-xs">
-        {{ cameraError }}
-      </Message>
+        <p
+          v-if="cameraError"
+          class="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700"
+        >
+          {{ cameraError }}
+        </p>
 
-      <div class="grid gap-1">
-        <label for="modal-manual-barcode" class="text-xs font-semibold text-brand-muted">Manual or USB Scanner Input</label>
-        <div class="flex gap-2">
-          <InputText
+        <div class="grid gap-2">
+          <Label for="modal-manual-barcode">Manual or USB Scanner Input</Label>
+          <Input
             id="modal-manual-barcode"
             v-model="manualValue"
             placeholder="Enter or scan EAN-13 / UPC-A"
-            class="w-full"
             @keyup.enter="confirmBarcode"
           />
         </div>
+
+        <div v-if="candidate" class="rounded-lg border bg-muted/40 p-3">
+          <small class="text-xs text-muted-foreground">Detected Barcode:</small>
+          <div class="text-lg font-semibold">{{ candidate }}</div>
+          <p
+            class="mt-1 text-xs"
+            :class="validation.valid ? 'text-emerald-600' : 'text-amber-600'"
+          >
+            {{ validation.message }}
+          </p>
+        </div>
       </div>
 
-      <div v-if="candidate" class="rounded-[8px] bg-brand-surface p-3 text-xs">
-        <small class="text-brand-muted">Detected Barcode:</small>
-        <div class="text-lg font-bold text-brand-navy">{{ candidate }}</div>
-        <Message :severity="validation.valid ? 'success' : 'warn'" class="mt-1">
-          {{ validation.message }}
-        </Message>
-      </div>
-    </div>
-
-    <template #footer>
-      <div class="flex justify-end gap-2">
-        <Button label="Cancel" severity="secondary" outlined @click="closeModal" />
-        <Button
-          label="Use Barcode"
-          icon="pi pi-check"
-          :disabled="!candidate"
-          @click="confirmBarcode"
-        />
-      </div>
-    </template>
+      <DialogFooter>
+        <Button variant="outline" @click="closeModal">Cancel</Button>
+        <Button :disabled="!candidate" @click="confirmBarcode">
+          <Check class="size-4" />
+          Use Barcode
+        </Button>
+      </DialogFooter>
+    </DialogContent>
   </Dialog>
 </template>
