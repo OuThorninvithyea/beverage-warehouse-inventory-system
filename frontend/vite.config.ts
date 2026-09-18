@@ -13,7 +13,7 @@ export default defineConfig({
   },
   server: {
     host: '0.0.0.0',
-    port: 6000,
+    port: 6001,
     proxy: {
       '/api': 'http://localhost:8080',
       '/health': 'http://localhost:8080',
