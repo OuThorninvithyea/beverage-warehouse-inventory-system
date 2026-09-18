@@ -3,17 +3,13 @@ import type { Page } from '@/types/pagination'
 
 export interface StockBalance {
   id: string
-  warehouse_id: string
   location_id: string
   product_id: string
   lot_id: string | null
   quantity: string
-  reserved_qty: string
-  location_code?: string
-  product_sku?: string
-  product_name?: string
-  lot_number?: string
-  expiration_date?: string
+  reserved_quantity: string
+  available_quantity: string
+  created_at: string
   updated_at: string
 }
 
@@ -75,7 +71,7 @@ export interface AdjustInput {
 
 export interface StockMovement {
   id: string
-  type: 'receive' | 'pick' | 'transfer' | 'adjust'
+  movement_type: 'receive' | 'pick' | 'transfer' | 'adjust'
   product_id: string
   lot_id: string | null
   from_location_id: string | null
@@ -84,14 +80,8 @@ export interface StockMovement {
   unit_cost: string | null
   reference: string | null
   notes: string | null
-  performed_by: string
+  performed_by: string | null
   created_at: string
-  product_sku?: string
-  product_name?: string
-  lot_number?: string
-  from_location_code?: string
-  to_location_code?: string
-  performer_name?: string
 }
 
 export interface MovementListFilter {

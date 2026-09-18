@@ -162,7 +162,7 @@ onBeforeUnmount(stopScanner)
           v-else
           label="Stop"
           severity="secondary"
-          icon="pi pi-[#091a2d]"
+          icon="pi pi-stop-circle"
           size="small"
           @click="stopScanner"
         />
