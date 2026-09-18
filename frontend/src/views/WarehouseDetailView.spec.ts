@@ -1,7 +1,5 @@
-import Aura from '@primeuix/themes/aura'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import PrimeVue from 'primevue/config'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import * as warehousesApi from '@/api/warehouses'
@@ -52,8 +50,7 @@ beforeEach(() => {
 function mountView() {
   return mount(WarehouseDetailView, {
     global: {
-      plugins: [[PrimeVue, { theme: { preset: Aura } }]],
-      stubs: { Portal: { template: '<div><slot /></div>' } },
+      stubs: { teleport: true },
     },
   })
 }

@@ -1,8 +1,6 @@
-import Aura from '@primeuix/themes/aura'
-import { mount } from '@vue/test-utils'
+import { DOMWrapper, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import PrimeVue from 'primevue/config'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ApiClientError } from '@/api/client'
 import * as warehousesApi from '@/api/warehouses'
@@ -13,23 +11,30 @@ vi.mock('@/api/warehouses')
 beforeEach(() => {
   setActivePinia(createPinia())
   vi.clearAllMocks()
+  document.body.innerHTML = ''
+})
+
+afterEach(() => {
+  document.body.innerHTML = ''
 })
 
 function mountDialog(location: warehousesApi.Location | null = null) {
   return mount(LocationFormDialog, {
     props: { visible: true, warehouseId: 'wh-1', location },
-    global: {
-      plugins: [[PrimeVue, { theme: { preset: Aura } }]],
-      stubs: { Portal: { template: '<div><slot /></div>' } },
-    },
+    attachTo: document.body,
   })
+}
+
+function body() {
+  return new DOMWrapper(document.body)
 }
 
 describe('LocationFormDialog', () => {
   it('blocks submit and shows an error when code is blank', async () => {
     const wrapper = mountDialog()
-    await wrapper.find('[data-testid="submit"]').trigger('click')
-    expect(wrapper.text()).toContain('Code is required.')
+    await flushPromises()
+    await body().find('[data-testid="submit"]').trigger('click')
+    expect(body().text()).toContain('Code is required.')
     expect(warehousesApi.createLocation).not.toHaveBeenCalled()
   })
 
@@ -49,8 +54,9 @@ describe('LocationFormDialog', () => {
       updated_at: '',
     })
     const wrapper = mountDialog()
-    await wrapper.find('#location-code').setValue('A-01')
-    await wrapper.find('[data-testid="submit"]').trigger('click')
+    await flushPromises()
+    await body().find('#location-code').setValue('A-01')
+    await body().find('[data-testid="submit"]').trigger('click')
     await flushPromises()
     expect(warehousesApi.createLocation).toHaveBeenCalledWith('wh-1', {
       code: 'A-01',
@@ -70,20 +76,22 @@ describe('LocationFormDialog', () => {
       new ApiClientError(409, 'LOCATION_BARCODE_CONFLICT', 'Barcode already exists'),
     )
     const wrapper = mountDialog()
-    await wrapper.find('#location-code').setValue('A-01')
-    await wrapper.find('#location-barcode').setValue('4006381333931')
-    await wrapper.find('[data-testid="submit"]').trigger('click')
     await flushPromises()
-    expect(wrapper.text()).toContain('This barcode is already in use.')
+    await body().find('#location-code').setValue('A-01')
+    await body().find('#location-barcode').setValue('4006381333931')
+    await body().find('[data-testid="submit"]').trigger('click')
+    await flushPromises()
+    expect(body().text()).toContain('This barcode is already in use.')
   })
 
   it('shows a valid-checksum hint for a well-formed EAN-13 barcode', async () => {
     const wrapper = mountDialog()
-    await wrapper.find('#location-barcode').setValue('4006381333931')
-    expect(wrapper.find('[data-testid="barcode-hint"]').text()).toContain('Valid EAN-13')
+    await flushPromises()
+    await body().find('#location-barcode').setValue('4006381333931')
+    expect(body().find('[data-testid="barcode-hint"]').text()).toContain('Valid EAN-13')
   })
 })
 
 async function flushPromises() {
-  await new Promise((resolve) => setTimeout(resolve, 0))
+  await new Promise((resolve) => setTimeout(resolve, 20))
 }
