@@ -16,12 +16,14 @@ import { exportToCSV } from '@/lib/export'
 import { useAuthStore } from '@/stores/auth'
 import { useCatalogStore } from '@/stores/catalog'
 import { useInventoryStore } from '@/stores/inventory'
+import { useUsersStore } from '@/stores/users'
 import { useWarehousesStore } from '@/stores/warehouses'
 
 const auth = useAuthStore()
 const inventoryStore = useInventoryStore()
 const catalogStore = useCatalogStore()
 const warehouseStore = useWarehousesStore()
+const usersStore = useUsersStore()
 
 const movementTypeFilter = ref<'receive' | 'pick' | 'transfer' | 'adjust'>()
 const selectedProductId = ref<string>()
@@ -31,8 +33,42 @@ const pickVisible = ref(false)
 const transferVisible = ref(false)
 const adjustVisible = ref(false)
 
+interface EnrichedMovement {
+  id: string
+  type: string
+  created_at: string
+  quantity: string
+  reference: string | null
+  product_name: string
+  product_sku: string
+  from_location_code: string | null
+  to_location_code: string | null
+  performer_name: string
+}
+
+const enrichedMovements = computed<EnrichedMovement[]>(() => {
+  return inventoryStore.movements.map((m) => {
+    const product = catalogStore.products.find((p) => p.id === m.product_id)
+    const fromLocation = warehouseStore.locations.find((l) => l.id === m.from_location_id)
+    const toLocation = warehouseStore.locations.find((l) => l.id === m.to_location_id)
+    const performer = m.performed_by ? usersStore.users.find((u) => u.id === m.performed_by) : undefined
+    return {
+      id: m.id,
+      type: m.movement_type,
+      created_at: m.created_at,
+      quantity: m.quantity,
+      reference: m.reference,
+      product_name: product?.name ?? 'Product',
+      product_sku: product?.sku ?? '—',
+      from_location_code: fromLocation?.code ?? null,
+      to_location_code: toLocation?.code ?? null,
+      performer_name: performer?.full_name ?? (m.performed_by ? 'Unknown Operator' : 'System Operator'),
+    }
+  })
+})
+
 function exportMovementsCSV() {
-  exportToCSV('stock_movement_audit_log', inventoryStore.movements, [
+  exportToCSV('stock_movement_audit_log', enrichedMovements.value, [
     { key: 'created_at', label: 'Timestamp' },
     { key: 'type', label: 'Type' },
     { key: 'product_sku', label: 'SKU' },
@@ -54,12 +90,15 @@ const canTransferOrAdjust = computed(() => {
 })
 
 onMounted(async () => {
+  await warehouseStore.fetchWarehouses()
   await Promise.all([
-    warehouseStore.fetchWarehouses(),
-    warehouseStore.fetchLocations(),
+    warehouseStore.fetchAllLocations(),
     catalogStore.fetchProducts(),
     inventoryStore.fetchMovements(),
   ])
+  if (auth.user?.role === 'admin') {
+    void usersStore.fetchUsers()
+  }
 })
 
 watch([movementTypeFilter, selectedProductId], () => {
@@ -179,7 +218,7 @@ function formatDate(dateStr: string): string {
         </Message>
 
         <DataTable
-          :value="inventoryStore.movements"
+          :value="enrichedMovements"
           :loading="inventoryStore.loading"
           data-key="id"
           responsive-layout="scroll"

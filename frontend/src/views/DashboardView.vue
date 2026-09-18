@@ -15,6 +15,7 @@ import BarcodeScannerModal from '@/components/BarcodeScannerModal.vue'
 import PickFormDialog from '@/components/PickFormDialog.vue'
 import ReceiveFormDialog from '@/components/ReceiveFormDialog.vue'
 import TransferFormDialog from '@/components/TransferFormDialog.vue'
+import type { Lot } from '@/api/inventory'
 import { useAuthStore } from '@/stores/auth'
 import { useCatalogStore } from '@/stores/catalog'
 import { useInventoryStore } from '@/stores/inventory'
@@ -40,15 +41,23 @@ const canTransferOrAdjust = computed(() => {
   return auth.user?.role === 'admin' || auth.user?.role === 'warehouse_manager'
 })
 
+const lotsByProduct = ref<Map<string, Lot[]>>(new Map())
+
 onMounted(async () => {
+  await warehouseStore.fetchWarehouses()
   await Promise.all([
-    warehouseStore.fetchWarehouses(),
-    warehouseStore.fetchLocations(),
+    warehouseStore.fetchAllLocations(),
     catalogStore.fetchProducts(),
     catalogStore.fetchCategories(),
     inventoryStore.fetchBalances(),
     inventoryStore.fetchMovements(),
   ])
+
+  const productIds = new Set(inventoryStore.balances.filter((b) => b.lot_id).map((b) => b.product_id))
+  for (const productId of productIds) {
+    const lots = await inventoryStore.fetchLots(productId)
+    lotsByProduct.value.set(productId, lots)
+  }
 })
 
 // Warehouse occupancy meter data
@@ -62,8 +71,8 @@ const occupancyMeters = computed(() => [
 const movementChartData = computed(() => {
   const counts = { receive: 0, pick: 0, transfer: 0, adjust: 0 }
   for (const m of inventoryStore.movements) {
-    if (m.type in counts) {
-      counts[m.type as keyof typeof counts]++
+    if (m.movement_type in counts) {
+      counts[m.movement_type as keyof typeof counts]++
     }
   }
 
@@ -121,20 +130,39 @@ const categoryChartOptions = {
   },
 }
 
+function productName(productId: string): string {
+  return catalogStore.products.find((p) => p.id === productId)?.name ?? 'Item'
+}
+
 // Timeline feed
 const movementTimeline = computed(() => {
   return inventoryStore.movements.slice(0, 5).map((m) => ({
-    status: `${m.type.toUpperCase()}: ${m.product_name || 'Item'} (${m.quantity})`,
+    status: `${m.movement_type.toUpperCase()}: ${productName(m.product_id)} (${m.quantity})`,
     date: formatDate(m.created_at),
-    icon: m.type === 'receive' ? 'pi pi-download' : m.type === 'pick' ? 'pi pi-upload' : 'pi pi-arrows-h',
-    color: m.type === 'receive' ? '#10b981' : m.type === 'pick' ? '#f59e0b' : '#3b82f6',
+    icon: m.movement_type === 'receive' ? 'pi pi-download' : m.movement_type === 'pick' ? 'pi pi-upload' : 'pi pi-arrows-h',
+    color: m.movement_type === 'receive' ? '#10b981' : m.movement_type === 'pick' ? '#f59e0b' : '#3b82f6',
     reference: m.reference ? `Ref: ${m.reference}` : '',
   }))
 })
 
 // Low Stock & Expiry Watchlist
 const lowStockWatchlist = computed(() => {
-  return inventoryStore.balances.filter((b) => parseFloat(b.quantity) < 10 || isExpiringSoon(b.expiration_date)).slice(0, 5)
+  return inventoryStore.balances
+    .map((b) => {
+      const product = catalogStore.products.find((p) => p.id === b.product_id)
+      const location = warehouseStore.locations.find((l) => l.id === b.location_id)
+      const lot = b.lot_id ? (lotsByProduct.value.get(b.product_id) ?? []).find((l) => l.id === b.lot_id) : undefined
+      return {
+        id: b.id,
+        product_name: product?.name ?? 'Product',
+        product_sku: product?.sku ?? '—',
+        location_code: location?.code ?? '—',
+        quantity: b.quantity,
+        expiration_date: lot?.expiration_date ?? null,
+      }
+    })
+    .filter((b) => parseFloat(b.quantity) < 10 || isExpiringSoon(b.expiration_date))
+    .slice(0, 5)
 })
 
 function isExpiringSoon(expirationDateStr?: string | null): boolean {

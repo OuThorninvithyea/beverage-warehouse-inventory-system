@@ -32,15 +32,66 @@ const pickVisible = ref(false)
 const transferVisible = ref(false)
 const adjustVisible = ref(false)
 
+interface EnrichedBalance {
+  id: string
+  location_id: string
+  product_id: string
+  lot_id: string | null
+  quantity: string
+  reserved_quantity: string
+  available_quantity: string
+  location_code: string
+  product_name: string
+  product_sku: string
+  lot_number: string | null
+  expiration_date: string | null
+}
+
+const lotsByProduct = ref<Map<string, import('@/api/inventory').Lot[]>>(new Map())
+
+const enrichedBalances = computed<EnrichedBalance[]>(() => {
+  return inventoryStore.balances.map((b) => {
+    const location = warehouseStore.locations.find((l) => l.id === b.location_id)
+    const product = catalogStore.products.find((p) => p.id === b.product_id)
+    const lot = b.lot_id
+      ? (lotsByProduct.value.get(b.product_id) ?? []).find((l) => l.id === b.lot_id)
+      : undefined
+    return {
+      id: b.id,
+      location_id: b.location_id,
+      product_id: b.product_id,
+      lot_id: b.lot_id,
+      quantity: b.quantity,
+      reserved_quantity: b.reserved_quantity,
+      available_quantity: b.available_quantity,
+      location_code: location?.code ?? b.location_id.substring(0, 8),
+      product_name: product?.name ?? 'Product',
+      product_sku: product?.sku ?? '—',
+      lot_number: lot?.lot_number ?? null,
+      expiration_date: lot?.expiration_date ?? null,
+    }
+  })
+})
+
+async function loadLotsForVisibleBalances() {
+  const productIds = new Set(inventoryStore.balances.filter((b) => b.lot_id).map((b) => b.product_id))
+  for (const productId of productIds) {
+    if (!lotsByProduct.value.has(productId)) {
+      const lots = await inventoryStore.fetchLots(productId)
+      lotsByProduct.value.set(productId, lots)
+    }
+  }
+}
+
 function exportInventoryCSV() {
-  exportToCSV('inventory_stock_balances', inventoryStore.balances, [
+  exportToCSV('inventory_stock_balances', enrichedBalances.value, [
     { key: 'location_code', label: 'Location' },
     { key: 'product_sku', label: 'SKU' },
     { key: 'product_name', label: 'Product Name' },
     { key: 'lot_number', label: 'Lot Number' },
     { key: 'expiration_date', label: 'Expiration Date' },
     { key: 'quantity', label: 'Available Quantity' },
-    { key: 'reserved_qty', label: 'Reserved Quantity' },
+    { key: 'reserved_quantity', label: 'Reserved Quantity' },
   ])
 }
 
@@ -89,6 +140,7 @@ async function fetchBalances() {
     location_id: selectedLocationId.value,
     product_id: selectedProductId.value,
   })
+  await loadLotsForVisibleBalances()
 }
 
 function isExpiringSoon(expirationDateStr?: string | null): boolean {
@@ -193,7 +245,7 @@ function isLowStock(qtyStr: string): boolean {
         </Message>
 
         <DataTable
-          :value="inventoryStore.balances"
+          :value="enrichedBalances"
           :loading="inventoryStore.loading"
           data-key="id"
           responsive-layout="scroll"
@@ -262,9 +314,9 @@ function isLowStock(qtyStr: string): boolean {
             </template>
           </Column>
 
-          <Column field="reserved_qty" header="Reserved Qty">
+          <Column field="reserved_quantity" header="Reserved Qty">
             <template #body="{ data }">
-              <span class="text-xs font-medium text-slate-500">{{ data.reserved_qty || '0.000' }}</span>
+              <span class="text-xs font-medium text-slate-500">{{ data.reserved_quantity || '0.000' }}</span>
             </template>
           </Column>
         </DataTable>

@@ -13,6 +13,7 @@ import BarcodeScannerModal from '@/components/BarcodeScannerModal.vue'
 import PickFormDialog from '@/components/PickFormDialog.vue'
 import ReceiveFormDialog from '@/components/ReceiveFormDialog.vue'
 import TransferFormDialog from '@/components/TransferFormDialog.vue'
+import type { Lot } from '@/api/inventory'
 import { useAuthStore } from '@/stores/auth'
 import { useCatalogStore } from '@/stores/catalog'
 import { useInventoryStore } from '@/stores/inventory'
@@ -28,6 +29,7 @@ const inventoryStore = useInventoryStore()
 const mobileMenuOpen = ref(false)
 const isDarkMode = ref(false)
 const notificationPanel = ref()
+const lotsByProduct = ref<Map<string, Lot[]>>(new Map())
 
 const receiveVisible = ref(false)
 const pickVisible = ref(false)
@@ -41,15 +43,26 @@ const canReceiveOrPick = computed(() => {
 })
 
 const activeAlerts = computed(() => {
-  return inventoryStore.balances.filter((b) => {
-    const isLow = parseFloat(b.quantity) < 10
-    let isExp = false
-    if (b.expiration_date) {
-      const diffDays = Math.ceil((new Date(b.expiration_date).getTime() - new Date().getTime()) / (1000 * 3600 * 24))
-      isExp = diffDays <= 30
-    }
-    return isLow || isExp
-  })
+  return inventoryStore.balances
+    .map((b) => {
+      const product = catalogStore.products.find((p) => p.id === b.product_id)
+      const lot = b.lot_id ? (lotsByProduct.value.get(b.product_id) ?? []).find((l) => l.id === b.lot_id) : undefined
+      return {
+        id: b.id,
+        product_name: product?.name ?? 'Item',
+        quantity: b.quantity,
+        expiration_date: lot?.expiration_date ?? null,
+      }
+    })
+    .filter((b) => {
+      const isLow = parseFloat(b.quantity) < 10
+      let isExp = false
+      if (b.expiration_date) {
+        const diffDays = Math.ceil((new Date(b.expiration_date).getTime() - new Date().getTime()) / (1000 * 3600 * 24))
+        isExp = diffDays <= 30
+      }
+      return isLow || isExp
+    })
 })
 
 onMounted(() => {
@@ -58,6 +71,18 @@ onMounted(() => {
     isDarkMode.value = true
     document.documentElement.classList.add('bwims-dark')
   }
+
+  // Preload data the quick-action dialogs (Receive/Pick/Transfer/Adjust) need,
+  // so they aren't empty if the user hasn't visited Inventory/Movements yet.
+  void catalogStore.fetchProducts()
+  void warehouseStore.fetchAllLocations()
+  inventoryStore.fetchBalances().then(async () => {
+    const productIds = new Set(inventoryStore.balances.filter((b) => b.lot_id).map((b) => b.product_id))
+    for (const productId of productIds) {
+      const lots = await inventoryStore.fetchLots(productId)
+      lotsByProduct.value.set(productId, lots)
+    }
+  })
 })
 
 function toggleTheme() {

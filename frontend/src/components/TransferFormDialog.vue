@@ -234,7 +234,7 @@ function closeDialog() {
         <Button label="Cancel" severity="secondary" outlined @click="closeDialog" />
         <Button
           label="Execute Transfer"
-          icon="pi pi-[#091a2d]"
+          icon="pi pi-arrows-h"
           :loading="inventoryStore.loading"
           @click="submitTransfer"
         />

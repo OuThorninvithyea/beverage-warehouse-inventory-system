@@ -27,6 +27,7 @@ vendor/
 
 # Node/Vue
 node_modules/
+*.tsbuildinfo
 .vite/
 
 # Local reference documents that are not project deliverables
