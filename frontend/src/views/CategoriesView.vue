@@ -1,15 +1,22 @@
 <script setup lang="ts">
-import Button from 'primevue/button'
-import Card from 'primevue/card'
-import Column from 'primevue/column'
-import DataTable from 'primevue/datatable'
-import InputText from 'primevue/inputtext'
-import Message from 'primevue/message'
-import Tag from 'primevue/tag'
+import { Pencil, Plus, Search, Trash2 } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
 
 import type { Category } from '@/api/catalog'
 import CategoryFormDialog from '@/components/CategoryFormDialog.vue'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { useAuthStore } from '@/stores/auth'
 import { useCatalogStore } from '@/stores/catalog'
 
@@ -57,100 +64,97 @@ function getParentCategoryName(parentId: string | null): string {
 
 <template>
   <div class="grid gap-6">
-    <div class="flex flex-wrap items-center justify-between gap-4">
-      <div>
-        <h1 class="m-0 text-2xl font-bold text-brand-navy">Product Categories</h1>
-        <p class="m-0 text-sm text-brand-muted">Organize catalog items by beverage type, brand, or package type</p>
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div class="grid gap-1">
+        <h1 class="text-2xl font-semibold tracking-tight">Product Categories</h1>
+        <p class="text-sm text-muted-foreground">
+          Organize catalog items by beverage type, brand, or package type.
+        </p>
       </div>
 
-      <Button
-        v-if="canManageCatalog"
-        label="Add Category"
-        icon="pi pi-plus"
-        @click="openAddCategory"
-      />
+      <Button v-if="canManageCatalog" @click="openAddCategory">
+        <Plus class="size-4" />
+        Add Category
+      </Button>
     </div>
 
     <Card>
-      <template #content>
-        <div class="mb-4 flex items-center justify-between gap-4">
-          <InputText
-            v-model="searchQuery"
-            placeholder="Search categories..."
-            class="w-full max-w-[320px]"
-          />
+      <CardContent class="grid gap-4">
+        <div class="relative max-w-sm">
+          <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input v-model="searchQuery" placeholder="Search categories..." class="pl-9" />
         </div>
 
-        <Message v-if="catalogStore.error" severity="error" class="mb-4">
-          {{ catalogStore.error }}
-        </Message>
-
-        <DataTable
-          :value="catalogStore.categories"
-          :loading="catalogStore.loading"
-          data-key="id"
-          responsive-layout="scroll"
-          striped-rows
-          paginator
-          :rows="10"
-          class="p-datatable-sm"
+        <p
+          v-if="catalogStore.error"
+          role="alert"
+          class="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
         >
-          <template #empty>
-            <div class="py-8 text-center text-brand-muted">
-              No categories found.
-            </div>
-          </template>
+          {{ catalogStore.error }}
+        </p>
 
-          <Column field="name" header="Category Name" sortable>
-            <template #body="{ data }">
-              <strong class="font-bold text-brand-navy">{{ data.name }}</strong>
-            </template>
-          </Column>
+        <div class="overflow-hidden rounded-lg border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Category Name</TableHead>
+                <TableHead>Parent Category</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead v-if="canManageCatalog" class="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow v-if="catalogStore.loading">
+                <TableCell :colspan="canManageCatalog ? 4 : 3">
+                  <div class="grid gap-2 py-2">
+                    <Skeleton class="h-6 w-full" />
+                    <Skeleton class="h-6 w-full" />
+                    <Skeleton class="h-6 w-2/3" />
+                  </div>
+                </TableCell>
+              </TableRow>
 
-          <Column field="parent_id" header="Parent Category">
-            <template #body="{ data }">
-              <span class="text-xs font-medium text-slate-600">
-                {{ getParentCategoryName(data.parent_id) }}
-              </span>
-            </template>
-          </Column>
+              <TableRow v-else-if="catalogStore.categories.length === 0">
+                <TableCell
+                  :colspan="canManageCatalog ? 4 : 3"
+                  class="py-10 text-center text-sm text-muted-foreground"
+                >
+                  No categories found.
+                </TableCell>
+              </TableRow>
 
-          <Column field="is_active" header="Status">
-            <template #body="{ data }">
-              <Tag
-                :value="data.is_active ? 'Active' : 'Inactive'"
-                :severity="data.is_active ? 'success' : 'warn'"
-              />
-            </template>
-          </Column>
-
-          <Column v-if="canManageCatalog" header="Actions" align-frozen="right" freeze>
-            <template #body="{ data }">
-              <div class="flex items-center gap-2">
-                <Button
-                  icon="pi pi-pencil"
-                  severity="secondary"
-                  text
-                  rounded
-                  size="small"
-                  title="Edit category"
-                  @click="openEditCategory(data)"
-                />
-                <Button
-                  v-if="data.is_active"
-                  icon="pi pi-trash"
-                  severity="danger"
-                  text
-                  rounded
-                  size="small"
-                  title="Deactivate category"
-                  @click="deactivateCategory(data)"
-                />
-              </div>
-            </template>
-          </Column>
-        </DataTable>
-      </template>
+              <TableRow v-for="category in catalogStore.categories" v-else :key="category.id">
+                <TableCell class="font-medium">{{ category.name }}</TableCell>
+                <TableCell class="text-sm text-muted-foreground">
+                  {{ getParentCategoryName(category.parent_id) }}
+                </TableCell>
+                <TableCell>
+                  <Badge :variant="category.is_active ? 'default' : 'secondary'">
+                    {{ category.is_active ? 'Active' : 'Inactive' }}
+                  </Badge>
+                </TableCell>
+                <TableCell v-if="canManageCatalog" class="text-right">
+                  <div class="flex items-center justify-end gap-1">
+                    <Button variant="ghost" size="icon" title="Edit category" @click="openEditCategory(category)">
+                      <Pencil class="size-4" />
+                    </Button>
+                    <Button
+                      v-if="category.is_active"
+                      variant="ghost"
+                      size="icon"
+                      class="text-destructive hover:text-destructive"
+                      title="Deactivate category"
+                      @click="deactivateCategory(category)"
+                    >
+                      <Trash2 class="size-4" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
     </Card>
 
     <CategoryFormDialog

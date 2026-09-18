@@ -1,18 +1,31 @@
 <script setup lang="ts">
-import Button from 'primevue/button'
-import Card from 'primevue/card'
-import Column from 'primevue/column'
-import DataTable from 'primevue/datatable'
-import InputText from 'primevue/inputtext'
-import Message from 'primevue/message'
-import Select from 'primevue/select'
-import Tag from 'primevue/tag'
+import { Barcode, Camera, Pencil, Printer, Plus, Search, Trash2 } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
 
 import type { Product } from '@/api/catalog'
 import BarcodePrintModal from '@/components/BarcodePrintModal.vue'
 import BarcodeScannerModal from '@/components/BarcodeScannerModal.vue'
 import ProductFormDialog from '@/components/ProductFormDialog.vue'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { useAuthStore } from '@/stores/auth'
 import { useCatalogStore } from '@/stores/catalog'
 
@@ -20,8 +33,13 @@ const auth = useAuthStore()
 const catalogStore = useCatalogStore()
 
 const searchQuery = ref('')
-const selectedCategoryId = ref<string>()
-const activeFilter = ref<boolean>(true)
+const categoryFilter = ref<string>('all')
+const statusFilter = ref<'active' | 'inactive'>('active')
+
+const selectedCategoryId = computed(() =>
+  categoryFilter.value === 'all' ? undefined : categoryFilter.value,
+)
+const activeFilter = computed(() => statusFilter.value === 'active')
 
 const productFormVisible = ref(false)
 const selectedProduct = ref<Product | null>(null)
@@ -36,6 +54,8 @@ function openPrintLabel(product: Product) {
 const canManageCatalog = computed(() => {
   return auth.user?.role === 'admin' || auth.user?.role === 'warehouse_manager'
 })
+
+const columnCount = computed(() => 7)
 
 onMounted(async () => {
   await Promise.all([
@@ -77,171 +97,157 @@ function getCategoryName(catId: string | null): string {
 
 <template>
   <div class="grid gap-6">
-    <div class="flex flex-wrap items-center justify-between gap-4">
-      <div>
-        <h1 class="m-0 text-2xl font-bold text-brand-navy">Products Catalog</h1>
-        <p class="m-0 text-sm text-brand-muted">Manage SKUs, barcodes, categories, and lot tracking properties</p>
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div class="grid gap-1">
+        <h1 class="text-2xl font-semibold tracking-tight">Products Catalog</h1>
+        <p class="text-sm text-muted-foreground">
+          Manage SKUs, barcodes, categories, and lot tracking properties.
+        </p>
       </div>
 
       <div class="flex flex-wrap items-center gap-2">
-        <Button
-          label="Scan Barcode"
-          icon="pi pi-camera"
-          severity="secondary"
-          outlined
-          @click="barcodeScannerVisible = true"
-        />
-        <Button
-          v-if="canManageCatalog"
-          label="Add Product"
-          icon="pi pi-plus"
-          @click="openAddProduct"
-        />
+        <Button variant="outline" @click="barcodeScannerVisible = true">
+          <Camera class="size-4" />
+          Scan Barcode
+        </Button>
+        <Button v-if="canManageCatalog" @click="openAddProduct">
+          <Plus class="size-4" />
+          Add Product
+        </Button>
       </div>
     </div>
 
     <Card>
-      <template #content>
-        <div class="mb-4 flex flex-wrap items-center justify-between gap-4">
-          <div class="flex flex-wrap items-center gap-3">
-            <span class="p-input-icon-left min-w-[240px]">
-              <InputText
-                v-model="searchQuery"
-                placeholder="Search SKU, name, or barcode..."
-                class="w-full"
-              />
-            </span>
-
-            <Select
-              v-model="selectedCategoryId"
-              :options="catalogStore.categories"
-              option-label="name"
-              option-value="id"
-              placeholder="All Categories"
-              show-clear
-              class="w-[200px]"
-            />
-
-            <Select
-              v-model="activeFilter"
-              :options="[
-                { label: 'Active Items', value: true },
-                { label: 'Inactive Items', value: false },
-              ]"
-              option-label="label"
-              option-value="value"
-              class="w-[160px]"
-            />
+      <CardContent class="grid gap-4">
+        <div class="flex flex-wrap items-center gap-3">
+          <div class="relative min-w-[260px] flex-1 max-w-sm">
+            <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input v-model="searchQuery" placeholder="Search SKU, name, or barcode..." class="pl-9" />
           </div>
+
+          <Select v-model="categoryFilter">
+            <SelectTrigger class="w-[200px]">
+              <SelectValue placeholder="All Categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              <SelectItem v-for="cat in catalogStore.categories" :key="cat.id" :value="cat.id">
+                {{ cat.name }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select v-model="statusFilter">
+            <SelectTrigger class="w-[160px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">Active Items</SelectItem>
+              <SelectItem value="inactive">Inactive Items</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
-        <Message v-if="catalogStore.error" severity="error" class="mb-4">
-          {{ catalogStore.error }}
-        </Message>
-
-        <DataTable
-          :value="catalogStore.products"
-          :loading="catalogStore.loading"
-          data-key="id"
-          responsive-layout="scroll"
-          striped-rows
-          paginator
-          :rows="10"
-          :rows-per-page-options="[10, 20, 50]"
-          class="p-datatable-sm"
+        <p
+          v-if="catalogStore.error"
+          role="alert"
+          class="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
         >
-          <template #empty>
-            <div class="py-8 text-center text-brand-muted">
-              No products found matching your search.
-            </div>
-          </template>
+          {{ catalogStore.error }}
+        </p>
 
-          <Column field="sku" header="SKU" sortable>
-            <template #body="{ data }">
-              <span class="font-mono font-bold text-brand-navy">{{ data.sku }}</span>
-            </template>
-          </Column>
+        <div class="overflow-hidden rounded-lg border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>SKU</TableHead>
+                <TableHead>Product Name</TableHead>
+                <TableHead>Barcode</TableHead>
+                <TableHead>Unit</TableHead>
+                <TableHead>Lot Tracking</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead class="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow v-if="catalogStore.loading">
+                <TableCell :colspan="columnCount">
+                  <div class="grid gap-2 py-2">
+                    <Skeleton class="h-6 w-full" />
+                    <Skeleton class="h-6 w-full" />
+                    <Skeleton class="h-6 w-2/3" />
+                  </div>
+                </TableCell>
+              </TableRow>
 
-          <Column field="name" header="Product Name" sortable>
-            <template #body="{ data }">
-              <div>
-                <strong class="block text-brand-ink">{{ data.name }}</strong>
-                <small class="text-brand-muted">{{ getCategoryName(data.category_id) }}</small>
-              </div>
-            </template>
-          </Column>
+              <TableRow v-else-if="catalogStore.products.length === 0">
+                <TableCell :colspan="columnCount" class="py-10 text-center text-sm text-muted-foreground">
+                  No products found matching your search.
+                </TableCell>
+              </TableRow>
 
-          <Column field="barcode" header="Barcode">
-            <template #body="{ data }">
-              <span v-if="data.barcode" class="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-0.5 font-mono text-xs text-slate-800 border border-slate-200">
-                <i class="pi pi-barcode text-[10px]" />
-                {{ data.barcode }}
-              </span>
-              <span v-else class="text-xs text-slate-400">—</span>
-            </template>
-          </Column>
-
-          <Column field="unit" header="Unit" sortable>
-            <template #body="{ data }">
-              <Tag :value="data.unit" severity="secondary" class="capitalize" />
-            </template>
-          </Column>
-
-          <Column field="is_lot_tracked" header="Lot Tracking">
-            <template #body="{ data }">
-              <Tag
-                :value="data.is_lot_tracked ? 'FEFO Lot Tracked' : 'Standard'"
-                :severity="data.is_lot_tracked ? 'info' : 'secondary'"
-              />
-            </template>
-          </Column>
-
-          <Column field="is_active" header="Status">
-            <template #body="{ data }">
-              <Tag
-                :value="data.is_active ? 'Active' : 'Inactive'"
-                :severity="data.is_active ? 'success' : 'warn'"
-              />
-            </template>
-          </Column>
-
-          <Column header="Actions" align-frozen="right" freeze>
-            <template #body="{ data }">
-              <div class="flex items-center gap-1">
-                <Button
-                  icon="pi pi-print"
-                  severity="success"
-                  text
-                  rounded
-                  size="small"
-                  title="Print barcode label"
-                  @click="openPrintLabel(data)"
-                />
-                <Button
-                  v-if="canManageCatalog"
-                  icon="pi pi-pencil"
-                  severity="secondary"
-                  text
-                  rounded
-                  size="small"
-                  title="Edit product"
-                  @click="openEditProduct(data)"
-                />
-                <Button
-                  v-if="canManageCatalog && data.is_active"
-                  icon="pi pi-trash"
-                  severity="danger"
-                  text
-                  rounded
-                  size="small"
-                  title="Deactivate product"
-                  @click="deactivateProduct(data)"
-                />
-              </div>
-            </template>
-          </Column>
-        </DataTable>
-      </template>
+              <TableRow v-for="product in catalogStore.products" v-else :key="product.id">
+                <TableCell class="font-mono text-sm font-semibold">{{ product.sku }}</TableCell>
+                <TableCell>
+                  <div class="grid leading-tight">
+                    <strong class="text-sm">{{ product.name }}</strong>
+                    <small class="text-xs text-muted-foreground">{{ getCategoryName(product.category_id) }}</small>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <span
+                    v-if="product.barcode"
+                    class="inline-flex items-center gap-1 rounded border bg-muted px-2 py-0.5 font-mono text-xs"
+                  >
+                    <Barcode class="size-3" />
+                    {{ product.barcode }}
+                  </span>
+                  <span v-else class="text-xs text-muted-foreground">&mdash;</span>
+                </TableCell>
+                <TableCell>
+                  <Badge variant="secondary" class="capitalize">{{ product.unit }}</Badge>
+                </TableCell>
+                <TableCell>
+                  <Badge :variant="product.is_lot_tracked ? 'default' : 'outline'">
+                    {{ product.is_lot_tracked ? 'FEFO Lot Tracked' : 'Standard' }}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <Badge :variant="product.is_active ? 'default' : 'secondary'">
+                    {{ product.is_active ? 'Active' : 'Inactive' }}
+                  </Badge>
+                </TableCell>
+                <TableCell class="text-right">
+                  <div class="flex items-center justify-end gap-1">
+                    <Button variant="ghost" size="icon" title="Print barcode label" @click="openPrintLabel(product)">
+                      <Printer class="size-4" />
+                    </Button>
+                    <Button
+                      v-if="canManageCatalog"
+                      variant="ghost"
+                      size="icon"
+                      title="Edit product"
+                      @click="openEditProduct(product)"
+                    >
+                      <Pencil class="size-4" />
+                    </Button>
+                    <Button
+                      v-if="canManageCatalog && product.is_active"
+                      variant="ghost"
+                      size="icon"
+                      class="text-destructive hover:text-destructive"
+                      title="Deactivate product"
+                      @click="deactivateProduct(product)"
+                    >
+                      <Trash2 class="size-4" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
     </Card>
 
     <ProductFormDialog
@@ -251,14 +257,8 @@ function getCategoryName(catId: string | null): string {
       @saved="catalogStore.fetchProducts(searchQuery, selectedCategoryId, activeFilter)"
     />
 
-    <BarcodeScannerModal
-      v-model:visible="barcodeScannerVisible"
-      @select="onBarcodeScanned"
-    />
+    <BarcodeScannerModal v-model:visible="barcodeScannerVisible" @select="onBarcodeScanned" />
 
-    <BarcodePrintModal
-      v-model:visible="barcodePrintVisible"
-      :product="selectedProduct"
-    />
+    <BarcodePrintModal v-model:visible="barcodePrintVisible" :product="selectedProduct" />
   </div>
 </template>
