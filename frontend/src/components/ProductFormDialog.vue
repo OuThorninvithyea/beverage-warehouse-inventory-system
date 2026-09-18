@@ -1,14 +1,28 @@
 <script setup lang="ts">
-import Button from 'primevue/button'
-import Dialog from 'primevue/dialog'
-import InputText from 'primevue/inputtext'
-import Message from 'primevue/message'
-import Select from 'primevue/select'
-import ToggleSwitch from 'primevue/toggleswitch'
+import { Camera, Check } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
 
 import type { Category, Product, ProductInput } from '@/api/catalog'
 import BarcodeScannerModal from '@/components/BarcodeScannerModal.vue'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
 import { validateBarcode } from '@/lib/barcode'
 import { useCatalogStore } from '@/stores/catalog'
 
@@ -29,12 +43,14 @@ const sku = ref('')
 const name = ref('')
 const unit = ref('case')
 const barcode = ref('')
-const categoryId = ref<string | null>(null)
+const categoryId = ref<string>('none')
 const isLotTracked = ref(true)
 const isActive = ref(true)
 
 const errorMessage = ref('')
 const scannerVisible = ref(false)
+
+const unitOptions = ['case', 'bottle', 'can', 'pack', 'pallet', 'keg']
 
 const isEditMode = computed(() => Boolean(props.product?.id))
 const barcodeValidation = computed(() => {
@@ -45,25 +61,24 @@ const barcodeValidation = computed(() => {
 watch(
   () => props.visible,
   (isVis) => {
-    if (isVis) {
-      errorMessage.value = ''
-      if (props.product) {
-        sku.value = props.product.sku
-        name.value = props.product.name
-        unit.value = props.product.unit
-        barcode.value = props.product.barcode || ''
-        categoryId.value = props.product.category_id
-        isLotTracked.value = props.product.is_lot_tracked
-        isActive.value = props.product.is_active
-      } else {
-        sku.value = ''
-        name.value = ''
-        unit.value = 'case'
-        barcode.value = ''
-        categoryId.value = null
-        isLotTracked.value = true
-        isActive.value = true
-      }
+    if (!isVis) return
+    errorMessage.value = ''
+    if (props.product) {
+      sku.value = props.product.sku
+      name.value = props.product.name
+      unit.value = props.product.unit
+      barcode.value = props.product.barcode || ''
+      categoryId.value = props.product.category_id ?? 'none'
+      isLotTracked.value = props.product.is_lot_tracked
+      isActive.value = props.product.is_active
+    } else {
+      sku.value = ''
+      name.value = ''
+      unit.value = 'case'
+      barcode.value = ''
+      categoryId.value = 'none'
+      isLotTracked.value = true
+      isActive.value = true
     }
   },
 )
@@ -96,7 +111,7 @@ async function saveProduct() {
     name: name.value.trim(),
     unit: unit.value.trim().toLowerCase(),
     barcode: barcode.value.trim() || null,
-    category_id: categoryId.value || null,
+    category_id: categoryId.value === 'none' ? null : categoryId.value,
     is_lot_tracked: isLotTracked.value,
     is_active: isActive.value,
   }
@@ -110,8 +125,8 @@ async function saveProduct() {
     }
     emit('saved', saved)
     closeDialog()
-  } catch (err: any) {
-    errorMessage.value = err.message || 'Failed to save product'
+  } catch (err: unknown) {
+    errorMessage.value = err instanceof Error ? err.message : 'Failed to save product'
   }
 }
 
@@ -121,118 +136,109 @@ function closeDialog() {
 </script>
 
 <template>
-  <Dialog
-    :visible="visible"
-    modal
-    :header="isEditMode ? 'Edit Product' : 'Add New Product'"
-    :style="{ width: '90vw', maxWidth: '580px' }"
-    @update:visible="closeDialog"
-  >
-    <form class="grid gap-4 py-2" @submit.prevent="saveProduct">
-      <Message v-if="errorMessage" severity="error">
-        {{ errorMessage }}
-      </Message>
+  <Dialog :open="visible" @update:open="(value: boolean) => emit('update:visible', value)">
+    <DialogContent class="sm:max-w-xl">
+      <DialogHeader>
+        <DialogTitle>{{ isEditMode ? 'Edit Product' : 'Add New Product' }}</DialogTitle>
+        <DialogDescription>SKU, barcode, unit, and FEFO lot tracking.</DialogDescription>
+      </DialogHeader>
 
-      <div class="grid grid-cols-2 gap-4 max-[520px]:grid-cols-1">
-        <div class="grid gap-1">
-          <label for="sku" class="text-xs font-semibold text-brand-muted">SKU *</label>
-          <InputText
-            id="sku"
-            v-model="sku"
-            placeholder="e.g. COKE-330-CAN"
-            required
-            class="uppercase"
-          />
+      <form class="grid gap-4" @submit.prevent="saveProduct">
+        <p
+          v-if="errorMessage"
+          class="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+        >
+          {{ errorMessage }}
+        </p>
+
+        <div class="grid grid-cols-2 gap-4 max-[520px]:grid-cols-1">
+          <div class="grid gap-2">
+            <Label for="sku">SKU *</Label>
+            <Input id="sku" v-model="sku" placeholder="e.g. COKE-330-CAN" class="uppercase" required />
+          </div>
+
+          <div class="grid gap-2">
+            <Label for="unit">Unit *</Label>
+            <Select v-model="unit">
+              <SelectTrigger id="unit" class="w-full">
+                <SelectValue placeholder="Select unit" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="option in unitOptions" :key="option" :value="option" class="capitalize">
+                  {{ option }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
-        <div class="grid gap-1">
-          <label for="unit" class="text-xs font-semibold text-brand-muted">Unit *</label>
-          <Select
-            id="unit"
-            v-model="unit"
-            :options="['case', 'bottle', 'can', 'pack', 'pallet', 'keg']"
-            placeholder="Select unit"
-          />
+        <div class="grid gap-2">
+          <Label for="name">Product Name *</Label>
+          <Input id="name" v-model="name" placeholder="e.g. Coca-Cola 330ml Can" required />
         </div>
-      </div>
 
-      <div class="grid gap-1">
-        <label for="name" class="text-xs font-semibold text-brand-muted">Product Name *</label>
-        <InputText
-          id="name"
-          v-model="name"
-          placeholder="e.g. Coca-Cola 330ml Can"
-          required
-        />
-      </div>
-
-      <div class="grid gap-1">
-        <label for="category" class="text-xs font-semibold text-brand-muted">Category</label>
-        <Select
-          id="category"
-          v-model="categoryId"
-          :options="categories"
-          option-label="name"
-          option-value="id"
-          placeholder="Select category (Optional)"
-          show-clear
-        />
-      </div>
-
-      <div class="grid gap-1">
-        <label for="barcode" class="text-xs font-semibold text-brand-muted">Barcode (EAN-13 / UPC-A)</label>
-        <div class="flex gap-2">
-          <InputText
-            id="barcode"
-            v-model="barcode"
-            placeholder="e.g. 4006381333931"
-            class="w-full"
-          />
-          <Button
-            type="button"
-            icon="pi pi-camera"
-            severity="secondary"
-            title="Scan barcode"
-            @click="scannerVisible = true"
-          />
+        <div class="grid gap-2">
+          <Label for="category">Category</Label>
+          <Select v-model="categoryId">
+            <SelectTrigger id="category" class="w-full">
+              <SelectValue placeholder="Select category (Optional)" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">No category</SelectItem>
+              <SelectItem v-for="cat in categories" :key="cat.id" :value="cat.id">
+                {{ cat.name }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        <small v-if="barcodeValidation" :class="barcodeValidation.valid ? 'text-green-600' : 'text-amber-600'">
-          {{ barcodeValidation.message }}
-        </small>
-      </div>
 
-      <div class="flex items-center justify-between rounded-[8px] border border-brand-border bg-brand-surface p-3">
-        <div>
-          <strong class="block text-sm">Lot & Expiration Tracking</strong>
-          <small class="text-brand-muted">Track expiration dates and FEFO lot picking for this item</small>
+        <div class="grid gap-2">
+          <Label for="barcode">Barcode (EAN-13 / UPC-A)</Label>
+          <div class="flex gap-2">
+            <Input id="barcode" v-model="barcode" placeholder="e.g. 4006381333931" class="flex-1" />
+            <Button type="button" variant="outline" size="icon" title="Scan barcode" @click="scannerVisible = true">
+              <Camera class="size-4" />
+            </Button>
+          </div>
+          <small
+            v-if="barcodeValidation"
+            class="text-xs"
+            :class="barcodeValidation.valid ? 'text-emerald-600' : 'text-amber-600'"
+          >
+            {{ barcodeValidation.message }}
+          </small>
         </div>
-        <ToggleSwitch v-model="isLotTracked" />
-      </div>
 
-      <div v-if="isEditMode" class="flex items-center justify-between rounded-[8px] border border-brand-border bg-brand-surface p-3">
-        <div>
-          <strong class="block text-sm">Active Status</strong>
-          <small class="text-brand-muted">Active products can be received and picked in inventory</small>
+        <div class="flex items-center justify-between rounded-lg border bg-muted/40 p-3">
+          <div class="grid gap-0.5">
+            <strong class="text-sm">Lot &amp; Expiration Tracking</strong>
+            <small class="text-xs text-muted-foreground">
+              Track expiration dates and FEFO lot picking for this item
+            </small>
+          </div>
+          <Switch v-model="isLotTracked" />
         </div>
-        <ToggleSwitch v-model="isActive" />
-      </div>
-    </form>
 
-    <template #footer>
-      <div class="flex justify-end gap-2">
-        <Button label="Cancel" severity="secondary" outlined @click="closeDialog" />
-        <Button
-          :label="isEditMode ? 'Update Product' : 'Create Product'"
-          icon="pi pi-check"
-          :loading="catalogStore.loading"
-          @click="saveProduct"
-        />
-      </div>
-    </template>
+        <div v-if="isEditMode" class="flex items-center justify-between rounded-lg border bg-muted/40 p-3">
+          <div class="grid gap-0.5">
+            <strong class="text-sm">Active Status</strong>
+            <small class="text-xs text-muted-foreground">
+              Active products can be received and picked in inventory
+            </small>
+          </div>
+          <Switch v-model="isActive" />
+        </div>
+      </form>
+
+      <DialogFooter>
+        <Button variant="outline" @click="closeDialog">Cancel</Button>
+        <Button :disabled="catalogStore.loading" @click="saveProduct">
+          <Check class="size-4" />
+          {{ isEditMode ? 'Update Product' : 'Create Product' }}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
   </Dialog>
 
-  <BarcodeScannerModal
-    v-model:visible="scannerVisible"
-    @select="onBarcodeScanned"
-  />
+  <BarcodeScannerModal v-model:visible="scannerVisible" @select="onBarcodeScanned" />
 </template>

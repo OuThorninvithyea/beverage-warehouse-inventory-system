@@ -1,12 +1,26 @@
 <script setup lang="ts">
-import Button from 'primevue/button'
-import Dialog from 'primevue/dialog'
-import InputText from 'primevue/inputtext'
-import Message from 'primevue/message'
-import Select from 'primevue/select'
+import { Check } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
 
 import type { Category, CategoryInput } from '@/api/catalog'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useCatalogStore } from '@/stores/catalog'
 
 const props = defineProps<{
@@ -23,7 +37,7 @@ const emit = defineEmits<{
 const catalogStore = useCatalogStore()
 
 const name = ref('')
-const parentId = ref<string | null>(null)
+const parentId = ref<string>('none')
 const errorMessage = ref('')
 
 const isEditMode = computed(() => Boolean(props.category?.id))
@@ -38,13 +52,8 @@ watch(
   (isVis) => {
     if (isVis) {
       errorMessage.value = ''
-      if (props.category) {
-        name.value = props.category.name
-        parentId.value = props.category.parent_id
-      } else {
-        name.value = ''
-        parentId.value = null
-      }
+      name.value = props.category?.name ?? ''
+      parentId.value = props.category?.parent_id ?? 'none'
     }
   },
 )
@@ -58,7 +67,7 @@ async function saveCategory() {
 
   const payload: CategoryInput = {
     name: name.value.trim(),
-    parent_id: parentId.value || null,
+    parent_id: parentId.value === 'none' ? null : parentId.value,
   }
 
   try {
@@ -70,8 +79,8 @@ async function saveCategory() {
     }
     emit('saved', saved)
     closeDialog()
-  } catch (err: any) {
-    errorMessage.value = err.message || 'Failed to save category'
+  } catch (err: unknown) {
+    errorMessage.value = err instanceof Error ? err.message : 'Failed to save category'
   }
 }
 
@@ -81,52 +90,54 @@ function closeDialog() {
 </script>
 
 <template>
-  <Dialog
-    :visible="visible"
-    modal
-    :header="isEditMode ? 'Edit Category' : 'Add New Category'"
-    :style="{ width: '90vw', maxWidth: '480px' }"
-    @update:visible="closeDialog"
-  >
-    <form class="grid gap-4 py-2" @submit.prevent="saveCategory">
-      <Message v-if="errorMessage" severity="error">
-        {{ errorMessage }}
-      </Message>
+  <Dialog :open="visible" @update:open="(value: boolean) => emit('update:visible', value)">
+    <DialogContent class="sm:max-w-md">
+      <DialogHeader>
+        <DialogTitle>{{ isEditMode ? 'Edit Category' : 'Add New Category' }}</DialogTitle>
+        <DialogDescription>Group catalog products by beverage type or brand.</DialogDescription>
+      </DialogHeader>
 
-      <div class="grid gap-1">
-        <label for="cat-name" class="text-xs font-semibold text-brand-muted">Category Name *</label>
-        <InputText
-          id="cat-name"
-          v-model="name"
-          placeholder="e.g. Soft Drinks, Energy Drinks, Water"
-          required
-        />
-      </div>
+      <form class="grid gap-4" @submit.prevent="saveCategory">
+        <p
+          v-if="errorMessage"
+          class="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+        >
+          {{ errorMessage }}
+        </p>
 
-      <div class="grid gap-1">
-        <label for="parent-cat" class="text-xs font-semibold text-brand-muted">Parent Category</label>
-        <Select
-          id="parent-cat"
-          v-model="parentId"
-          :options="parentCategoryOptions"
-          option-label="name"
-          option-value="id"
-          placeholder="None (Top Level)"
-          show-clear
-        />
-      </div>
-    </form>
+        <div class="grid gap-2">
+          <Label for="cat-name">Category Name *</Label>
+          <Input
+            id="cat-name"
+            v-model="name"
+            placeholder="e.g. Soft Drinks, Energy Drinks, Water"
+            required
+          />
+        </div>
 
-    <template #footer>
-      <div class="flex justify-end gap-2">
-        <Button label="Cancel" severity="secondary" outlined @click="closeDialog" />
-        <Button
-          :label="isEditMode ? 'Update' : 'Create'"
-          icon="pi pi-check"
-          :loading="catalogStore.loading"
-          @click="saveCategory"
-        />
-      </div>
-    </template>
+        <div class="grid gap-2">
+          <Label for="parent-cat">Parent Category</Label>
+          <Select v-model="parentId">
+            <SelectTrigger id="parent-cat" class="w-full">
+              <SelectValue placeholder="None (Top Level)" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">None (Top Level)</SelectItem>
+              <SelectItem v-for="cat in parentCategoryOptions" :key="cat.id" :value="cat.id">
+                {{ cat.name }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </form>
+
+      <DialogFooter>
+        <Button variant="outline" @click="closeDialog">Cancel</Button>
+        <Button :disabled="catalogStore.loading" @click="saveCategory">
+          <Check class="size-4" />
+          {{ isEditMode ? 'Update' : 'Create' }}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
   </Dialog>
 </template>
