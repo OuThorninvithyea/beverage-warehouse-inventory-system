@@ -1,0 +1,72 @@
+<h2>Which screen should we build first?</h2>
+<p class="subtitle">12 screens is too much for one design pass — we need to build them as separate vertical slices, one at a time. Whichever we pick first becomes the reference pattern the rest copy.</p>
+
+<div class="cards">
+  <div class="card" data-choice="warehouses" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mock-nav">BWIMS | Dashboard | Products | Inventory | Movements</div>
+      <div style="display:flex;">
+        <div class="mock-sidebar" style="flex:0 0 90px;">Nav</div>
+        <div class="mock-content">
+          <div class="mock-input" style="margin-bottom:8px;">Search warehouses...</div>
+          <div class="placeholder" style="height:16px;margin-bottom:4px;">PP-01 · Phnom Penh Main</div>
+          <div class="placeholder" style="height:16px;margin-bottom:4px;">SR-02 · Siem Reap Cold Store</div>
+          <button class="mock-button">+ Add Warehouse</button>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A. Warehouses &amp; Locations</h3>
+      <p>Full CRUD, backend 100% complete, zero known gaps. Cleanest possible reference pattern for list + filter + form drawer, which Catalog and Users both reuse.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="dashboard" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mock-nav">BWIMS | Dashboard</div>
+      <div style="display:flex; gap:8px; margin-bottom:8px;">
+        <div class="placeholder" style="flex:1;height:40px;">$1.2M value</div>
+        <div class="placeholder" style="flex:1;height:40px;">12 low stock</div>
+        <div class="placeholder" style="flex:1;height:40px;">5 expiring</div>
+      </div>
+      <div class="mock-content" style="padding:8px;">Recent Movements table…</div>
+    </div>
+    <div class="card-body">
+      <h3>B. Dashboard</h3>
+      <p>We already have a real Figma design for this one. But 2 real gaps: the 3 stat cards need reporting APIs that don't exist yet, and "Performed By" conflicts with the admin-only Users API.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="catalog" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mock-nav">BWIMS | Products</div>
+      <div class="mock-content">
+        <div class="mock-input" style="margin-bottom:8px;">Search SKU, name, barcode...</div>
+        <div class="placeholder" style="height:16px;margin-bottom:4px;">COKE-330 · Coca-Cola 330ml</div>
+        <div class="placeholder" style="height:16px;margin-bottom:4px;">SPR-1.5L · Sprite 1.5L PET</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C. Catalog (Products &amp; Categories)</h3>
+      <p>Same CRUD shape as Warehouses, backend 100% complete. Slightly more complex (barcode validation, category tree), good second slice once the pattern exists.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="movements" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mock-nav">BWIMS | Movements | Receive</div>
+      <div class="mock-content">
+        <div class="mock-input" style="margin-bottom:6px;">Product</div>
+        <div class="mock-input" style="margin-bottom:6px;">Location</div>
+        <div class="mock-input" style="margin-bottom:6px;">Quantity</div>
+        <button class="mock-button">Confirm Receive</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>D. Movements (Receive/Pick/Transfer/Adjust)</h3>
+      <p>The functionally richest and most valuable screen — this is the actual floor-operations workflow — but also the most complex forms (FEFO lot selection, tri-state fields). Best done after a simpler CRUD pattern exists.</p>
+    </div>
+  </div>
+</div>
+
+<p class="subtitle">My recommendation: <strong>A, Warehouses</strong> — it's the only option with a completely gap-free backend, so nothing here is blocked or half-fake. Click a card, or tell me in the terminal.</p>
