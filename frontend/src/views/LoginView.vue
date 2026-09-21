@@ -79,7 +79,7 @@ async function signInAsDemo(emailAddress: string, accountPassword: string) {
         </div>
       </div>
 
-      <Card class="border-white/10 bg-white/95 shadow-2xl backdrop-blur supports-[backdrop-filter]:bg-white/90">
+      <Card class="border-border/80 bg-card/95 shadow-2xl backdrop-blur supports-[backdrop-filter]:bg-card/90">
         <CardHeader>
           <CardTitle class="text-xl">Welcome back</CardTitle>
           <CardDescription>Sign in with your assigned warehouse account.</CardDescription>
