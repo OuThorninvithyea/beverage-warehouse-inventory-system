@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BWIMS barcode test sheet</title>
+    <style>
+      :root {
+        color-scheme: light;
+      }
+      body {
+        margin: 0;
+        padding: 18mm 12mm;
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+        color: #0b2545;
+        background: #ffffff;
+      }
+      h1 {
+        margin: 0 0 0.3rem;
+        font-size: 1.5rem;
+      }
+      p.lead {
+        margin: 0 0 1.2rem;
+        max-width: 60em;
+        color: #4a5c73;
+        font-size: 0.9rem;
+        line-height: 1.5;
+      }
+      h2 {
+        margin: 1.6rem 0 0.6rem;
+        font-size: 1.05rem;
+        border-bottom: 1px solid #d5dde8;
+        padding-bottom: 0.3rem;
+      }
+      .grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6mm;
+      }
+      .code {
+        break-inside: avoid;
+        page-break-inside: avoid;
+        border: 1px solid #d5dde8;
+        border-radius: 3mm;
+        padding: 4mm;
+        text-align: center;
+        background: #ffffff;
+      }
+      .code .label {
+        font-size: 0.78rem;
+        font-weight: 600;
+        margin-bottom: 2mm;
+      }
+      .code .meta {
+        font-size: 0.7rem;
+        color: #4a5c73;
+        margin-top: 1mm;
+      }
+      .code .digits {
+        font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+        font-size: 0.85rem;
+        letter-spacing: 0.12em;
+        margin-top: 1mm;
+      }
+      @media print {
+        body {
+          padding: 10mm;
+        }
+        p.lead,
+        .no-print {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>BWIMS barcode test sheet</h1>
+    <p class="lead">
+      Print this page at 100% scale (no "fit to page") and scan it from the
+      barcode test route. Every value here is also written to the database by
+      the development seeder, so a scan resolves to a real product or location.
+      The bars are generated in the browser from the digits below them, so the
+      printed code and the expected value can never drift apart.
+    </p>
+
+    <div id="sheet"></div>
+
+    <script>
+      // EAN-13 / UPC-A module encoder. UPC-A is encoded as EAN-13 with a
+      // leading zero, which is how the standard defines it and how ZXing
+      // reports it back. Verified by decoding every value on this sheet with
+      // @zxing/library, the same decoder the scanner route uses.
+      const L = ['0001101','0011001','0010011','0111101','0100011','0110001','0101111','0111011','0110111','0001011'];
+      const G = ['0100111','0110011','0011011','0100001','0011101','0111001','0000101','0010001','0001001','0010111'];
+      const R = ['1110010','1100110','1101100','1000010','1011100','1001110','1010000','1000100','1001000','1110100'];
+      const PARITY = ['LLLLLL','LLGLGG','LLGGLG','LLGGGL','LGLLGG','LGGLLG','LGGGLL','LGLGLG','LGLGGL','LGGLGL'];
+
+      function encode(value) {
+        const digits = value.length === 12 ? '0' + value : value;
+        if (!/^\d{13}$/.test(digits)) {
+          throw new Error('unsupported barcode ' + value);
+        }
+        const parity = PARITY[Number(digits[0])];
+        let bits = '101';
+        for (let index = 1; index <= 6; index += 1) {
+          const digit = Number(digits[index]);
+          bits += parity[index - 1] === 'L' ? L[digit] : G[digit];
+        }
+        bits += '01010';
+        for (let index = 7; index <= 12; index += 1) {
+          bits += R[Number(digits[index])];
+        }
+        return bits + '101';
+      }
+
+      // Physical sizing keeps the printed code scannable: 0.5 mm modules is
+      // about 1.5x the EAN-13 nominal width, which phone cameras handle well.
+      const MODULE_MM = 0.5;
+      const QUIET_MODULES = 11;
+      const BAR_HEIGHT_MM = 20;
+
+      function renderBarcode(value) {
+        const bits = encode(value);
+        const widthMm = (bits.length + QUIET_MODULES * 2) * MODULE_MM;
+        const bars = [];
+        for (let index = 0; index < bits.length; index += 1) {
+          if (bits[index] !== '1') continue;
+          const x = (QUIET_MODULES + index) * MODULE_MM;
+          bars.push(
+            '<rect x="' + x.toFixed(3) + '" y="0" width="' + MODULE_MM +
+              '" height="' + BAR_HEIGHT_MM + '" fill="#000000" />',
+          );
+        }
+        return (
+          '<svg xmlns="http://www.w3.org/2000/svg" width="' + widthMm + 'mm" height="' +
+          BAR_HEIGHT_MM + 'mm" viewBox="0 0 ' + widthMm + ' ' + BAR_HEIGHT_MM + '">' +
+          '<rect width="' + widthMm + '" height="' + BAR_HEIGHT_MM + '" fill="#ffffff" />' +
+          bars.join('') +
+          '</svg>'
+        );
+      }
+
+      const sections = [
+        {
+          title: 'Seeded products',
+          codes: [
+            { value: '8841000001015', label: 'Angkor Cola Can 330 ml', meta: 'BEV-COLA-330 · EAN-13' },
+            { value: '8841000001022', label: 'Angkor Cola PET 1.5 L', meta: 'BEV-COLA-1500 · EAN-13' },
+            { value: '8841000001039', label: 'Mekong Lemon Soda Can 330 ml', meta: 'BEV-LEMON-330 · EAN-13' },
+            { value: '8841000002012', label: 'Kulen Still Water 500 ml', meta: 'WTR-STILL-500 · EAN-13' },
+            { value: '8841000002029', label: 'Kulen Sparkling Water 750 ml', meta: 'WTR-SPARK-750 · EAN-13' },
+            { value: '8841000003019', label: 'Tonle Orange Juice 1 L', meta: 'JUI-ORNG-1000 · EAN-13' },
+            { value: '8841000003026', label: 'Tonle Mango Nectar 250 ml', meta: 'JUI-MANGO-250 · EAN-13' },
+            { value: '8841000004016', label: 'Bayon Boost Energy 250 ml', meta: 'ENG-BOOST-250 · EAN-13' },
+            { value: '8841000005013', label: 'Riverside Lager Can 330 ml', meta: 'BEE-LAGER-330 · EAN-13' },
+            { value: '8841000005020', label: 'Riverside Stout Can 330 ml', meta: 'BEE-STOUT-330 · EAN-13' },
+            { value: '8841000006010', label: 'Phnom Coffee Latte Can 240 ml', meta: 'COF-LATTE-240 · EAN-13' },
+            { value: '8841000006027', label: 'Siem Dairy Milk 200 ml', meta: 'DRY-MILK-200 · EAN-13' },
+            { value: '8841000007017', label: 'Returnable Crate 24 Slot', meta: 'PKG-CRATE-24 · EAN-13' },
+            { value: '049000012347', label: 'Imported Cola Can 355 ml', meta: 'IMP-COLA-355 · UPC-A' },
+            { value: '012000012341', label: 'Imported Root Beer Can 355 ml', meta: 'IMP-ROOT-355 · UPC-A' },
+          ],
+        },
+        {
+          title: 'Seeded locations',
+          codes: [
+            { value: '2001000190010', label: 'PP-CENTRAL / RECV-DOCK', meta: 'Receiving · not pickable' },
+            { value: '2001000190027', label: 'PP-CENTRAL / QUAR-01', meta: 'Quarantine · not pickable' },
+            { value: '2001000101016', label: 'PP-CENTRAL / A-01-01', meta: 'Ambient rack' },
+            { value: '2001000101023', label: 'PP-CENTRAL / A-01-02', meta: 'Ambient rack' },
+            { value: '2001000102013', label: 'PP-CENTRAL / COLD-01', meta: 'Chilled rack' },
+            { value: '2002000190017', label: 'SR-DEPOT / RECV-DOCK', meta: 'Receiving · not pickable' },
+            { value: '2002000101013', label: 'SR-DEPOT / A-01-01', meta: 'Ambient rack' },
+            { value: '2002000101020', label: 'SR-DEPOT / A-01-02', meta: 'Ambient rack' },
+          ],
+        },
+      ];
+
+      document.getElementById('sheet').innerHTML = sections
+        .map(function (section) {
+          const cards = section.codes
+            .map(function (code) {
+              return (
+                '<div class="code">' +
+                '<div class="label">' + code.label + '</div>' +
+                renderBarcode(code.value) +
+                '<div class="digits">' + code.value + '</div>' +
+                '<div class="meta">' + code.meta + '</div>' +
+                '</div>'
+              );
+            })
+            .join('');
+          return '<h2>' + section.title + '</h2><div class="grid">' + cards + '</div>';
+        })
+        .join('');
+    </script>
+  </body>
+</html>

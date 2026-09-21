@@ -61,6 +61,8 @@ services:
       SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@bwims.local}
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-ChangeMe123!}
       SEED_ADMIN_NAME: ${SEED_ADMIN_NAME:-Development Administrator}
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
+      SEED_DEMO_PASSWORD: ${SEED_DEMO_PASSWORD:-DemoPass123!}
     depends_on:
       postgres:
         condition: service_healthy

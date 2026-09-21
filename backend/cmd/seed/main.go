@@ -55,4 +55,32 @@ func main() {
 	}
 
 	logger.Info("development administrator ready", "email", email)
+
+	if !demoDataEnabled() {
+		logger.Info("demo data skipped", "reason", "SEED_DEMO_DATA is disabled")
+		return
+	}
+	if err := seedDemoData(ctx, pool, logger, demoPassword()); err != nil {
+		logger.Error("seed demo data", "error", err)
+		os.Exit(1)
+	}
+}
+
+// demoDataEnabled reports whether the catalog and inventory demo dataset should
+// be loaded after the administrator. It is on by default because the seeder
+// already refuses to run outside development.
+func demoDataEnabled() bool {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv("SEED_DEMO_DATA"))) {
+	case "false", "0", "no", "off":
+		return false
+	default:
+		return true
+	}
+}
+
+func demoPassword() string {
+	if password := os.Getenv("SEED_DEMO_PASSWORD"); password != "" {
+		return password
+	}
+	return "DemoPass123!"
 }

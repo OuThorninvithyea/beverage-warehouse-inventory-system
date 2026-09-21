@@ -55,6 +55,12 @@ Most USB scanners use keyboard-wedge mode:
 Configure the scanner for EAN-13/UPC-A and an Enter suffix. Test that ordinary
 typing still works and that one scan produces one lookup.
 
+## Test values
+
+Seeded barcodes, invalid values and a printable sheet are in
+[barcode-test-data.md](barcode-test-data.md). They cover the camera, manual and
+USB paths, but they do not replace the real-package evidence below.
+
 ## Real phone test record
 
 This must be completed using an actual beverage package; it cannot be truthfully

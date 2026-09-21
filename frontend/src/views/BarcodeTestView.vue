@@ -8,6 +8,11 @@ import Select from 'primevue/select'
 import { computed, nextTick, onBeforeUnmount, ref } from 'vue'
 
 import { validateBarcode } from '@/lib/barcode'
+import {
+  invalidSamples,
+  validLocationSamples,
+  validProductSamples,
+} from '@/lib/barcode-samples'
 
 interface CameraOption {
   label: string
@@ -95,6 +100,12 @@ function useManualValue() {
   capturedValue.value = manualValue.value.trim()
   locked.value = true
   stopScanner()
+}
+
+// Sample values make the route testable without a printed package or a camera.
+function useSampleValue(value: string) {
+  manualValue.value = value
+  useManualValue()
 }
 
 onBeforeUnmount(stopScanner)
@@ -185,6 +196,67 @@ onBeforeUnmount(stopScanner)
               This screen only produces a lookup value. It cannot receive, pick,
               transfer or adjust inventory.
             </Message>
+          </div>
+        </template>
+      </Card>
+
+      <Card class="col-span-2 max-[800px]:col-span-1">
+        <template #title>Test values</template>
+        <template #content>
+          <p class="mb-4 mt-0 text-brand-muted">
+            These are the barcodes written by the development seeder. Select one
+            to fill the input, or print the sheet in
+            <code>docs/barcode-test-data.md</code> to test a real camera scan.
+          </p>
+
+          <div class="grid grid-cols-3 gap-4 max-[800px]:grid-cols-1">
+            <div>
+              <h3 class="mb-2 mt-0 text-[0.95rem]">Seeded products</h3>
+              <div class="flex flex-wrap gap-2">
+                <Button
+                  v-for="sample in validProductSamples"
+                  :key="sample.value"
+                  :label="sample.value"
+                  :title="`${sample.label} (${sample.format})`"
+                  severity="secondary"
+                  outlined
+                  size="small"
+                  @click="useSampleValue(sample.value)"
+                />
+              </div>
+            </div>
+
+            <div>
+              <h3 class="mb-2 mt-0 text-[0.95rem]">Seeded locations</h3>
+              <div class="flex flex-wrap gap-2">
+                <Button
+                  v-for="sample in validLocationSamples"
+                  :key="sample.value"
+                  :label="sample.value"
+                  :title="`${sample.label} (${sample.format})`"
+                  severity="secondary"
+                  outlined
+                  size="small"
+                  @click="useSampleValue(sample.value)"
+                />
+              </div>
+            </div>
+
+            <div>
+              <h3 class="mb-2 mt-0 text-[0.95rem]">Values that must fail</h3>
+              <div class="flex flex-wrap gap-2">
+                <Button
+                  v-for="sample in invalidSamples"
+                  :key="sample.value"
+                  :label="sample.value"
+                  :title="sample.label"
+                  severity="danger"
+                  outlined
+                  size="small"
+                  @click="useSampleValue(sample.value)"
+                />
+              </div>
+            </div>
           </div>
         </template>
       </Card>

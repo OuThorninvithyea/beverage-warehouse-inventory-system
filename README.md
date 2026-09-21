@@ -80,5 +80,8 @@ marked complete until the printed and captured barcode values are recorded.
 - `docs/qa-test-plan.md` — QA strategy and Week 6–7 acceptance tests
 - `docs/user-journeys-and-wireframes.md` — approved journeys and wireframes
 - `docs/barcode-validation.md` — scanner decision and phone evidence form
+- `docs/demo-data.md` — the development dataset loaded by `make seed-demo`
+- `docs/barcode-test-data.md` — seeded barcodes for scanner testing
+- `docs/barcode-test-sheet.html` — printable, scannable barcode sheet
 
 Do not commit secrets. Copy future `.env.example` files to `.env` locally and keep real credentials outside Git.
