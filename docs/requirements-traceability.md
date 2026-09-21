@@ -19,7 +19,7 @@ not GitHub issue status.
 | FR-9 | Product search | 2.2 | PRO-9 catalog module | Search/filter and cursor-pagination tests | Implemented |
 | FR-10 | Inventory balances | 1.2, 3.1 | Week 9-10 inventory module | Repository and integration tests | Implemented |
 | FR-11 | Lot and expiry tracking | 1.2, 3.1 | Week 9-10 inventory module | Repository and integration tests | Implemented |
-| FR-12 | Expiry alerts | 4.2 | Week 11–12 reporting | Alert API tests | Planned |
+| FR-12 | Expiry alerts | 4.2 | `GET /api/v1/inventory/alerts` and the Expiry Alerts screen | Service, handler, route-ordering and PostgreSQL integration tests | Implemented |
 | FR-13 | Transactional receive | 3.1 | Week 9-10 inventory module | Transaction integration tests | Implemented |
 | FR-14 | FEFO pick | 3.2 | Week 9-10 inventory module | Mixed-lot ordering tests | Implemented |
 | FR-15 | Transfer stock | 3.2 | Week 9-10 inventory module | Atomic source/destination test | Implemented |

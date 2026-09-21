@@ -79,6 +79,7 @@ const navItems = computed(() => {
     { to: '/', label: 'Dashboard', icon: LayoutGrid, exact: true },
     { to: '/inventory', label: 'Inventory Stock', icon: Database, exact: false },
     { to: '/movements', label: 'Stock Movements', icon: Truck, exact: false },
+    { to: '/alerts', label: 'Expiry Alerts', icon: Bell, exact: false },
     { to: '/products', label: 'Products Catalog', icon: Boxes, exact: false },
     { to: '/categories', label: 'Categories', icon: Tags, exact: false },
     { to: '/warehouses', label: 'Warehouses', icon: Building2, exact: false },

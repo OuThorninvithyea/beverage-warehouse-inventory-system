@@ -13,6 +13,7 @@ func RegisterRoutes(app *fiber.App, handler *Handler, tokens *auth.TokenManager)
 
 	inventory := api.Group("/inventory")
 	inventory.Get("", handler.ListBalances)
+	inventory.Get("/alerts", handler.ListExpiryAlerts)
 	inventory.Get("/products/:product_id/lots", handler.ListLots)
 
 	movements := inventory.Group("/movements")

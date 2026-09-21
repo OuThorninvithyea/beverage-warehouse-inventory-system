@@ -10,7 +10,7 @@ repository, so the chart, `requirements-traceability.md` and the final report
 agree. Apply the values in the last section to the sheet.
 
 **Reconciled on:** 2026-09-22
-**Overall completion:** ~80% across the 24 leaf tasks (the chart's stale values
+**Overall completion:** ~81% across the 24 leaf tasks (the chart's stale values
 average ~51%)
 
 > **Note on the frontend rows.** A rebase onto `origin/main` left 21 commits of
@@ -45,7 +45,7 @@ average ~51%)
 | 3.5 | Mobile warehouse UX and inventory indicators | 0% | **60%** | Responsive layouts across every view and stock/expiry indicators in the inventory screens. Missing: a dedicated mobile scan-to-operation flow |
 | 3.6 | Movement QA, traceability and documentation | 0% | **60%** | `week-10-inventory-validation.md`, traceability rows FR-10 to FR-19, API contract section. Missing: QA execution record against the movement flows |
 | 4.1 | Hardware barcode and scan-flow integration | 0% | **60%** | `/barcode-test` route with camera, manual and USB paths; checksum validation; seeded barcodes; printable verified test sheet. Missing: real-device evidence and scan-to-operation wiring |
-| 4.2 | Expiry alerts and reporting APIs | 0% | 0% | Correct. FR-12 and the reporting endpoints are not started |
+| 4.2 | Expiry alerts and reporting APIs | 0% | **40%** | Expiry alerts delivered (FR-12): `GET /api/v1/inventory/alerts` plus the Expiry Alerts screen, with unit, handler and PostgreSQL integration tests. Missing: valuation, movement-summary and velocity reports |
 | 5.1 | Frontend integration, dashboard, E2E tests & responsive polish | 0% | **75%** | Every screen is wired to a live API client; `DashboardView` renders real aggregates through a chart.js wrapper; CSV export in `lib/export.ts`; 12 Vitest files pass and the production build succeeds. Missing: an E2E (Playwright) suite |
 | 6.1 | Deployment, UAT, final documentation & presentation | 0% | **20%** | `deployment-guide.md` and the living final report exist. Nothing has been deployed; no UAT has run |
 
@@ -59,7 +59,7 @@ Simple average of each phase's children:
 | 1 | System Design & Foundation | 98% | 98% |
 | 2 | Authentication & Core Domain | 35% | **82%** |
 | 3 | Inventory & Stock Movements | 0% | **82%** |
-| 4 | Barcode & Reporting | 0% | **30%** |
+| 4 | Barcode & Reporting | 0% | **50%** |
 | 5 | Frontend Integration & Testing | 0% | **75%** |
 | 6 | Deployment & Documentation | 0% | **20%** |
 
@@ -70,8 +70,9 @@ planned screens exist and are wired to live APIs, and 18 of 21 functional
 requirements are implemented. What remains is concentrated in the closing
 phases:
 
-1. **Reporting and alerts** (4.2) — expiry/low-stock alerts and the reporting
-   endpoints are not started. This is the largest functional gap.
+1. **Reporting** (4.2) — expiry alerts are delivered (FR-12); the valuation,
+   movement-summary and velocity reports are not started. This is the largest
+   remaining functional gap.
 2. **Deployment and UAT** (6.1) — nothing has been deployed and no UAT has run.
 3. **Test and evidence gaps** (2.7, 4.1, 5.1) — no cross-module acceptance
    pass, no E2E suite, and the physical scanner evidence is still open.
@@ -110,9 +111,9 @@ Column **H** is `PCT COMPLETE`. Paste this block into **H12** and it fills rows
 100%
 60%
 60%
-30%
+50%
 60%
-0%
+40%
 75%
 75%
 20%

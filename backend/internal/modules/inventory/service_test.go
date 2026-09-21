@@ -9,14 +9,15 @@ import (
 )
 
 type fakeRepository struct {
-	listBalancesFn  func(BalanceListFilter) ([]Balance, error)
-	listLotsFn      func(string, *string) ([]Lot, error)
-	receiveFn       func(string, *string, ReceiveInput) (Movement, Balance, error)
-	pickFn          func(string, *string, PickInput) ([]Movement, error)
-	transferFn      func(string, *string, TransferInput) (Movement, Balance, Balance, error)
-	adjustFn        func(string, *string, AdjustInput) (Movement, Balance, error)
-	listMovementsFn func(MovementListFilter) ([]Movement, error)
-	getMovementFn   func(string) (Movement, error)
+	listBalancesFn     func(BalanceListFilter) ([]Balance, error)
+	listLotsFn         func(string, *string) ([]Lot, error)
+	listExpiryAlertsFn func(ExpiryAlertFilter) ([]ExpiryAlert, error)
+	receiveFn          func(string, *string, ReceiveInput) (Movement, Balance, error)
+	pickFn             func(string, *string, PickInput) ([]Movement, error)
+	transferFn         func(string, *string, TransferInput) (Movement, Balance, Balance, error)
+	adjustFn           func(string, *string, AdjustInput) (Movement, Balance, error)
+	listMovementsFn    func(MovementListFilter) ([]Movement, error)
+	getMovementFn      func(string) (Movement, error)
 }
 
 func (f *fakeRepository) ListBalances(_ context.Context, filter BalanceListFilter) ([]Balance, error) {
@@ -24,6 +25,9 @@ func (f *fakeRepository) ListBalances(_ context.Context, filter BalanceListFilte
 }
 func (f *fakeRepository) ListLots(_ context.Context, productID string, warehouseID *string) ([]Lot, error) {
 	return f.listLotsFn(productID, warehouseID)
+}
+func (f *fakeRepository) ListExpiryAlerts(_ context.Context, filter ExpiryAlertFilter) ([]ExpiryAlert, error) {
+	return f.listExpiryAlertsFn(filter)
 }
 func (f *fakeRepository) Receive(_ context.Context, actorID string, actorWarehouseID *string, input ReceiveInput) (Movement, Balance, error) {
 	return f.receiveFn(actorID, actorWarehouseID, input)
@@ -274,5 +278,83 @@ func TestGetMovementPassesThroughToRepository(t *testing.T) {
 	movement, err := service.GetMovement(context.Background(), adminActor(), "11111111-1111-1111-1111-111111111111")
 	if err != nil || movement.ID != "11111111-1111-1111-1111-111111111111" {
 		t.Fatalf("GetMovement() = %+v, %v, want passthrough", movement, err)
+	}
+}
+
+func TestListExpiryAlertsRejectsNonAdminWithoutWarehouse(t *testing.T) {
+	service := NewService(&fakeRepository{})
+	_, err := service.ListExpiryAlerts(context.Background(), Actor{ID: "x", Role: auth.RoleViewer}, ExpiryAlertFilter{})
+	if !errors.Is(err, ErrForbidden) {
+		t.Fatalf("err = %v, want ErrForbidden", err)
+	}
+}
+
+func TestListExpiryAlertsScopesNonAdminToAssignedWarehouse(t *testing.T) {
+	var captured ExpiryAlertFilter
+	repo := &fakeRepository{listExpiryAlertsFn: func(filter ExpiryAlertFilter) ([]ExpiryAlert, error) {
+		captured = filter
+		return nil, nil
+	}}
+	service := NewService(repo)
+	warehouseID := "11111111-1111-1111-1111-111111111111"
+	if _, err := service.ListExpiryAlerts(context.Background(), pickerActor(warehouseID), ExpiryAlertFilter{}); err != nil {
+		t.Fatalf("ListExpiryAlerts() error = %v", err)
+	}
+	if captured.WarehouseID == nil || *captured.WarehouseID != warehouseID {
+		t.Fatalf("captured.WarehouseID = %v, want %s", captured.WarehouseID, warehouseID)
+	}
+}
+
+func TestListExpiryAlertsRejectsCrossWarehouseFilterForNonAdmin(t *testing.T) {
+	service := NewService(&fakeRepository{})
+	warehouseID := "11111111-1111-1111-1111-111111111111"
+	other := "22222222-2222-2222-2222-222222222222"
+	_, err := service.ListExpiryAlerts(context.Background(), pickerActor(warehouseID), ExpiryAlertFilter{WarehouseID: &other})
+	if !errors.Is(err, ErrForbidden) {
+		t.Fatalf("err = %v, want ErrForbidden", err)
+	}
+}
+
+func TestListExpiryAlertsRejectsInvalidWarehouseID(t *testing.T) {
+	service := NewService(&fakeRepository{})
+	invalid := "not-a-uuid"
+	_, err := service.ListExpiryAlerts(context.Background(), adminActor(), ExpiryAlertFilter{WarehouseID: &invalid})
+	if !errors.Is(err, ErrValidation) {
+		t.Fatalf("err = %v, want ErrValidation", err)
+	}
+}
+
+func TestListExpiryAlertsNormalizesTheWindow(t *testing.T) {
+	zero, negative, huge := 0, -5, 10_000
+	cases := []struct {
+		name  string
+		input *int
+		want  int
+	}{
+		{name: "unset falls back to the default", input: nil, want: defaultExpiryWindowDays},
+		{name: "zero is kept as expired-or-today", input: &zero, want: 0},
+		{name: "negative is clamped to zero", input: &negative, want: 0},
+		{name: "oversized is clamped to the maximum", input: &huge, want: maxExpiryWindowDays},
+	}
+
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			var captured ExpiryAlertFilter
+			repo := &fakeRepository{listExpiryAlertsFn: func(filter ExpiryAlertFilter) ([]ExpiryAlert, error) {
+				captured = filter
+				return nil, nil
+			}}
+			service := NewService(repo)
+			if _, err := service.ListExpiryAlerts(context.Background(), adminActor(),
+				ExpiryAlertFilter{WithinDays: testCase.input}); err != nil {
+				t.Fatalf("ListExpiryAlerts() error = %v", err)
+			}
+			if captured.WithinDays == nil || *captured.WithinDays != testCase.want {
+				t.Fatalf("WithinDays = %v, want %d", captured.WithinDays, testCase.want)
+			}
+			if captured.Limit != maxExpiryAlerts {
+				t.Fatalf("Limit = %d, want the %d cap", captured.Limit, maxExpiryAlerts)
+			}
+		})
 	}
 }

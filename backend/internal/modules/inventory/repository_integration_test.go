@@ -385,3 +385,108 @@ func TestPostgresInventoryLifecycle(t *testing.T) {
 		t.Fatalf("nonExpiredAuditCount = %d, want 0 (no false-positive audit flag)", nonExpiredAuditCount)
 	}
 }
+
+// TestPostgresExpiryAlerts drives FR-12 against real data: a lot that expired
+// last week, one expiring inside the window, and one far outside it.
+func TestPostgresExpiryAlerts(t *testing.T) {
+	fixture := setupFixture(t)
+	ctx := context.Background()
+	repository := NewPostgresRepository(fixture.pool)
+
+	today := time.Now().UTC()
+	expiredOn := today.AddDate(0, 0, -7).Format("2006-01-02")
+	soonOn := today.AddDate(0, 0, 10).Format("2006-01-02")
+	laterOn := today.AddDate(0, 0, 200).Format("2006-01-02")
+
+	for _, lot := range []struct {
+		number   string
+		expiry   string
+		quantity string
+	}{
+		{number: "LOT-EXPIRED", expiry: expiredOn, quantity: "12.000"},
+		{number: "LOT-SOON", expiry: soonOn, quantity: "8.000"},
+		{number: "LOT-LATER", expiry: laterOn, quantity: "20.000"},
+	} {
+		if _, _, err := repository.Receive(ctx, fixture.actorID, nil, ReceiveInput{
+			LocationID: fixture.locationAID, ProductID: fixture.trackedProduct,
+			Quantity: lot.quantity, UnitCost: "1.0000",
+			LotNumber:      OptionalString{Set: true, Value: strPointer(lot.number)},
+			ExpirationDate: OptionalString{Set: true, Value: strPointer(lot.expiry)},
+		}); err != nil {
+			t.Fatalf("Receive(%s) error = %v", lot.number, err)
+		}
+	}
+
+	within := 30
+	alerts, err := repository.ListExpiryAlerts(ctx, ExpiryAlertFilter{
+		WithinDays: &within, WarehouseID: &fixture.warehouseID, Limit: 100,
+	})
+	if err != nil {
+		t.Fatalf("ListExpiryAlerts() error = %v", err)
+	}
+
+	found := map[string]ExpiryAlert{}
+	for _, alert := range alerts {
+		found[alert.LotNumber] = alert
+	}
+	if len(found) != 2 {
+		t.Fatalf("alerts = %#v, want exactly LOT-EXPIRED and LOT-SOON inside a 30-day window", alerts)
+	}
+
+	expired, ok := found["LOT-EXPIRED"]
+	if !ok {
+		t.Fatal("LOT-EXPIRED is missing: expired stock still on hand must be reported")
+	}
+	if expired.Status != ExpiryStatusExpired || expired.DaysRemaining != -7 {
+		t.Fatalf("expired = %+v, want status %q and -7 days", expired, ExpiryStatusExpired)
+	}
+	if expired.Quantity != "12.000" || expired.AvailableQuantity != "12.000" {
+		t.Fatalf("expired quantities = %s/%s, want 12.000/12.000", expired.Quantity, expired.AvailableQuantity)
+	}
+	if expired.LocationID != fixture.locationAID || expired.WarehouseID != fixture.warehouseID {
+		t.Fatalf("expired location = %s/%s, want the fixture location and warehouse",
+			expired.WarehouseID, expired.LocationID)
+	}
+
+	soon, ok := found["LOT-SOON"]
+	if !ok {
+		t.Fatal("LOT-SOON is missing from a 30-day window")
+	}
+	if soon.Status != ExpiryStatusExpiring || soon.DaysRemaining != 10 {
+		t.Fatalf("soon = %+v, want status %q and 10 days", soon, ExpiryStatusExpiring)
+	}
+	// Expired stock must sort first: it is the most urgent.
+	if alerts[0].LotNumber != "LOT-EXPIRED" {
+		t.Fatalf("alerts[0] = %s, want LOT-EXPIRED first", alerts[0].LotNumber)
+	}
+
+	// A zero-day window keeps expired stock and drops anything still in date.
+	zero := 0
+	urgent, err := repository.ListExpiryAlerts(ctx, ExpiryAlertFilter{
+		WithinDays: &zero, WarehouseID: &fixture.warehouseID, Limit: 100,
+	})
+	if err != nil {
+		t.Fatalf("ListExpiryAlerts(0) error = %v", err)
+	}
+	if len(urgent) != 1 || urgent[0].LotNumber != "LOT-EXPIRED" {
+		t.Fatalf("urgent = %#v, want only LOT-EXPIRED", urgent)
+	}
+
+	// Picking the expired lot to zero must remove it: the alert reports stock
+	// on hand, not history.
+	if _, err := repository.Pick(ctx, fixture.actorID, nil, PickInput{
+		LocationID: fixture.locationAID, ProductID: fixture.trackedProduct,
+		Quantity: "12.000", LotID: OptionalString{Set: true, Value: strPointer(expired.LotID)},
+	}); err != nil {
+		t.Fatalf("Pick(expired lot) error = %v", err)
+	}
+	afterPick, err := repository.ListExpiryAlerts(ctx, ExpiryAlertFilter{
+		WithinDays: &zero, WarehouseID: &fixture.warehouseID, Limit: 100,
+	})
+	if err != nil {
+		t.Fatalf("ListExpiryAlerts(after pick) error = %v", err)
+	}
+	if len(afterPick) != 0 {
+		t.Fatalf("afterPick = %#v, want no alerts once the expired stock is gone", afterPick)
+	}
+}

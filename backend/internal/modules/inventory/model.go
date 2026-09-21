@@ -107,6 +107,43 @@ type MovementListFilter struct {
 	To           *time.Time
 }
 
+// Expiry alert statuses (FR-12). Expired stock is still on hand and still
+// pickable — FR-19 allows the pick and audits it — so it is reported rather
+// than hidden.
+const (
+	ExpiryStatusExpired  = "expired"
+	ExpiryStatusExpiring = "expiring"
+)
+
+// ExpiryAlert is one lot sitting in one location that has expired or will
+// expire within the requested window. Stock is reported per location so a
+// picker knows where to go, not only that a problem exists.
+type ExpiryAlert struct {
+	ProductID         string `json:"product_id"`
+	SKU               string `json:"sku"`
+	ProductName       string `json:"product_name"`
+	LotID             string `json:"lot_id"`
+	LotNumber         string `json:"lot_number"`
+	ExpirationDate    string `json:"expiration_date"`
+	DaysRemaining     int    `json:"days_remaining"`
+	Status            string `json:"status"`
+	WarehouseID       string `json:"warehouse_id"`
+	WarehouseCode     string `json:"warehouse_code"`
+	LocationID        string `json:"location_id"`
+	LocationCode      string `json:"location_code"`
+	Quantity          string `json:"quantity"`
+	ReservedQuantity  string `json:"reserved_quantity"`
+	AvailableQuantity string `json:"available_quantity"`
+}
+
+// WithinDays is a pointer because 0 is a meaningful window — "expired, or
+// expiring today" — and must be distinguishable from "not supplied".
+type ExpiryAlertFilter struct {
+	WithinDays  *int
+	WarehouseID *string
+	Limit       int
+}
+
 type PageInfo struct {
 	NextCursor *string `json:"next_cursor"`
 	HasMore    bool    `json:"has_more"`

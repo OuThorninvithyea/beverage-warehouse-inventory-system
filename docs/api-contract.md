@@ -490,7 +490,48 @@ non-admin token without an assigned `warehouse_id` receives `FORBIDDEN`).
 | Method | Route | Result |
 | --- | --- | --- |
 | `GET` | `/api/v1/inventory` | List balances; filters `location_id`, `product_id`, `warehouse_id`, `lot_id` |
+| `GET` | `/api/v1/inventory/alerts` | Expiry alerts (FR-12); filters `within_days`, `warehouse_id`, `limit` |
 | `GET` | `/api/v1/inventory/products/:product_id/lots` | List lots for a product, FEFO order |
+
+### Expiry alerts
+
+`GET /api/v1/inventory/alerts` returns every lot that has expired or will
+expire inside the window and still has stock on hand, one row per holding
+location so the result is actionable rather than just a count.
+
+| Query | Default | Meaning |
+| --- | --- | --- |
+| `within_days` | `30` | Horizon in days, `0` to `365`. `0` means expired or expiring today. Already-expired lots are always included |
+| `warehouse_id` | caller's warehouse | Admins may pass any warehouse; other roles are restricted to their own and receive `FORBIDDEN` otherwise |
+| `limit` | `500` | `1` to `500` |
+
+Results are ordered by expiration date ascending, so expired stock comes
+first. Response:
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "product_id": "<uuid>", "sku": "JUI-ORNG-1000",
+      "product_name": "Tonle Orange Juice 1 L",
+      "lot_id": "<uuid>", "lot_number": "L-ORNG-EXPIRED",
+      "expiration_date": "2026-09-16", "days_remaining": -5,
+      "status": "expired",
+      "warehouse_id": "<uuid>", "warehouse_code": "PP-CENTRAL",
+      "location_id": "<uuid>", "location_code": "COLD-01",
+      "quantity": "96.000", "reserved_quantity": "0.000",
+      "available_quantity": "96.000"
+    }
+  ]
+}
+```
+
+`status` is `expired` when `days_remaining` is negative and `expiring`
+otherwise. Reporting expired stock rather than hiding it is deliberate: FR-19
+keeps expired lots pickable and audits the pick, so the alert is what makes
+that visible. Lots with no expiration date, and balances at zero, never
+appear.
 
 ### Movement write routes
 
