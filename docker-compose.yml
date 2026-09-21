@@ -1,13 +1,12 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: postgres
     environment:
       POSTGRES_DB: bwims
       POSTGRES_USER: bwims
       POSTGRES_PASSWORD: bwims
     ports:
-      - "5432:5432"
+      - "${BWIM_POSTGRES_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -20,7 +19,6 @@ services:
 
   migrate:
     image: migrate/migrate:v4.18.3
-    container_name: migrate
     depends_on:
       postgres:
         condition: service_healthy
@@ -36,7 +34,6 @@ services:
   api:
     build:
       context: ./backend
-    container_name: api
     environment:
       APP_ENV: development
       API_HOST: 0.0.0.0
@@ -50,7 +47,7 @@ services:
       JWT_ACCESS_TTL: 15m
       JWT_REFRESH_TTL: 168h
     ports:
-      - "8080:8080"
+      - "${BWIM_API_PORT:-8081}:8080"
     depends_on:
       postgres:
         condition: service_healthy
@@ -62,7 +59,6 @@ services:
   seed:
     build:
       context: ./backend
-    container_name: seed
     entrypoint: ["bwims-seed"]
     environment:
       APP_ENV: development
@@ -90,9 +86,11 @@ services:
       context: ./frontend
       args:
         VITE_API_BASE_URL: /api/v1
-    container_name: frontend
+        # The compose stack seeds local demo accounts by default. Set this to
+        # false whenever SEED_DEMO_DATA is disabled.
+        VITE_DEMO_MODE: ${VITE_DEMO_MODE:-true}
     ports:
-      - "6001:80"
+      - "${BWIM_FRONTEND_PORT:-6002}:80"
     depends_on:
       - api
     networks:
