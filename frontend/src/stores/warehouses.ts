@@ -91,6 +91,27 @@ export const useWarehousesStore = defineStore('warehouses', () => {
     }
   }
 
+  /** Fetches and merges locations across every known warehouse (for screens without a warehouse filter). */
+  async function fetchAllLocations() {
+    locationsLoading.value = true
+    locationsError.value = null
+    try {
+      if (warehouses.value.length === 0) {
+        await fetchWarehouses()
+      }
+      const pages = await Promise.all(
+        warehouses.value.map((warehouse) => warehousesApi.listLocations(warehouse.id, { limit: 100 })),
+      )
+      locations.value = pages.flatMap((page) => page.items)
+      locationsHasMore.value = false
+      locationsNextCursor.value = null
+    } catch (err) {
+      locationsError.value = messageOf(err, 'Failed to load locations.')
+    } finally {
+      locationsLoading.value = false
+    }
+  }
+
   async function loadMoreLocations(warehouseId: string) {
     if (!locationsHasMore.value || !locationsNextCursor.value) {
       return
@@ -145,6 +166,7 @@ export const useWarehousesStore = defineStore('warehouses', () => {
     locationsError,
     locationsHasMore,
     fetchLocations,
+    fetchAllLocations,
     loadMoreLocations,
     createLocation,
     updateLocation,

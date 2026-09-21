@@ -1,8 +1,6 @@
-import Aura from '@primeuix/themes/aura'
-import { mount } from '@vue/test-utils'
+import { DOMWrapper, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import PrimeVue from 'primevue/config'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ApiClientError } from '@/api/client'
 import * as warehousesApi from '@/api/warehouses'
@@ -13,24 +11,31 @@ vi.mock('@/api/warehouses')
 beforeEach(() => {
   setActivePinia(createPinia())
   vi.clearAllMocks()
+  document.body.innerHTML = ''
+})
+
+afterEach(() => {
+  document.body.innerHTML = ''
 })
 
 function mountDialog(warehouse: warehousesApi.Warehouse | null = null) {
   return mount(WarehouseFormDialog, {
     props: { visible: true, warehouse },
-    global: {
-      plugins: [[PrimeVue, { theme: { preset: Aura } }]],
-      stubs: { Portal: { template: '<div><slot /></div>' } },
-    },
+    attachTo: document.body,
   })
+}
+
+function body() {
+  return new DOMWrapper(document.body)
 }
 
 describe('WarehouseFormDialog', () => {
   it('blocks submit and shows errors when code and name are blank', async () => {
     const wrapper = mountDialog()
-    await wrapper.find('[data-testid="submit"]').trigger('click')
-    expect(wrapper.text()).toContain('Code is required.')
-    expect(wrapper.text()).toContain('Name is required.')
+    await flushPromises()
+    await body().find('[data-testid="submit"]').trigger('click')
+    expect(body().text()).toContain('Code is required.')
+    expect(body().text()).toContain('Name is required.')
     expect(warehousesApi.createWarehouse).not.toHaveBeenCalled()
   })
 
@@ -45,9 +50,10 @@ describe('WarehouseFormDialog', () => {
       updated_at: '',
     })
     const wrapper = mountDialog()
-    await wrapper.find('#warehouse-code').setValue('PP-01')
-    await wrapper.find('#warehouse-name').setValue('Phnom Penh Main')
-    await wrapper.find('[data-testid="submit"]').trigger('click')
+    await flushPromises()
+    await body().find('#warehouse-code').setValue('PP-01')
+    await body().find('#warehouse-name').setValue('Phnom Penh Main')
+    await body().find('[data-testid="submit"]').trigger('click')
     await flushPromises()
     expect(warehousesApi.createWarehouse).toHaveBeenCalledWith({
       code: 'PP-01',
@@ -64,11 +70,12 @@ describe('WarehouseFormDialog', () => {
       new ApiClientError(409, 'WAREHOUSE_CODE_CONFLICT', 'Warehouse code already exists'),
     )
     const wrapper = mountDialog()
-    await wrapper.find('#warehouse-code').setValue('PP-01')
-    await wrapper.find('#warehouse-name').setValue('Phnom Penh Main')
-    await wrapper.find('[data-testid="submit"]').trigger('click')
     await flushPromises()
-    expect(wrapper.text()).toContain('This code is already in use.')
+    await body().find('#warehouse-code').setValue('PP-01')
+    await body().find('#warehouse-name').setValue('Phnom Penh Main')
+    await body().find('[data-testid="submit"]').trigger('click')
+    await flushPromises()
+    expect(body().text()).toContain('This code is already in use.')
   })
 
   it('pre-fills the form and calls updateWarehouse in edit mode', async () => {
@@ -83,8 +90,9 @@ describe('WarehouseFormDialog', () => {
     }
     vi.mocked(warehousesApi.updateWarehouse).mockResolvedValue(existing)
     const wrapper = mountDialog(existing)
-    expect((wrapper.find('#warehouse-code').element as HTMLInputElement).value).toBe('PP-01')
-    await wrapper.find('[data-testid="submit"]').trigger('click')
+    await flushPromises()
+    expect((body().find('#warehouse-code').element as HTMLInputElement).value).toBe('PP-01')
+    await body().find('[data-testid="submit"]').trigger('click')
     await flushPromises()
     expect(warehousesApi.updateWarehouse).toHaveBeenCalledWith('wh-1', {
       code: 'PP-01',
@@ -96,5 +104,5 @@ describe('WarehouseFormDialog', () => {
 })
 
 async function flushPromises() {
-  await new Promise((resolve) => setTimeout(resolve, 0))
+  await new Promise((resolve) => setTimeout(resolve, 20))
 }

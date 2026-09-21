@@ -1,13 +1,21 @@
 <script setup lang="ts">
-import Button from 'primevue/button'
-import Dialog from 'primevue/dialog'
-import InputText from 'primevue/inputtext'
-import Message from 'primevue/message'
-import ToggleSwitch from 'primevue/toggleswitch'
+import { Loader2 } from 'lucide-vue-next'
 import { computed, reactive, ref, watch } from 'vue'
 
 import { ApiClientError } from '@/api/client'
 import type { Warehouse, WarehouseInput } from '@/api/warehouses'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { useWarehousesStore } from '@/stores/warehouses'
 
 const props = defineProps<{
@@ -93,34 +101,48 @@ async function submit() {
 </script>
 
 <template>
-  <Dialog
-    :visible="visible"
-    modal
-    :header="isEdit ? 'Edit warehouse' : 'Add warehouse'"
-    @update:visible="(value: boolean) => emit('update:visible', value)"
-  >
-    <div class="mb-4 flex flex-col gap-1">
-      <label for="warehouse-code">Code</label>
-      <InputText id="warehouse-code" v-model="form.code" :invalid="codeError !== null" />
-      <Message v-if="codeError" severity="error" size="small" variant="simple">{{ codeError }}</Message>
-    </div>
-    <div class="mb-4 flex flex-col gap-1">
-      <label for="warehouse-name">Name</label>
-      <InputText id="warehouse-name" v-model="form.name" :invalid="nameError !== null" />
-      <Message v-if="nameError" severity="error" size="small" variant="simple">{{ nameError }}</Message>
-    </div>
-    <div class="mb-4 flex flex-col gap-1">
-      <label for="warehouse-address">Address</label>
-      <InputText id="warehouse-address" v-model="form.address" />
-    </div>
-    <div class="mb-4 flex flex-row items-center gap-3">
-      <label for="warehouse-active">Active</label>
-      <ToggleSwitch id="warehouse-active" v-model="form.is_active" />
-    </div>
-    <Message v-if="generalError" severity="error" size="small">{{ generalError }}</Message>
-    <template #footer>
-      <Button label="Cancel" severity="secondary" data-testid="cancel" @click="emit('update:visible', false)" />
-      <Button label="Save" :loading="submitting" data-testid="submit" @click="submit" />
-    </template>
+  <Dialog :open="visible" @update:open="(value: boolean) => emit('update:visible', value)">
+    <DialogContent class="sm:max-w-md">
+      <DialogHeader>
+        <DialogTitle>{{ isEdit ? 'Edit warehouse' : 'Add warehouse' }}</DialogTitle>
+        <DialogDescription>Facility code, name, and address details.</DialogDescription>
+      </DialogHeader>
+
+      <div class="grid gap-4">
+        <div class="grid gap-2">
+          <Label for="warehouse-code">Code</Label>
+          <Input id="warehouse-code" v-model="form.code" :aria-invalid="codeError !== null" />
+          <p v-if="codeError" class="text-xs text-destructive">{{ codeError }}</p>
+        </div>
+
+        <div class="grid gap-2">
+          <Label for="warehouse-name">Name</Label>
+          <Input id="warehouse-name" v-model="form.name" :aria-invalid="nameError !== null" />
+          <p v-if="nameError" class="text-xs text-destructive">{{ nameError }}</p>
+        </div>
+
+        <div class="grid gap-2">
+          <Label for="warehouse-address">Address</Label>
+          <Input id="warehouse-address" v-model="form.address" />
+        </div>
+
+        <div class="flex items-center gap-3">
+          <Switch id="warehouse-active" v-model="form.is_active" />
+          <Label for="warehouse-active">Active</Label>
+        </div>
+
+        <p v-if="generalError" class="text-sm text-destructive">{{ generalError }}</p>
+      </div>
+
+      <DialogFooter>
+        <Button variant="outline" data-testid="cancel" @click="emit('update:visible', false)">
+          Cancel
+        </Button>
+        <Button :disabled="submitting" data-testid="submit" @click="submit">
+          <Loader2 v-if="submitting" class="size-4 animate-spin" />
+          Save
+        </Button>
+      </DialogFooter>
+    </DialogContent>
   </Dialog>
 </template>

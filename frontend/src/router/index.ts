@@ -21,10 +21,24 @@ const router = createRouter({
           component: () => import('@/views/DashboardView.vue'),
         },
         {
-          path: 'barcode-test',
-          name: 'barcode-test',
-          component: () => import('@/views/BarcodeTestView.vue'),
-          meta: { public: true },
+          path: 'products',
+          name: 'products',
+          component: () => import('@/views/ProductsView.vue'),
+        },
+        {
+          path: 'categories',
+          name: 'categories',
+          component: () => import('@/views/CategoriesView.vue'),
+        },
+        {
+          path: 'inventory',
+          name: 'inventory',
+          component: () => import('@/views/InventoryView.vue'),
+        },
+        {
+          path: 'movements',
+          name: 'movements',
+          component: () => import('@/views/MovementsView.vue'),
         },
         {
           path: 'warehouses',
@@ -35,6 +49,18 @@ const router = createRouter({
           path: 'warehouses/:warehouseId',
           name: 'warehouse-detail',
           component: () => import('@/views/WarehouseDetailView.vue'),
+        },
+        {
+          path: 'users',
+          name: 'users',
+          component: () => import('@/views/UsersView.vue'),
+          meta: { roles: ['admin'] },
+        },
+        {
+          path: 'barcode-test',
+          name: 'barcode-test',
+          component: () => import('@/views/BarcodeTestView.vue'),
+          meta: { public: true },
         },
       ],
     },
@@ -58,6 +84,15 @@ router.beforeEach(async (to) => {
   if (to.name === 'login' && auth.isAuthenticated) {
     return { name: 'dashboard' }
   }
+
+  // Role guard
+  const requiredRoles = to.meta.roles as string[] | undefined
+  if (requiredRoles && auth.user) {
+    if (!requiredRoles.includes(auth.user.role)) {
+      return { name: 'dashboard' }
+    }
+  }
+
   return true
 })
 
