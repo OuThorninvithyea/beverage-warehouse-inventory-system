@@ -217,6 +217,41 @@ func (h *Handler) GetMovement(c fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(httpx.Success(movement))
 }
 
+func parseExpiryAlertFilter(c fiber.Ctx) (ExpiryAlertFilter, error) {
+	filter := ExpiryAlertFilter{}
+	if raw := c.Query("within_days"); raw != "" {
+		days, err := strconv.Atoi(raw)
+		if err != nil || days < 0 || days > maxExpiryWindowDays {
+			return ExpiryAlertFilter{}, invalidQueryError("within_days must be an integer from 0 to 365")
+		}
+		filter.WithinDays = &days
+	}
+	if raw := c.Query("limit"); raw != "" {
+		limit, err := strconv.Atoi(raw)
+		if err != nil || limit < 1 || limit > maxExpiryAlerts {
+			return ExpiryAlertFilter{}, invalidQueryError("limit must be an integer from 1 to 500")
+		}
+		filter.Limit = limit
+	}
+	filter.WarehouseID = optionalQueryUUID(c.Query("warehouse_id"))
+	return filter, nil
+}
+
+func (h *Handler) ListExpiryAlerts(c fiber.Ctx) error {
+	filter, err := parseExpiryAlertFilter(c)
+	if err != nil {
+		return err
+	}
+	alerts, err := h.service.ListExpiryAlerts(c.Context(), actorFromContext(c), filter)
+	if err != nil {
+		return inventoryHTTPError(err)
+	}
+	if alerts == nil {
+		alerts = []ExpiryAlert{}
+	}
+	return c.Status(fiber.StatusOK).JSON(httpx.Success(alerts))
+}
+
 func parseBalanceFilter(c fiber.Ctx) (BalanceListFilter, error) {
 	filter := BalanceListFilter{}
 	if raw := c.Query("limit"); raw != "" {

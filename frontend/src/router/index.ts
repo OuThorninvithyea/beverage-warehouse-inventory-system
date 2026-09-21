@@ -36,6 +36,11 @@ const router = createRouter({
           component: () => import('@/views/InventoryView.vue'),
         },
         {
+          path: 'alerts',
+          name: 'expiry-alerts',
+          component: () => import('@/views/ExpiryAlertsView.vue'),
+        },
+        {
           path: 'movements',
           name: 'movements',
           component: () => import('@/views/MovementsView.vue'),

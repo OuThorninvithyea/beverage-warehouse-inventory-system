@@ -21,6 +21,7 @@ var (
 type Service interface {
 	ListBalances(ctx context.Context, actor Actor, filter BalanceListFilter) (Page[Balance], error)
 	ListLots(ctx context.Context, actor Actor, productID string) ([]Lot, error)
+	ListExpiryAlerts(ctx context.Context, actor Actor, filter ExpiryAlertFilter) ([]ExpiryAlert, error)
 	Receive(ctx context.Context, actor Actor, input ReceiveInput) (Movement, Balance, error)
 	Pick(ctx context.Context, actor Actor, input PickInput) ([]Movement, error)
 	Transfer(ctx context.Context, actor Actor, input TransferInput) (Movement, Balance, Balance, error)
@@ -125,6 +126,55 @@ func (s *service) ListLots(ctx context.Context, actor Actor, productID string) (
 		return nil, fmt.Errorf("list lots: %w", err)
 	}
 	return lots, nil
+}
+
+// Default and maximum horizons for expiry alerts. The default matches the
+// 30-day window used in the QA plan; the maximum keeps the query bounded.
+const (
+	defaultExpiryWindowDays = 30
+	maxExpiryWindowDays     = 365
+	maxExpiryAlerts         = 500
+)
+
+func normalizeExpiryFilter(filter ExpiryAlertFilter) ExpiryAlertFilter {
+	days := defaultExpiryWindowDays
+	if filter.WithinDays != nil {
+		days = *filter.WithinDays
+		if days < 0 {
+			days = 0
+		}
+		if days > maxExpiryWindowDays {
+			days = maxExpiryWindowDays
+		}
+	}
+	filter.WithinDays = &days
+
+	if filter.Limit <= 0 || filter.Limit > maxExpiryAlerts {
+		filter.Limit = maxExpiryAlerts
+	}
+	return filter
+}
+
+func (s *service) ListExpiryAlerts(ctx context.Context, actor Actor, filter ExpiryAlertFilter) ([]ExpiryAlert, error) {
+	warehouseID, err := requireWarehouseScope(actor)
+	if err != nil {
+		return nil, err
+	}
+	if warehouseID != "" {
+		if filter.WarehouseID != nil && *filter.WarehouseID != warehouseID {
+			return nil, ErrForbidden
+		}
+		filter.WarehouseID = &warehouseID
+	}
+	if filter.WarehouseID != nil && isInvalidUUID(*filter.WarehouseID) {
+		return nil, ErrValidation
+	}
+
+	alerts, err := s.repository.ListExpiryAlerts(ctx, normalizeExpiryFilter(filter))
+	if err != nil {
+		return nil, fmt.Errorf("list expiry alerts: %w", err)
+	}
+	return alerts, nil
 }
 
 func (s *service) Receive(ctx context.Context, actor Actor, input ReceiveInput) (Movement, Balance, error) {

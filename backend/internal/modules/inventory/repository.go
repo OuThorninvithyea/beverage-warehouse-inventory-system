@@ -13,8 +13,8 @@ import (
 )
 
 var (
-	ErrProductNotFound         = errors.New("product was not found or is not active")
-	ErrLocationNotFound        = errors.New("location was not found")
+	ErrProductNotFound          = errors.New("product was not found or is not active")
+	ErrLocationNotFound         = errors.New("location was not found")
 	ErrLotNotFound              = errors.New("lot was not found for this product")
 	ErrInsufficientStock        = errors.New("insufficient available stock for this operation")
 	ErrWarehouseMismatch        = errors.New("location does not belong to the actor's assigned warehouse")
@@ -25,6 +25,7 @@ var (
 type Repository interface {
 	ListBalances(ctx context.Context, filter BalanceListFilter) ([]Balance, error)
 	ListLots(ctx context.Context, productID string, warehouseID *string) ([]Lot, error)
+	ListExpiryAlerts(ctx context.Context, filter ExpiryAlertFilter) ([]ExpiryAlert, error)
 	Receive(ctx context.Context, actorID string, actorWarehouseID *string, input ReceiveInput) (Movement, Balance, error)
 	Pick(ctx context.Context, actorID string, actorWarehouseID *string, input PickInput) ([]Movement, error)
 	Transfer(ctx context.Context, actorID string, actorWarehouseID *string, input TransferInput) (Movement, Balance, Balance, error)
@@ -193,6 +194,58 @@ func (r *PostgresRepository) ListLots(ctx context.Context, productID string, war
 		return nil, fmt.Errorf("list lots: %w", err)
 	}
 	return lots, nil
+}
+
+// ListExpiryAlerts reports lots that have expired or will expire within the
+// requested window and still have stock on hand (FR-12). Already-expired lots
+// are always included: they are the most urgent case, and FR-19 keeps them
+// pickable, so hiding them would defeat the alert.
+func (r *PostgresRepository) ListExpiryAlerts(ctx context.Context, filter ExpiryAlertFilter) ([]ExpiryAlert, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT p.id::text, p.sku, p.name,
+		       l.id::text, l.lot_number, l.expiration_date,
+		       (l.expiration_date - CURRENT_DATE)::int,
+		       w.id::text, w.code, loc.id::text, loc.code,
+		       b.quantity::text, b.reserved_quantity::text,
+		       (b.quantity - b.reserved_quantity)::text
+		FROM inventory_balances b
+		JOIN lots l ON l.id = b.lot_id
+		JOIN products p ON p.id = b.product_id
+		JOIN locations loc ON loc.id = b.location_id
+		JOIN warehouses w ON w.id = loc.warehouse_id
+		WHERE l.expiration_date IS NOT NULL
+		  AND b.quantity > 0
+		  AND l.expiration_date <= CURRENT_DATE + $1::int
+		  AND ($2::uuid IS NULL OR loc.warehouse_id = $2)
+		ORDER BY l.expiration_date ASC, w.code ASC, loc.code ASC, p.sku ASC
+		LIMIT $3`,
+		*filter.WithinDays, filter.WarehouseID, filter.Limit)
+	if err != nil {
+		return nil, fmt.Errorf("list expiry alerts: %w", err)
+	}
+	defer rows.Close()
+
+	alerts := make([]ExpiryAlert, 0)
+	for rows.Next() {
+		var alert ExpiryAlert
+		var expirationDate time.Time
+		if err := rows.Scan(&alert.ProductID, &alert.SKU, &alert.ProductName,
+			&alert.LotID, &alert.LotNumber, &expirationDate, &alert.DaysRemaining,
+			&alert.WarehouseID, &alert.WarehouseCode, &alert.LocationID, &alert.LocationCode,
+			&alert.Quantity, &alert.ReservedQuantity, &alert.AvailableQuantity); err != nil {
+			return nil, fmt.Errorf("scan expiry alert: %w", err)
+		}
+		alert.ExpirationDate = expirationDate.Format("2006-01-02")
+		alert.Status = ExpiryStatusExpiring
+		if alert.DaysRemaining < 0 {
+			alert.Status = ExpiryStatusExpired
+		}
+		alerts = append(alerts, alert)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("list expiry alerts: %w", err)
+	}
+	return alerts, nil
 }
 
 func resolveOrCreateLot(ctx context.Context, tx pgx.Tx, productID, lotNumber string, expirationDate *string) (string, error) {

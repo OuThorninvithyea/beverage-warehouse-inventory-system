@@ -3,6 +3,8 @@ import { ref } from 'vue'
 
 import {
   type AdjustInput,
+  type ExpiryAlert,
+  type ExpiryAlertFilter,
   type Lot,
   type MovementListFilter,
   type PickInput,
@@ -12,6 +14,7 @@ import {
   type TransferInput,
   adjustStock,
   listBalances,
+  listExpiryAlerts,
   listLots,
   listMovements,
   pickStock,
@@ -23,6 +26,7 @@ export const useInventoryStore = defineStore('inventory', () => {
   const balances = ref<StockBalance[]>([])
   const movements = ref<StockMovement[]>([])
   const currentProductLots = ref<Lot[]>([])
+  const expiryAlerts = ref<ExpiryAlert[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
   const hasMore = ref(false)
@@ -53,6 +57,20 @@ export const useInventoryStore = defineStore('inventory', () => {
       hasMore.value = page.page.has_more
     } catch (e: any) {
       error.value = e.message || 'Failed to fetch stock movements'
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function fetchExpiryAlerts(filter: ExpiryAlertFilter = {}) {
+    loading.value = true
+    error.value = null
+    try {
+      expiryAlerts.value = await listExpiryAlerts(filter)
+      return expiryAlerts.value
+    } catch (e: any) {
+      error.value = e.message || 'Failed to fetch expiry alerts'
+      return []
     } finally {
       loading.value = false
     }
@@ -139,12 +157,14 @@ export const useInventoryStore = defineStore('inventory', () => {
     balances,
     movements,
     currentProductLots,
+    expiryAlerts,
     loading,
     error,
     hasMore,
     fetchBalances,
     fetchMovements,
     fetchLots,
+    fetchExpiryAlerts,
     doReceive,
     doPick,
     doTransfer,

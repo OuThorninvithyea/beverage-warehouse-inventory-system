@@ -30,6 +30,32 @@ export interface Lot {
   created_at: string
 }
 
+export type ExpiryStatus = 'expired' | 'expiring'
+
+export interface ExpiryAlert {
+  product_id: string
+  sku: string
+  product_name: string
+  lot_id: string
+  lot_number: string
+  expiration_date: string
+  days_remaining: number
+  status: ExpiryStatus
+  warehouse_id: string
+  warehouse_code: string
+  location_id: string
+  location_code: string
+  quantity: string
+  reserved_quantity: string
+  available_quantity: string
+}
+
+export interface ExpiryAlertFilter {
+  within_days?: number
+  warehouse_id?: string
+  limit?: number
+}
+
 export interface ReceiveInput {
   location_id: string
   product_id: string
@@ -114,6 +140,10 @@ export function listBalances(filter: BalanceListFilter = {}) {
 
 export function listLots(productId: string) {
   return apiRequest<Lot[]>(`/inventory/products/${productId}/lots`)
+}
+
+export function listExpiryAlerts(filter: ExpiryAlertFilter = {}) {
+  return apiRequest<ExpiryAlert[]>(`/inventory/alerts${buildQuery(filter)}`)
 }
 
 export function receiveStock(input: ReceiveInput) {

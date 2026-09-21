@@ -19,14 +19,21 @@ import (
 )
 
 type fakeHandlerService struct {
-	receiveFn func(Actor, ReceiveInput) (Movement, Balance, error)
-	pickFn    func(Actor, PickInput) ([]Movement, error)
+	receiveFn          func(Actor, ReceiveInput) (Movement, Balance, error)
+	pickFn             func(Actor, PickInput) ([]Movement, error)
+	listExpiryAlertsFn func(Actor, ExpiryAlertFilter) ([]ExpiryAlert, error)
 }
 
 func (f *fakeHandlerService) ListBalances(context.Context, Actor, BalanceListFilter) (Page[Balance], error) {
 	return Page[Balance]{Items: []Balance{}}, nil
 }
 func (f *fakeHandlerService) ListLots(context.Context, Actor, string) ([]Lot, error) { return nil, nil }
+func (f *fakeHandlerService) ListExpiryAlerts(_ context.Context, actor Actor, filter ExpiryAlertFilter) ([]ExpiryAlert, error) {
+	if f.listExpiryAlertsFn == nil {
+		return nil, nil
+	}
+	return f.listExpiryAlertsFn(actor, filter)
+}
 func (f *fakeHandlerService) Receive(_ context.Context, actor Actor, input ReceiveInput) (Movement, Balance, error) {
 	return f.receiveFn(actor, input)
 }
@@ -188,5 +195,92 @@ func TestReceiveRouteAllowsPicker(t *testing.T) {
 	}
 	if response.StatusCode != fiber.StatusCreated {
 		t.Fatalf("status = %d, want 201", response.StatusCode)
+	}
+}
+
+func TestExpiryAlertsHandlerReturnsArrayAndForwardsTheWindow(t *testing.T) {
+	var captured ExpiryAlertFilter
+	service := &fakeHandlerService{listExpiryAlertsFn: func(_ Actor, filter ExpiryAlertFilter) ([]ExpiryAlert, error) {
+		captured = filter
+		return []ExpiryAlert{{
+			SKU: "JUI-ORNG-1000", LotNumber: "L-ORNG-EXPIRED",
+			ExpirationDate: "2026-09-17", DaysRemaining: -5, Status: ExpiryStatusExpired,
+			Quantity: "96.000",
+		}}, nil
+	}}
+	app, tokens := newTestApp(t, service)
+	token := issueToken(t, tokens, auth.RoleAdmin)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/inventory/alerts?within_days=7", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	response, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test() error = %v", err)
+	}
+	if response.StatusCode != fiber.StatusOK {
+		t.Fatalf("status = %d, want 200", response.StatusCode)
+	}
+	if captured.WithinDays == nil || *captured.WithinDays != 7 {
+		t.Fatalf("captured.WithinDays = %v, want 7", captured.WithinDays)
+	}
+
+	var payload struct {
+		Success bool          `json:"success"`
+		Data    []ExpiryAlert `json:"data"`
+	}
+	if err := json.NewDecoder(response.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode response error = %v", err)
+	}
+	if !payload.Success || len(payload.Data) != 1 || payload.Data[0].Status != ExpiryStatusExpired {
+		t.Fatalf("payload = %+v, want one expired alert", payload)
+	}
+}
+
+// The literal /alerts route must win over /:product_id-style segments, the
+// same ordering trap the catalog module hit with /by-barcode.
+func TestExpiryAlertsRouteIsNotShadowed(t *testing.T) {
+	called := false
+	service := &fakeHandlerService{listExpiryAlertsFn: func(Actor, ExpiryAlertFilter) ([]ExpiryAlert, error) {
+		called = true
+		return nil, nil
+	}}
+	app, tokens := newTestApp(t, service)
+	token := issueToken(t, tokens, auth.RoleAdmin)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/inventory/alerts", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	if _, err := app.Test(req); err != nil {
+		t.Fatalf("app.Test() error = %v", err)
+	}
+	if !called {
+		t.Fatal("GET /inventory/alerts did not reach the expiry alert handler")
+	}
+}
+
+func TestExpiryAlertsHandlerRejectsAnInvalidWindow(t *testing.T) {
+	app, tokens := newTestApp(t, &fakeHandlerService{})
+	token := issueToken(t, tokens, auth.RoleAdmin)
+
+	for _, query := range []string{"within_days=-1", "within_days=400", "within_days=soon", "limit=0", "limit=501"} {
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/inventory/alerts?"+query, nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+		response, err := app.Test(req)
+		if err != nil {
+			t.Fatalf("app.Test(%s) error = %v", query, err)
+		}
+		if response.StatusCode != fiber.StatusBadRequest {
+			t.Fatalf("%s: status = %d, want 400", query, response.StatusCode)
+		}
+	}
+}
+
+func TestExpiryAlertsHandlerRequiresAuthentication(t *testing.T) {
+	app, _ := newTestApp(t, &fakeHandlerService{})
+	response, err := app.Test(httptest.NewRequest(http.MethodGet, "/api/v1/inventory/alerts", nil))
+	if err != nil {
+		t.Fatalf("app.Test() error = %v", err)
+	}
+	if response.StatusCode != fiber.StatusUnauthorized {
+		t.Fatalf("status = %d, want 401", response.StatusCode)
 	}
 }
