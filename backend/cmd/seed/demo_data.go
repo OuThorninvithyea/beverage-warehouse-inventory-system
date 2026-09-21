@@ -67,7 +67,6 @@ type demoLot struct {
 	sku             string
 	number          string
 	expiresInDays   int // negative is already expired
-	noExpiry        bool
 	receivedDaysAgo int
 }
 
@@ -134,7 +133,9 @@ var demoWarehouses = []demoWarehouse{
 var demoLocations = []demoLocation{
 	// Phnom Penh: the deep warehouse, with every location type.
 	{warehouse: warehousePhnomPenh, code: "RECV-DOCK", zone: "RECEIVING", barcode: ean13("200100019001"), notPickable: true},
-	{warehouse: warehousePhnomPenh, code: "SHIP-DOCK", zone: "SHIPPING", barcode: ean13("200100019003"), notPickable: true},
+	// Migration 000006 restricts zone to AMBIENT, CHILLED, FROZEN, RECEIVING and
+	// QUARANTINE, so the shipping dock carries no zone label for now.
+	{warehouse: warehousePhnomPenh, code: "SHIP-DOCK", barcode: ean13("200100019003"), notPickable: true},
 	{warehouse: warehousePhnomPenh, code: "QUAR-01", zone: "QUARANTINE", barcode: ean13("200100019002"), notPickable: true},
 	{warehouse: warehousePhnomPenh, code: "A-01-01", zone: "AMBIENT", aisle: "A", rack: "01", shelf: "01", barcode: ean13("200100010101")},
 	{warehouse: warehousePhnomPenh, code: "A-01-02", zone: "AMBIENT", aisle: "A", rack: "01", shelf: "02", barcode: ean13("200100010102")},
@@ -273,8 +274,9 @@ var curatedLots = []demoLot{
 	{sku: "JUI-LYCHEE-250", number: "L-LYCHEE-2608", expiresInDays: 28, receivedDaysAgo: 18},
 	{sku: "TEA-GREEN-500", number: "L-GREEN-2609", expiresInDays: 45, receivedDaysAgo: 30},
 
-	// A lot with no expiration date at all.
-	{sku: "SPI-RUM-700", number: "L-RUM-NOEXP", noExpiry: true, receivedDaysAgo: 150},
+	// Spirits keep a long shelf life. Migration 000006 makes an expiration date
+	// mandatory, so no lot can be open-ended any more.
+	{sku: "SPI-RUM-700", number: "L-RUM-2031", expiresInDays: 1800, receivedDaysAgo: 150},
 }
 
 // Curated movements carry the scenarios worth reading in the movement
@@ -284,7 +286,7 @@ var curatedMovements = []demoMovement{
 	{kind: "receive", sku: "JUI-ORNG-1000", lot: "L-ORNG-EXPIRED", to: "PP-CENTRAL/COLD-01", quantity: "120", unitCost: "14.50", daysAgo: 95, reference: "SEED-RCV-1002", actor: userManagerPP},
 	{kind: "receive", sku: "JUI-COCO-330", lot: "L-COCO-EXPIRED", to: "SR-DEPOT/COLD-01", quantity: "90", unitCost: "11.80", daysAgo: 70, reference: "SEED-RCV-1003", actor: userManagerSR},
 	{kind: "receive", sku: "DRY-YOG-180", lot: "L-YOG-EXPIRED", to: "PP-CENTRAL/COLD-02", quantity: "60", unitCost: "13.20", daysAgo: 60, reference: "SEED-RCV-1004", actor: userManagerPP},
-	{kind: "receive", sku: "SPI-RUM-700", lot: "L-RUM-NOEXP", to: "PP-CENTRAL/B-01-01", quantity: "48", unitCost: "42.00", daysAgo: 150, reference: "SEED-RCV-1005", actor: userManagerPP},
+	{kind: "receive", sku: "SPI-RUM-700", lot: "L-RUM-2031", to: "PP-CENTRAL/B-01-01", quantity: "48", unitCost: "42.00", daysAgo: 150, reference: "SEED-RCV-1005", actor: userManagerPP},
 	{kind: "receive", sku: "BEV-COLA-330", lot: "L-COLA-2601", to: "PP-CENTRAL/A-01-01", quantity: "300", unitCost: "9.65", daysAgo: 40, reference: "SEED-RCV-1006", actor: userManagerPP},
 	{kind: "receive", sku: "TEA-GREEN-500", lot: "L-GREEN-2609", to: "PP-CENTRAL/A-02-01", quantity: "180", unitCost: "8.40", daysAgo: 30, reference: "SEED-RCV-1007", actor: userManagerPP},
 	{kind: "receive", sku: "COF-LATTE-240", lot: "L-LATTE-2607", to: "PP-CENTRAL/COLD-01", quantity: "96", unitCost: "15.20", daysAgo: 20, reference: "SEED-RCV-1008", actor: userManagerPP},

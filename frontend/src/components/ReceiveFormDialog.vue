@@ -107,6 +107,10 @@ async function submitReceive() {
     errorMessage.value = 'Lot number is required for lot-tracked products'
     return
   }
+  if (selectedProduct.value?.is_lot_tracked && !expirationDate.value) {
+    errorMessage.value = 'Expiration date is required for lot-tracked products'
+    return
+  }
 
   const payload: ReceiveInput = {
     location_id: locationId.value,
@@ -138,7 +142,7 @@ function closeDialog() {
     <DialogContent class="sm:max-w-2xl">
       <DialogHeader>
         <DialogTitle>Receive Inventory</DialogTitle>
-        <DialogDescription>Inbound stock with optional lot and expiration tracking.</DialogDescription>
+        <DialogDescription>Inbound stock with mandatory lot and expiry tracking for applicable products.</DialogDescription>
       </DialogHeader>
 
       <form class="grid gap-4" @submit.prevent="submitReceive">
@@ -215,7 +219,7 @@ function closeDialog() {
           </div>
 
           <div class="grid gap-2">
-            <Label for="rcv-exp">Expiration Date</Label>
+            <Label for="rcv-exp">Expiration Date<span v-if="selectedProduct?.is_lot_tracked"> *</span></Label>
             <Input id="rcv-exp" v-model="expirationDate" type="date" />
           </div>
         </div>

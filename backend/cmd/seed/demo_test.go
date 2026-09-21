@@ -140,17 +140,19 @@ func TestDemoDataCoversTheEdgeCases(t *testing.T) {
 		t.Errorf("categories: inactive=%d nested=%d, want at least one of each", inactiveCategories, nested)
 	}
 
-	var noExpiry, expired int
+	// Migration 000006 requires every lot to carry an expiration date, so a
+	// fixture without one would fail the seed rather than exercise a path.
+	var expired, longDated int
 	for _, lot := range demoLots() {
-		if lot.noExpiry {
-			noExpiry++
-		}
-		if !lot.noExpiry && lot.expiresInDays < 0 {
+		switch {
+		case lot.expiresInDays < 0:
 			expired++
+		case lot.expiresInDays > 365:
+			longDated++
 		}
 	}
-	if noExpiry == 0 || expired == 0 {
-		t.Errorf("lots: noExpiry=%d expired=%d, want at least one of each", noExpiry, expired)
+	if expired == 0 || longDated == 0 {
+		t.Errorf("lots: expired=%d longDated=%d, want at least one of each", expired, longDated)
 	}
 }
 
@@ -301,7 +303,7 @@ func TestDemoLedgerCoversTheKeyScenarios(t *testing.T) {
 
 		if movement.kind == "pick" {
 			if lot, tracked := expiry[movement.sku+"/"+movement.lot]; tracked &&
-				!lot.noExpiry && lot.expiresInDays < -movement.daysAgo {
+				lot.expiresInDays < -movement.daysAgo {
 				expiredLotPicks++
 			}
 		}
@@ -354,7 +356,7 @@ func TestDemoLedgerCoversTheKeyScenarios(t *testing.T) {
 		locationsPerProduct[key.sku][key.location] = true
 
 		lot, tracked := expiry[key.sku+"/"+key.lot]
-		if !tracked || lot.noExpiry {
+		if !tracked {
 			continue
 		}
 		switch {
