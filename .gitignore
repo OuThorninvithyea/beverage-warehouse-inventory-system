@@ -27,9 +27,12 @@ vendor/
 
 # Node/Vue
 node_modules/
+*.tsbuildinfo
 .vite/
 
 # Local reference documents that are not project deliverables
 /IOU.com Document - Puth Monisela.pdf
 /POSManagement - Chilean Ramech.pdf
 /Software Project Proposal Format.pdf
+
+.superpowers/

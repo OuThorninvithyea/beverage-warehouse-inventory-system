@@ -1,13 +1,21 @@
 <script setup lang="ts">
-import Button from 'primevue/button'
-import Dialog from 'primevue/dialog'
-import InputText from 'primevue/inputtext'
-import Message from 'primevue/message'
-import ToggleSwitch from 'primevue/toggleswitch'
+import { Loader2 } from 'lucide-vue-next'
 import { computed, reactive, ref, watch } from 'vue'
 
 import { ApiClientError } from '@/api/client'
 import type { Location, LocationInput } from '@/api/warehouses'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { validateBarcode } from '@/lib/barcode'
 import { useWarehousesStore } from '@/stores/warehouses'
 
@@ -117,51 +125,71 @@ async function submit() {
 </script>
 
 <template>
-  <Dialog
-    :visible="visible"
-    modal
-    :header="isEdit ? 'Edit location' : 'Add location'"
-    @update:visible="(value: boolean) => emit('update:visible', value)"
-  >
-    <div class="mb-4 flex flex-col gap-1">
-      <label for="location-code">Code</label>
-      <InputText id="location-code" v-model="form.code" :invalid="codeError !== null" />
-      <Message v-if="codeError" severity="error" size="small" variant="simple">{{ codeError }}</Message>
-    </div>
-    <div class="mb-4 flex flex-col gap-1">
-      <label for="location-zone">Zone</label>
-      <InputText id="location-zone" v-model="form.zone" />
-    </div>
-    <div class="mb-4 flex flex-col gap-1">
-      <label for="location-aisle">Aisle</label>
-      <InputText id="location-aisle" v-model="form.aisle" />
-    </div>
-    <div class="mb-4 flex flex-col gap-1">
-      <label for="location-rack">Rack</label>
-      <InputText id="location-rack" v-model="form.rack" />
-    </div>
-    <div class="mb-4 flex flex-col gap-1">
-      <label for="location-shelf">Shelf</label>
-      <InputText id="location-shelf" v-model="form.shelf" />
-    </div>
-    <div class="mb-4 flex flex-col gap-1">
-      <label for="location-barcode">Barcode</label>
-      <InputText id="location-barcode" v-model="form.barcode" :invalid="barcodeError !== null" />
-      <Message v-if="barcodeError" severity="error" size="small" variant="simple">{{ barcodeError }}</Message>
-      <small v-else-if="barcodeHint" data-testid="barcode-hint">{{ barcodeHint }}</small>
-    </div>
-    <div class="mb-4 flex flex-row items-center gap-3">
-      <label for="location-pickable">Pickable</label>
-      <ToggleSwitch id="location-pickable" v-model="form.is_pickable" />
-    </div>
-    <div class="mb-4 flex flex-row items-center gap-3">
-      <label for="location-active">Active</label>
-      <ToggleSwitch id="location-active" v-model="form.is_active" />
-    </div>
-    <Message v-if="generalError" severity="error" size="small">{{ generalError }}</Message>
-    <template #footer>
-      <Button label="Cancel" severity="secondary" data-testid="cancel" @click="emit('update:visible', false)" />
-      <Button label="Save" :loading="submitting" data-testid="submit" @click="submit" />
-    </template>
+  <Dialog :open="visible" @update:open="(value: boolean) => emit('update:visible', value)">
+    <DialogContent class="sm:max-w-lg">
+      <DialogHeader>
+        <DialogTitle>{{ isEdit ? 'Edit location' : 'Add location' }}</DialogTitle>
+        <DialogDescription>Zone, aisle, rack, shelf, and barcode details.</DialogDescription>
+      </DialogHeader>
+
+      <div class="grid gap-4">
+        <div class="grid gap-2">
+          <Label for="location-code">Code</Label>
+          <Input id="location-code" v-model="form.code" :aria-invalid="codeError !== null" />
+          <p v-if="codeError" class="text-xs text-destructive">{{ codeError }}</p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div class="grid gap-2">
+            <Label for="location-zone">Zone</Label>
+            <Input id="location-zone" v-model="form.zone" />
+          </div>
+          <div class="grid gap-2">
+            <Label for="location-aisle">Aisle</Label>
+            <Input id="location-aisle" v-model="form.aisle" />
+          </div>
+          <div class="grid gap-2">
+            <Label for="location-rack">Rack</Label>
+            <Input id="location-rack" v-model="form.rack" />
+          </div>
+          <div class="grid gap-2">
+            <Label for="location-shelf">Shelf</Label>
+            <Input id="location-shelf" v-model="form.shelf" />
+          </div>
+        </div>
+
+        <div class="grid gap-2">
+          <Label for="location-barcode">Barcode</Label>
+          <Input id="location-barcode" v-model="form.barcode" :aria-invalid="barcodeError !== null" />
+          <p v-if="barcodeError" class="text-xs text-destructive">{{ barcodeError }}</p>
+          <small v-else-if="barcodeHint" data-testid="barcode-hint" class="text-xs text-muted-foreground">
+            {{ barcodeHint }}
+          </small>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-6">
+          <div class="flex items-center gap-3">
+            <Switch id="location-pickable" v-model="form.is_pickable" />
+            <Label for="location-pickable">Pickable</Label>
+          </div>
+          <div class="flex items-center gap-3">
+            <Switch id="location-active" v-model="form.is_active" />
+            <Label for="location-active">Active</Label>
+          </div>
+        </div>
+
+        <p v-if="generalError" class="text-sm text-destructive">{{ generalError }}</p>
+      </div>
+
+      <DialogFooter>
+        <Button variant="outline" data-testid="cancel" @click="emit('update:visible', false)">
+          Cancel
+        </Button>
+        <Button :disabled="submitting" data-testid="submit" @click="submit">
+          <Loader2 v-if="submitting" class="size-4 animate-spin" />
+          Save
+        </Button>
+      </DialogFooter>
+    </DialogContent>
   </Dialog>
 </template>

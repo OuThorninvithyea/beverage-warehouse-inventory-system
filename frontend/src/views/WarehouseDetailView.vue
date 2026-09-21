@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import Button from 'primevue/button'
-import Column from 'primevue/column'
-import DataTable from 'primevue/datatable'
+import { Ban, Pencil, Plus } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 
@@ -9,6 +7,18 @@ import type { Location, Warehouse } from '@/api/warehouses'
 import { getWarehouse } from '@/api/warehouses'
 import LocationFormDialog from '@/components/LocationFormDialog.vue'
 import WarehouseFormDialog from '@/components/WarehouseFormDialog.vue'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { useAuthStore } from '@/stores/auth'
 import { useWarehousesStore } from '@/stores/warehouses'
 
@@ -24,6 +34,7 @@ const canManageWarehouses = computed(() => auth.user?.role === 'admin')
 const canManageLocations = computed(
   () => auth.user?.role === 'admin' || auth.user?.role === 'warehouse_manager',
 )
+const columnCount = computed(() => (canManageLocations.value ? 9 : 8))
 
 const warehouseDialogVisible = ref(false)
 const locationDialogVisible = ref(false)
@@ -68,124 +79,155 @@ function handleWarehouseSaved() {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4">
-    <p v-if="warehouseError" class="text-danger-text" data-testid="warehouse-error">{{ warehouseError }}</p>
+  <div class="grid gap-6">
+    <p
+      v-if="warehouseError"
+      role="alert"
+      data-testid="warehouse-error"
+      class="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+    >
+      {{ warehouseError }}
+    </p>
+
     <template v-else-if="warehouse">
-      <nav class="text-sm text-ink-faint">
+      <nav class="text-sm text-muted-foreground">
         <RouterLink to="/warehouses" class="hover:underline">Warehouses</RouterLink>
-        <span class="mx-1">›</span>
-        <span class="text-ink">{{ warehouse.name }}</span>
+        <span class="mx-1">&rsaquo;</span>
+        <span class="text-foreground">{{ warehouse.name }}</span>
       </nav>
 
-      <div class="flex items-center justify-between">
-        <div>
-          <h1 class="text-2xl font-semibold text-ink">{{ warehouse.name }}</h1>
-          <p class="text-ink-muted">
-            <span class="font-mono-code">{{ warehouse.code }}</span>
-            · {{ warehouse.address ?? 'No address on file' }}
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <div class="grid gap-1">
+          <h1 class="text-2xl font-semibold tracking-tight">{{ warehouse.name }}</h1>
+          <p class="text-sm text-muted-foreground">
+            <span class="font-mono">{{ warehouse.code }}</span>
+            &middot; {{ warehouse.address ?? 'No address on file' }}
           </p>
         </div>
         <Button
           v-if="canManageWarehouses"
-          label="Edit Warehouse"
+          variant="outline"
           data-testid="edit-warehouse"
           @click="warehouseDialogVisible = true"
-        />
+        >
+          <Pencil class="size-4" />
+          Edit Warehouse
+        </Button>
       </div>
 
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <h2 class="text-lg font-semibold text-ink">Locations</h2>
-          <span class="rounded-full bg-surface px-2 py-0.5 text-xs font-medium text-ink-faint">
-            {{ store.locations.length }} shown
-          </span>
-        </div>
-        <Button
-          v-if="canManageLocations"
-          label="Add Location"
-          data-testid="add-location"
-          @click="openCreateLocationDialog"
-        />
-      </div>
+      <Card>
+        <CardContent class="grid gap-4">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+              <h2 class="text-lg font-semibold">Locations</h2>
+              <Badge variant="secondary">{{ store.locations.length }} shown</Badge>
+            </div>
+            <Button v-if="canManageLocations" data-testid="add-location" @click="openCreateLocationDialog">
+              <Plus class="size-4" />
+              Add Location
+            </Button>
+          </div>
 
-      <p v-if="store.locationsError" class="text-danger-text" data-testid="locations-error">
-        {{ store.locationsError }}
-      </p>
-      <DataTable
-        v-else
-        :value="store.locations"
-        :loading="store.locationsLoading"
-        data-key="id"
-        class="overflow-hidden rounded-[12px] border border-border"
-      >
-        <template #empty>
-          <p>No locations yet.</p>
-        </template>
-        <Column field="code" header="Location code">
-          <template #body="{ data }">
-            <span class="font-mono-code text-[0.85rem]">{{ data.code }}</span>
-          </template>
-        </Column>
-        <Column field="zone" header="Zone" />
-        <Column field="aisle" header="Aisle" />
-        <Column field="rack" header="Rack" />
-        <Column field="shelf" header="Shelf" />
-        <Column field="barcode" header="Barcode">
-          <template #body="{ data }">
-            <span v-if="data.barcode" class="font-mono-code text-[0.85rem]">{{ data.barcode }}</span>
-            <span v-else class="text-ink-faint">—</span>
-          </template>
-        </Column>
-        <Column header="Pickable">
-          <template #body="{ data }">
-            <span
-              class="rounded-badge px-2 py-1 text-xs font-medium"
-              :class="data.is_pickable ? 'bg-success-bg text-success-text' : 'bg-danger-bg text-danger-text'"
-            >{{ data.is_pickable ? 'Yes' : 'No' }}</span>
-          </template>
-        </Column>
-        <Column header="Status">
-          <template #body="{ data }">
-            <span
-              class="rounded-badge px-2 py-1 text-xs font-medium"
-              :class="data.is_active ? 'bg-success-bg text-success-text' : 'bg-danger-bg text-danger-text'"
-            >{{ data.is_active ? 'Active' : 'Inactive' }}</span>
-          </template>
-        </Column>
-        <Column v-if="canManageLocations" header="Actions">
-          <template #body="{ data }">
-            <Button
-              icon="pi pi-pencil"
-              size="small"
-              severity="secondary"
-              text
-              rounded
-              aria-label="Edit location"
-              data-testid="edit-location"
-              @click="openEditLocationDialog(data)"
-            />
-            <Button
-              v-if="data.is_active"
-              icon="pi pi-ban"
-              size="small"
-              severity="danger"
-              text
-              rounded
-              aria-label="Deactivate location"
-              data-testid="deactivate-location"
-              @click="deactivateLocationRow(data)"
-            />
-          </template>
-        </Column>
-      </DataTable>
+          <p
+            v-if="store.locationsError"
+            role="alert"
+            data-testid="locations-error"
+            class="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          >
+            {{ store.locationsError }}
+          </p>
 
-      <Button
-        v-if="store.locationsHasMore"
-        label="Load more"
-        severity="secondary"
-        data-testid="load-more-locations"
-        @click="store.loadMoreLocations(warehouseId)"
-      />
+          <div v-else class="overflow-x-auto rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Location code</TableHead>
+                  <TableHead>Zone</TableHead>
+                  <TableHead>Aisle</TableHead>
+                  <TableHead>Rack</TableHead>
+                  <TableHead>Shelf</TableHead>
+                  <TableHead>Barcode</TableHead>
+                  <TableHead>Pickable</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead v-if="canManageLocations" class="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow v-if="store.locationsLoading">
+                  <TableCell :colspan="columnCount">
+                    <div class="grid gap-2 py-2">
+                      <Skeleton class="h-6 w-full" />
+                      <Skeleton class="h-6 w-2/3" />
+                    </div>
+                  </TableCell>
+                </TableRow>
+
+                <TableRow v-else-if="store.locations.length === 0">
+                  <TableCell :colspan="columnCount" class="py-10 text-center text-sm text-muted-foreground">
+                    No locations yet.
+                  </TableCell>
+                </TableRow>
+
+                <TableRow v-for="location in store.locations" v-else :key="location.id">
+                  <TableCell class="font-mono text-sm">{{ location.code }}</TableCell>
+                  <TableCell>{{ location.zone || '—' }}</TableCell>
+                  <TableCell>{{ location.aisle || '—' }}</TableCell>
+                  <TableCell>{{ location.rack || '—' }}</TableCell>
+                  <TableCell>{{ location.shelf || '—' }}</TableCell>
+                  <TableCell>
+                    <span v-if="location.barcode" class="font-mono text-sm">{{ location.barcode }}</span>
+                    <span v-else class="text-muted-foreground">—</span>
+                  </TableCell>
+                  <TableCell>
+                    <Badge :variant="location.is_pickable ? 'default' : 'secondary'">
+                      {{ location.is_pickable ? 'Yes' : 'No' }}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge :variant="location.is_active ? 'default' : 'secondary'">
+                      {{ location.is_active ? 'Active' : 'Inactive' }}
+                    </Badge>
+                  </TableCell>
+                  <TableCell v-if="canManageLocations" class="text-right">
+                    <div class="flex items-center justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Edit location"
+                        data-testid="edit-location"
+                        @click="openEditLocationDialog(location)"
+                      >
+                        <Pencil class="size-4" />
+                      </Button>
+                      <Button
+                        v-if="location.is_active"
+                        variant="ghost"
+                        size="icon"
+                        class="text-destructive hover:text-destructive"
+                        aria-label="Deactivate location"
+                        data-testid="deactivate-location"
+                        @click="deactivateLocationRow(location)"
+                      >
+                        <Ban class="size-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </div>
+
+          <Button
+            v-if="store.locationsHasMore"
+            variant="outline"
+            class="justify-self-start"
+            data-testid="load-more-locations"
+            @click="store.loadMoreLocations(warehouseId)"
+          >
+            Load more
+          </Button>
+        </CardContent>
+      </Card>
 
       <WarehouseFormDialog
         v-model:visible="warehouseDialogVisible"
