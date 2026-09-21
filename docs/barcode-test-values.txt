@@ -1,0 +1,73 @@
+BWIMS BARCODE TEST VALUES
+=========================
+Type or paste these into the Manual / USB scanner input on /barcode-test.
+Seeded values match backend/cmd/seed/demo_data.go, so they resolve to a real
+row after `make seed-demo`.
+
+To scan instead of type, open docs/barcode-test-sheet.html (printable) or
+docs/barcode-single-test.png (one big code for on-screen scanning).
+
+
+SEEDED PRODUCTS  -- valid, and found in the database
+---------------------------------------------------
+8841000001015   EAN-13   BEV-COLA-330    Angkor Cola Can 330 ml
+8841000001022   EAN-13   BEV-COLA-1500   Angkor Cola PET 1.5 L
+8841000001039   EAN-13   BEV-LEMON-330   Mekong Lemon Soda Can 330 ml
+8841000002012   EAN-13   WTR-STILL-500   Kulen Still Water 500 ml
+8841000002029   EAN-13   WTR-SPARK-750   Kulen Sparkling Water 750 ml
+8841000003019   EAN-13   JUI-ORNG-1000   Tonle Orange Juice 1 L
+8841000003026   EAN-13   JUI-MANGO-250   Tonle Mango Nectar 250 ml
+8841000004016   EAN-13   ENG-BOOST-250   Bayon Boost Energy 250 ml
+8841000005013   EAN-13   BEE-LAGER-330   Riverside Lager Can 330 ml
+8841000005020   EAN-13   BEE-STOUT-330   Riverside Stout Can 330 ml
+8841000006010   EAN-13   COF-LATTE-240   Phnom Coffee Latte Can 240 ml
+8841000006027   EAN-13   DRY-MILK-200    Siem Dairy Milk 200 ml
+8841000007017   EAN-13   PKG-CRATE-24    Returnable Crate 24 Slot (no lots)
+049000012347    UPC-A    IMP-COLA-355    Imported Cola Can 355 ml
+012000012341    UPC-A    IMP-ROOT-355    Imported Root Beer Can 355 ml
+
+
+SEEDED LOCATIONS  -- valid, and found in the database
+-----------------------------------------------------
+2001000190010   PP-CENTRAL / RECV-DOCK   Receiving, not pickable
+2001000190027   PP-CENTRAL / QUAR-01     Quarantine, not pickable
+2001000101016   PP-CENTRAL / A-01-01     Ambient rack
+2001000101023   PP-CENTRAL / A-01-02     Ambient rack
+2001000102013   PP-CENTRAL / COLD-01     Chilled rack
+2002000190017   SR-DEPOT / RECV-DOCK     Receiving, not pickable
+2002000101013   SR-DEPOT / A-01-01       Ambient rack
+2002000101020   SR-DEPOT / A-01-02       Ambient rack
+
+
+REAL RETAIL BARCODES  -- on actual cans, NOT in the database
+-------------------------------------------------------------
+Scanning these proves the camera path works on a real package. The lookup
+will return PRODUCT_NOT_FOUND, which is correct: they are not seeded.
+
+5449000000996   Coca-Cola 330 ml can
+5449000014528   Coca-Cola Zero 330 ml can
+9002490100070   Red Bull 250 ml can
+4006381333931   ZXing reference value (long-standing decoder test value)
+
+
+MUST BE REJECTED  -- validation fails before any lookup
+--------------------------------------------------------
+8841000001016   EAN-13 with a wrong check digit
+049000012348    UPC-A with a wrong check digit
+884100000101    12 digits that are not a valid UPC-A
+88410000010155  Too many digits
+88410000O1015   Contains a letter (capital O, not zero)
+
+8841000009011   Valid EAN-13 that is simply not in the catalog.
+                Expect PRODUCT_NOT_FOUND, not a validation error.
+
+
+NOTES
+-----
+- The 884 (Cambodia) and 20x (internal use) values are invented for this
+  project. They are structurally valid and scan correctly, but no physical
+  product carries them.
+- A wrong-check-digit value cannot be drawn as a legitimate EAN-13 barcode,
+  so the rejection cases are type-in only.
+- Browsers block camera access over plain HTTP except on localhost. Use the
+  laptop webcam on localhost, or serve over HTTPS to scan with a phone.

@@ -20,11 +20,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { validateBarcode } from '@/lib/barcode'
-import {
-  invalidSamples,
-  validLocationSamples,
-  validProductSamples,
-} from '@/lib/barcode-samples'
 
 interface CameraOption {
   label: string
@@ -112,12 +107,6 @@ function useManualValue() {
   capturedValue.value = manualValue.value.trim()
   locked.value = true
   stopScanner()
-}
-
-// Sample values make the route testable without a printed package or a camera.
-function useSampleValue(value: string) {
-  manualValue.value = value
-  useManualValue()
 }
 
 onBeforeUnmount(stopScanner)
@@ -211,70 +200,6 @@ onBeforeUnmount(stopScanner)
           <p class="rounded-md border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-sm text-sky-700">
             This screen only produces a lookup value. It cannot receive, pick, transfer or adjust inventory.
           </p>
-        </CardContent>
-      </Card>
-
-      <Card class="col-span-2 max-[800px]:col-span-1">
-        <CardHeader>
-          <CardTitle class="text-base">Test values</CardTitle>
-        </CardHeader>
-        <CardContent class="grid gap-4">
-          <p class="text-sm text-muted-foreground">
-            These are the barcodes written by the development seeder. Select one
-            to fill the input, or print
-            <code>docs/barcode-test-sheet.html</code> to test a real camera scan.
-          </p>
-
-          <div class="grid grid-cols-3 gap-4 max-[800px]:grid-cols-1">
-            <div class="grid gap-2">
-              <h3 class="text-sm font-medium">Seeded products</h3>
-              <div class="flex flex-wrap gap-2">
-                <Button
-                  v-for="sample in validProductSamples"
-                  :key="sample.value"
-                  variant="outline"
-                  size="sm"
-                  :title="`${sample.label} (${sample.format})`"
-                  @click="useSampleValue(sample.value)"
-                >
-                  {{ sample.value }}
-                </Button>
-              </div>
-            </div>
-
-            <div class="grid gap-2">
-              <h3 class="text-sm font-medium">Seeded locations</h3>
-              <div class="flex flex-wrap gap-2">
-                <Button
-                  v-for="sample in validLocationSamples"
-                  :key="sample.value"
-                  variant="outline"
-                  size="sm"
-                  :title="`${sample.label} (${sample.format})`"
-                  @click="useSampleValue(sample.value)"
-                >
-                  {{ sample.value }}
-                </Button>
-              </div>
-            </div>
-
-            <div class="grid gap-2">
-              <h3 class="text-sm font-medium">Values that must fail</h3>
-              <div class="flex flex-wrap gap-2">
-                <Button
-                  v-for="sample in invalidSamples"
-                  :key="sample.value"
-                  variant="outline"
-                  size="sm"
-                  class="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                  :title="sample.label"
-                  @click="useSampleValue(sample.value)"
-                >
-                  {{ sample.value }}
-                </Button>
-              </div>
-            </div>
-          </div>
         </CardContent>
       </Card>
     </div>
