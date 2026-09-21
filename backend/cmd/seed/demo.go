@@ -190,11 +190,7 @@ func insertProducts(ctx context.Context, tx pgx.Tx) error {
 
 func insertLots(ctx context.Context, tx pgx.Tx, now time.Time) error {
 	for _, lot := range demoLots() {
-		var expiration *time.Time
-		if !lot.noExpiry {
-			expiresOn := now.AddDate(0, 0, lot.expiresInDays)
-			expiration = &expiresOn
-		}
+		expiration := now.AddDate(0, 0, lot.expiresInDays)
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO lots (product_id, lot_number, expiration_date, received_at)
 			SELECT p.id, $2, $3::date, $4
@@ -322,9 +318,7 @@ func insertLedger(ctx context.Context, tx pgx.Tx, now time.Time) error {
 
 	expiryByLot := map[string]time.Time{}
 	for _, lot := range demoLots() {
-		if !lot.noExpiry {
-			expiryByLot[strings.ToLower(lot.sku+"/"+lot.number)] = now.AddDate(0, 0, lot.expiresInDays)
-		}
+		expiryByLot[strings.ToLower(lot.sku+"/"+lot.number)] = now.AddDate(0, 0, lot.expiresInDays)
 	}
 
 	movementIDs := make(map[int]string, len(movements))

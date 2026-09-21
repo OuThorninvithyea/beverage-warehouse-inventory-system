@@ -65,7 +65,7 @@ const router = createRouter({
           path: 'barcode-test',
           name: 'barcode-test',
           component: () => import('@/views/BarcodeTestView.vue'),
-          meta: { public: true },
+          meta: { roles: ['admin'] },
         },
       ],
     },

@@ -5,6 +5,7 @@ import {
   Boxes,
   Building2,
   Camera,
+  ClipboardList,
   Database,
   LayoutGrid,
   LogOut,
@@ -15,7 +16,6 @@ import {
   SlidersHorizontal,
   Sun,
   Tags,
-  Truck,
   Upload,
   Download,
   Users,
@@ -74,21 +74,47 @@ const canReceiveOrPick = computed(
     auth.user?.role === 'picker',
 )
 
-const navItems = computed(() => {
-  const items = [
-    { to: '/', label: 'Dashboard', icon: LayoutGrid, exact: true },
-    { to: '/inventory', label: 'Inventory Stock', icon: Database, exact: false },
-    { to: '/movements', label: 'Stock Movements', icon: Truck, exact: false },
-    { to: '/alerts', label: 'Expiry Alerts', icon: Bell, exact: false },
-    { to: '/products', label: 'Products Catalog', icon: Boxes, exact: false },
-    { to: '/categories', label: 'Categories', icon: Tags, exact: false },
-    { to: '/warehouses', label: 'Warehouses', icon: Building2, exact: false },
+const navSections = computed(() => {
+  const sections: Array<{
+    label: string | null
+    items: Array<{ to: string; label: string; icon: typeof LayoutGrid; exact: boolean }>
+  }> = [
+    {
+      label: null,
+      items: [{ to: '/', label: 'Dashboard', icon: LayoutGrid, exact: true }],
+    },
+    {
+      label: 'Product Catalog',
+      items: [
+        { to: '/products', label: 'Products', icon: Boxes, exact: false },
+        { to: '/categories', label: 'Categories', icon: Tags, exact: false },
+      ],
+    },
+    {
+      label: 'Warehouses',
+      items: [{ to: '/warehouses', label: 'Warehouses', icon: Building2, exact: false }],
+    },
+    {
+      label: 'Inventory Ops',
+      items: [
+        { to: '/inventory', label: 'Inventory', icon: Database, exact: false },
+        { to: '/movements', label: 'Movement History', icon: ClipboardList, exact: false },
+        { to: '/alerts', label: 'Expiry Alerts', icon: Bell, exact: false },
+      ],
+    },
   ]
+
   if (isAdmin.value) {
-    items.push({ to: '/users', label: 'User Management', icon: Users, exact: false })
+    sections.push({
+      label: 'Admin & Tools',
+      items: [
+        { to: '/users', label: 'User Management', icon: Users, exact: false },
+        { to: '/barcode-test', label: 'Barcode Tools', icon: Camera, exact: false },
+      ],
+    })
   }
-  items.push({ to: '/barcode-test', label: 'Barcode Test', icon: Camera, exact: false })
-  return items
+
+  return sections
 })
 
 const userInitials = computed(() => {
@@ -225,23 +251,28 @@ function onMovementSuccess(msg: string) {
         </div>
       </div>
 
-      <nav aria-label="Primary navigation" class="grid gap-1">
-        <RouterLink
-          v-for="item in navItems"
-          :key="item.to"
-          :to="item.to"
-          class="group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-          :class="
-            item.exact
-              ? '[&.router-link-exact-active]:bg-primary [&.router-link-exact-active]:text-primary-foreground'
-              : '[&.router-link-active]:bg-primary [&.router-link-active]:text-primary-foreground'
-          "
-          @click="closeMobileMenu"
-        >
-          <component :is="item.icon" class="size-4" />
-          <span>{{ item.label }}</span>
-        </RouterLink>
-      </nav>
+        <nav aria-label="Primary navigation" class="grid gap-4">
+          <div v-for="section in navSections" :key="section.label ?? 'dashboard'" class="grid gap-1">
+            <p v-if="section.label" class="px-3 pb-1 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+              {{ section.label }}
+            </p>
+            <RouterLink
+              v-for="item in section.items"
+              :key="item.to"
+              :to="item.to"
+              class="group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              :class="
+                item.exact
+                  ? '[&.router-link-exact-active]:bg-primary [&.router-link-exact-active]:text-primary-foreground'
+                  : '[&.router-link-active]:bg-primary [&.router-link-active]:text-primary-foreground'
+              "
+              @click="closeMobileMenu"
+            >
+              <component :is="item.icon" class="size-4" />
+              <span>{{ item.label }}</span>
+            </RouterLink>
+          </div>
+        </nav>
 
       <div class="mt-auto grid gap-1 rounded-xl border bg-card p-3 text-xs max-[900px]:hidden">
         <div class="flex items-center justify-between font-semibold text-muted-foreground">
