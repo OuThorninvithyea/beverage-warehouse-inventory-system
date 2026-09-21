@@ -10,33 +10,71 @@ docs/barcode-single-test.png (one big code for on-screen scanning).
 
 SEEDED PRODUCTS  -- valid, and found in the database
 ---------------------------------------------------
-8841000001015   EAN-13   BEV-COLA-330    Angkor Cola Can 330 ml
-8841000001022   EAN-13   BEV-COLA-1500   Angkor Cola PET 1.5 L
-8841000001039   EAN-13   BEV-LEMON-330   Mekong Lemon Soda Can 330 ml
-8841000002012   EAN-13   WTR-STILL-500   Kulen Still Water 500 ml
-8841000002029   EAN-13   WTR-SPARK-750   Kulen Sparkling Water 750 ml
-8841000003019   EAN-13   JUI-ORNG-1000   Tonle Orange Juice 1 L
-8841000003026   EAN-13   JUI-MANGO-250   Tonle Mango Nectar 250 ml
-8841000004016   EAN-13   ENG-BOOST-250   Bayon Boost Energy 250 ml
-8841000005013   EAN-13   BEE-LAGER-330   Riverside Lager Can 330 ml
-8841000005020   EAN-13   BEE-STOUT-330   Riverside Stout Can 330 ml
-8841000006010   EAN-13   COF-LATTE-240   Phnom Coffee Latte Can 240 ml
-8841000006027   EAN-13   DRY-MILK-200    Siem Dairy Milk 200 ml
-8841000007017   EAN-13   PKG-CRATE-24    Returnable Crate 24 Slot (no lots)
-049000012347    UPC-A    IMP-COLA-355    Imported Cola Can 355 ml
-012000012341    UPC-A    IMP-ROOT-355    Imported Root Beer Can 355 ml
+8841000001015  EAN-13  BEV-COLA-330       Angkor Cola Can 330 ml
+8841000001022  EAN-13  BEV-COLA-1500      Angkor Cola PET 1.5 L
+8841000001039  EAN-13  BEV-COLA-DIET-330  Angkor Cola Zero Can 330 ml
+8841000001046  EAN-13  BEV-LEMON-330      Mekong Lemon Soda Can 330 ml
+8841000001053  EAN-13  BEV-ORANGE-330     Mekong Orange Soda Can 330 ml
+8841000001060  EAN-13  BEV-GINGER-330     Bassac Ginger Ale Can 330 ml
+8841000001077  EAN-13  BEV-TONIC-200      Bassac Tonic Water 200 ml
+8841000001084  EAN-13  BEV-SODA-1500      Bassac Soda Water PET 1.5 L
+8841000002012  EAN-13  WTR-STILL-500      Kulen Still Water 500 ml
+8841000002029  EAN-13  WTR-STILL-1500     Kulen Still Water 1.5 L
+8841000002036  EAN-13  WTR-SPARK-750      Kulen Sparkling Water 750 ml
+8841000002043  EAN-13  WTR-MINERAL-330    Bokor Mineral Water 330 ml
+8841000002050  EAN-13  WTR-GALLON-19      Kulen Water Gallon 19 L
+8841000003019  EAN-13  JUI-ORNG-1000      Tonle Orange Juice 1 L   <- has an expired lot
+8841000003026  EAN-13  JUI-MANGO-250      Tonle Mango Nectar 250 ml
+8841000003033  EAN-13  JUI-APPLE-1000     Tonle Apple Juice 1 L
+8841000003040  EAN-13  JUI-COCO-330       Kampot Coconut Water 330 ml  <- expired lot
+8841000003057  EAN-13  JUI-LYCHEE-250     Tonle Lychee Nectar 250 ml
+8841000004016  EAN-13  ENG-BOOST-250      Bayon Boost Energy 250 ml
+8841000004023  EAN-13  ENG-BOOST-SF-250   Bayon Boost Sugar Free 250 ml
+8841000004030  EAN-13  ENG-SPORT-500      Bayon Sport Isotonic 500 ml
+8841000005013  EAN-13  BEE-LAGER-330      Riverside Lager Can 330 ml
+8841000005020  EAN-13  BEE-LAGER-640      Riverside Lager Bottle 640 ml
+8841000005037  EAN-13  BEE-STOUT-330      Riverside Stout Can 330 ml
+8841000005044  EAN-13  BEE-IPA-330        Riverside IPA Can 330 ml
+8841000005051  EAN-13  BEE-LIGHT-330      Riverside Light Can 330 ml
+8841000006010  EAN-13  WIN-RED-750        Imported Red Wine 750 ml
+8841000006027  EAN-13  WIN-WHITE-750      Imported White Wine 750 ml
+8841000006034  EAN-13  SPI-RUM-700        Kampong Rum 700 ml  <- lot with no expiry date
+8841000007017  EAN-13  COF-LATTE-240      Phnom Coffee Latte Can 240 ml
+8841000007024  EAN-13  COF-BLACK-240      Phnom Coffee Black Can 240 ml
+8841000007031  EAN-13  TEA-GREEN-500      Angkor Green Tea 500 ml
+8841000007048  EAN-13  TEA-LEMON-500      Angkor Lemon Tea 500 ml
+8841000008014  EAN-13  DRY-MILK-200       Siem Dairy Milk 200 ml  <- expires in ~7 days
+8841000008021  EAN-13  DRY-YOG-180        Siem Dairy Drinking Yoghurt 180 ml  <- expired lot
+049000012347   UPC-A   IMP-COLA-355       Imported Cola Can 355 ml
+012000012341   UPC-A   IMP-ROOT-355       Imported Root Beer Can 355 ml
+8841000009011  EAN-13  PKG-CRATE-24       Returnable Crate 24 Slot (not lot tracked)
+8841000009028  EAN-13  CLN-SANITIZER-5L   Line Sanitizer 5 L
+
+Products deliberately left without a barcode, to test that path:
+  PKG-PALLET-EU      Euro Pallet
+  MSC-UNSORTED-001   Unsorted Returns Pallet (also has no category)
+  BEE-SEASONAL-330   Seasonal Festival Beer (also inactive)
 
 
 SEEDED LOCATIONS  -- valid, and found in the database
 -----------------------------------------------------
-2001000190010   PP-CENTRAL / RECV-DOCK   Receiving, not pickable
-2001000190027   PP-CENTRAL / QUAR-01     Quarantine, not pickable
-2001000101016   PP-CENTRAL / A-01-01     Ambient rack
-2001000101023   PP-CENTRAL / A-01-02     Ambient rack
-2001000102013   PP-CENTRAL / COLD-01     Chilled rack
-2002000190017   SR-DEPOT / RECV-DOCK     Receiving, not pickable
-2002000101013   SR-DEPOT / A-01-01       Ambient rack
-2002000101020   SR-DEPOT / A-01-02       Ambient rack
+2001000190010  PP-CENTRAL  RECV-DOCK  Receiving, not pickable
+2001000190034  PP-CENTRAL  SHIP-DOCK  Shipping, not pickable
+2001000190027  PP-CENTRAL  QUAR-01    Quarantine, not pickable
+2001000101016  PP-CENTRAL  A-01-01    Ambient rack
+2001000101023  PP-CENTRAL  A-01-02    Ambient rack
+2001000102013  PP-CENTRAL  A-02-01    Ambient rack
+2001000103010  PP-CENTRAL  B-01-01    Ambient rack
+2001000104017  PP-CENTRAL  COLD-01    Chilled rack
+2001000104024  PP-CENTRAL  COLD-02    Chilled rack
+2001000199006  PP-CENTRAL  OLD-01     INACTIVE location
+2002000190017  SR-DEPOT    RECV-DOCK  Receiving, not pickable
+2002000101013  SR-DEPOT    A-01-01    Ambient rack
+2002000101020  SR-DEPOT    A-01-02    Ambient rack
+2002000103017  SR-DEPOT    COLD-01    Chilled rack
+2003000190014  BB-HUB      RECV-DOCK  Receiving, not pickable
+2003000101010  BB-HUB      A-01-01    Ambient rack
+2004000101017  KP-CLOSED   A-01-01    INACTIVE, in the closed warehouse
 
 
 REAL RETAIL BARCODES  -- on actual cans, NOT in the database
@@ -58,15 +96,22 @@ MUST BE REJECTED  -- validation fails before any lookup
 88410000010155  Too many digits
 88410000O1015   Contains a letter (capital O, not zero)
 
-8841000009011   Valid EAN-13 that is simply not in the catalog.
-                Expect PRODUCT_NOT_FOUND, not a validation error.
+These two are valid barcodes, so validation passes and the lookup runs.
+Both return PRODUCT_NOT_FOUND rather than a validation error:
+
+8841000099999   Valid EAN-13 assigned to nothing at all
+8841000009035   Valid EAN-13 belonging to BEV-RETIRED-330, a deactivated
+                product. Lookups only return active products, so a
+                discontinued SKU stops resolving without being deleted.
 
 
 NOTES
 -----
-- The 884 (Cambodia) and 20x (internal use) values are invented for this
+- The 884 (Cambodia) and 200-204 (internal use) values are invented for this
   project. They are structurally valid and scan correctly, but no physical
   product carries them.
+- Check digits are computed in code (ean13/upcA in demo_data.go), never typed,
+  and a Go test re-validates every one against the API's own validator.
 - A wrong-check-digit value cannot be drawn as a legitimate EAN-13 barcode,
   so the rejection cases are type-in only.
 - Browsers block camera access over plain HTTP except on localhost. Use the
