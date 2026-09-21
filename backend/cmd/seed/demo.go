@@ -71,8 +71,8 @@ func seedDemoData(ctx context.Context, pool *pgxpool.Pool, logger *slog.Logger, 
 		"locations", len(demoLocations),
 		"users", len(demoUsers),
 		"products", len(demoProducts),
-		"lots", len(demoLots),
-		"movements", len(demoMovements),
+		"lots", len(demoLots()),
+		"movements", len(demoMovements()),
 		"ledger_written", !seeded,
 	)
 	return nil
@@ -81,14 +81,14 @@ func seedDemoData(ctx context.Context, pool *pgxpool.Pool, logger *slog.Logger, 
 func insertWarehouses(ctx context.Context, tx pgx.Tx) error {
 	for _, warehouse := range demoWarehouses {
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO warehouses (code, name, address)
-			VALUES ($1, $2, $3)
+			INSERT INTO warehouses (code, name, address, is_active)
+			VALUES ($1, $2, $3, $4)
 			ON CONFLICT ((LOWER(code))) DO UPDATE
 			SET name = EXCLUDED.name,
 			    address = EXCLUDED.address,
-			    is_active = TRUE,
+			    is_active = EXCLUDED.is_active,
 			    updated_at = NOW()`,
-			warehouse.code, warehouse.name, warehouse.address); err != nil {
+			warehouse.code, warehouse.name, warehouse.address, !warehouse.inactive); err != nil {
 			return fmt.Errorf("seed warehouse %s: %w", warehouse.code, err)
 		}
 	}
@@ -98,8 +98,8 @@ func insertWarehouses(ctx context.Context, tx pgx.Tx) error {
 func insertLocations(ctx context.Context, tx pgx.Tx) error {
 	for _, location := range demoLocations {
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO locations (warehouse_id, code, zone, aisle, rack, shelf, barcode, is_pickable)
-			SELECT w.id, $2, NULLIF($3, ''), NULLIF($4, ''), NULLIF($5, ''), NULLIF($6, ''), NULLIF($7, ''), $8
+			INSERT INTO locations (warehouse_id, code, zone, aisle, rack, shelf, barcode, is_pickable, is_active)
+			SELECT w.id, $2, NULLIF($3, ''), NULLIF($4, ''), NULLIF($5, ''), NULLIF($6, ''), NULLIF($7, ''), $8, $9
 			FROM warehouses w
 			WHERE LOWER(w.code) = LOWER($1)
 			ON CONFLICT (warehouse_id, (LOWER(code))) DO UPDATE
@@ -109,10 +109,11 @@ func insertLocations(ctx context.Context, tx pgx.Tx) error {
 			    shelf = EXCLUDED.shelf,
 			    barcode = EXCLUDED.barcode,
 			    is_pickable = EXCLUDED.is_pickable,
-			    is_active = TRUE,
+			    is_active = EXCLUDED.is_active,
 			    updated_at = NOW()`,
 			location.warehouse, location.code, location.zone, location.aisle,
-			location.rack, location.shelf, location.barcode, location.pickable); err != nil {
+			location.rack, location.shelf, location.barcode,
+			!location.notPickable, !location.inactive); err != nil {
 			return fmt.Errorf("seed location %s/%s: %w", location.warehouse, location.code, err)
 		}
 	}
@@ -122,8 +123,8 @@ func insertLocations(ctx context.Context, tx pgx.Tx) error {
 func insertUsers(ctx context.Context, tx pgx.Tx, passwordHash string) error {
 	for _, user := range demoUsers {
 		tag, err := tx.Exec(ctx, `
-			INSERT INTO users (role_id, warehouse_id, email, password_hash, full_name)
-			SELECT r.id, w.id, $1, $2, $3
+			INSERT INTO users (role_id, warehouse_id, email, password_hash, full_name, is_active)
+			SELECT r.id, w.id, $1, $2, $3, $6
 			FROM roles r
 			LEFT JOIN warehouses w ON LOWER(w.code) = LOWER(NULLIF($4, ''))
 			WHERE r.code = $5
@@ -132,9 +133,9 @@ func insertUsers(ctx context.Context, tx pgx.Tx, passwordHash string) error {
 			    full_name = EXCLUDED.full_name,
 			    role_id = EXCLUDED.role_id,
 			    warehouse_id = EXCLUDED.warehouse_id,
-			    is_active = TRUE,
+			    is_active = EXCLUDED.is_active,
 			    updated_at = NOW()`,
-			user.email, passwordHash, user.fullName, user.warehouse, user.role)
+			user.email, passwordHash, user.fullName, user.warehouse, user.role, !user.inactive)
 		if err != nil {
 			return fmt.Errorf("seed user %s: %w", user.email, err)
 		}
@@ -149,15 +150,15 @@ func insertCategories(ctx context.Context, tx pgx.Tx) error {
 	// Roots first so a child can resolve its parent by name.
 	for _, category := range demoCategories {
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO categories (parent_id, name)
-			SELECT p.id, $1
+			INSERT INTO categories (parent_id, name, is_active)
+			SELECT p.id, $1, $3
 			FROM (SELECT 1) AS anchor
 			LEFT JOIN categories p ON LOWER(p.name) = LOWER(NULLIF($2, ''))
 			ON CONFLICT ((LOWER(name))) DO UPDATE
 			SET parent_id = EXCLUDED.parent_id,
-			    is_active = TRUE,
+			    is_active = EXCLUDED.is_active,
 			    updated_at = NOW()`,
-			category.name, category.parent); err != nil {
+			category.name, category.parent, !category.inactive); err != nil {
 			return fmt.Errorf("seed category %s: %w", category.name, err)
 		}
 	}
@@ -167,8 +168,8 @@ func insertCategories(ctx context.Context, tx pgx.Tx) error {
 func insertProducts(ctx context.Context, tx pgx.Tx) error {
 	for _, product := range demoProducts {
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO products (category_id, sku, barcode, name, unit, is_lot_tracked)
-			SELECT c.id, $1, NULLIF($2, ''), $3, $4, $5
+			INSERT INTO products (category_id, sku, barcode, name, unit, is_lot_tracked, is_active)
+			SELECT c.id, $1, NULLIF($2, ''), $3, $4, $5, $7
 			FROM (SELECT 1) AS anchor
 			LEFT JOIN categories c ON LOWER(c.name) = LOWER(NULLIF($6, ''))
 			ON CONFLICT ((LOWER(sku))) DO UPDATE
@@ -177,10 +178,10 @@ func insertProducts(ctx context.Context, tx pgx.Tx) error {
 			    name = EXCLUDED.name,
 			    unit = EXCLUDED.unit,
 			    is_lot_tracked = EXCLUDED.is_lot_tracked,
-			    is_active = TRUE,
+			    is_active = EXCLUDED.is_active,
 			    updated_at = NOW()`,
 			product.sku, product.barcode, product.name, product.unit,
-			product.lotTracked, product.category); err != nil {
+			!product.untracked, product.category, !product.inactive); err != nil {
 			return fmt.Errorf("seed product %s: %w", product.sku, err)
 		}
 	}
@@ -188,9 +189,9 @@ func insertProducts(ctx context.Context, tx pgx.Tx) error {
 }
 
 func insertLots(ctx context.Context, tx pgx.Tx, now time.Time) error {
-	for _, lot := range demoLots {
+	for _, lot := range demoLots() {
 		var expiration *time.Time
-		if lot.hasExpiry {
+		if !lot.noExpiry {
 			expiresOn := now.AddDate(0, 0, lot.expiresInDays)
 			expiration = &expiresOn
 		}
@@ -309,7 +310,8 @@ func (i identifiers) optionalLocation(location string) (*string, error) {
 }
 
 func insertLedger(ctx context.Context, tx pgx.Tx, now time.Time) error {
-	plan, err := buildLedger(demoMovements, now)
+	movements := demoMovements()
+	plan, err := buildLedger(movements, now)
 	if err != nil {
 		return err
 	}
@@ -319,15 +321,15 @@ func insertLedger(ctx context.Context, tx pgx.Tx, now time.Time) error {
 	}
 
 	expiryByLot := map[string]time.Time{}
-	for _, lot := range demoLots {
-		if lot.hasExpiry {
+	for _, lot := range demoLots() {
+		if !lot.noExpiry {
 			expiryByLot[strings.ToLower(lot.sku+"/"+lot.number)] = now.AddDate(0, 0, lot.expiresInDays)
 		}
 	}
 
-	movementIDs := make(map[int]string, len(demoMovements))
+	movementIDs := make(map[int]string, len(movements))
 	for _, index := range plan.order {
-		movement := demoMovements[index]
+		movement := movements[index]
 		occurredAt := now.AddDate(0, 0, -movement.daysAgo)
 
 		productID, err := ids.lookup(ids.products, "product", movement.sku)
@@ -386,7 +388,7 @@ func insertLedger(ctx context.Context, tx pgx.Tx, now time.Time) error {
 	}
 
 	for _, layer := range plan.layers {
-		movement := demoMovements[layer.movementIndex]
+		movement := movements[layer.movementIndex]
 		warehouseID, err := ids.lookup(ids.warehouses, "warehouse", layer.warehouse)
 		if err != nil {
 			return err
