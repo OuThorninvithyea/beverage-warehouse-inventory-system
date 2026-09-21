@@ -139,6 +139,7 @@ func TestPostgresInventoryLifecycle(t *testing.T) {
 		LocationID: fixture.locationAID, ProductID: fixture.trackedProduct,
 		Quantity: "50.000", UnitCost: "1.2500",
 		LotNumber: OptionalString{Set: true, Value: strPointer("LOT-A")},
+		ExpirationDate: OptionalString{Set: true, Value: strPointer("2030-01-01")},
 	})
 	if err != nil {
 		t.Fatalf("Receive() error = %v", err)
