@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -20,6 +21,7 @@ var (
 	ErrWarehouseMismatch        = errors.New("location does not belong to the actor's assigned warehouse")
 	ErrInventoryOperationFailed = errors.New("inventory operation could not be completed")
 	ErrMovementNotFound         = errors.New("movement was not found")
+	ErrLotExpiryRequired        = errors.New("lot number and expiration date are required for lot-tracked products")
 )
 
 type Repository interface {
@@ -274,6 +276,9 @@ func (r *PostgresRepository) Receive(ctx context.Context, actorID string, actorW
 	product, err := lockActiveProduct(ctx, tx, input.ProductID)
 	if err != nil {
 		return Movement{}, Balance{}, err
+	}
+	if product.IsLotTracked && (!input.LotNumber.Set || input.LotNumber.Value == nil || strings.TrimSpace(*input.LotNumber.Value) == "" || !input.ExpirationDate.Set || input.ExpirationDate.Value == nil || strings.TrimSpace(*input.ExpirationDate.Value) == "") {
+		return Movement{}, Balance{}, ErrLotExpiryRequired
 	}
 
 	var lotID *string

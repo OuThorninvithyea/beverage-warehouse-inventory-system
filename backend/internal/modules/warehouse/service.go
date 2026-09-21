@@ -244,6 +244,14 @@ func normalizeLocationInput(input LocationInput, defaults bool) (LocationInput, 
 	}
 
 	input.Zone = optionalText(input.Zone)
+	if input.Zone != nil {
+		allowedZones := map[string]struct{}{
+			"AMBIENT": {}, "CHILLED": {}, "FROZEN": {}, "RECEIVING": {}, "QUARANTINE": {},
+		}
+		if _, ok := allowedZones[strings.ToUpper(*input.Zone)]; !ok {
+			return LocationInput{}, ErrValidation
+		}
+	}
 	input.Aisle = optionalText(input.Aisle)
 	input.Rack = optionalText(input.Rack)
 	input.Shelf = optionalText(input.Shelf)

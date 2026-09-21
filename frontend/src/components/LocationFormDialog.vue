@@ -19,6 +19,14 @@ import { Switch } from '@/components/ui/switch'
 import { validateBarcode } from '@/lib/barcode'
 import { useWarehousesStore } from '@/stores/warehouses'
 
+const zoneOptions = [
+  { value: 'AMBIENT', label: 'Ambient' },
+  { value: 'CHILLED', label: 'Chilled' },
+  { value: 'FROZEN', label: 'Frozen' },
+  { value: 'RECEIVING', label: 'Receiving' },
+  { value: 'QUARANTINE', label: 'Quarantine' },
+]
+
 const props = defineProps<{
   visible: boolean
   warehouseId: string
@@ -141,8 +149,13 @@ async function submit() {
 
         <div class="grid grid-cols-2 gap-4">
           <div class="grid gap-2">
-            <Label for="location-zone">Zone</Label>
-            <Input id="location-zone" v-model="form.zone" />
+            <Label for="location-zone">Temperature / workflow zone</Label>
+            <Select v-model="form.zone">
+              <SelectTrigger id="location-zone" class="w-full"><SelectValue placeholder="Select zone" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="zone in zoneOptions" :key="zone.value" :value="zone.value">{{ zone.label }}</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div class="grid gap-2">
             <Label for="location-aisle">Aisle</Label>

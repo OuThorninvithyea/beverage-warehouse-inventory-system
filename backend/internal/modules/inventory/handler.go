@@ -47,6 +47,8 @@ func inventoryHTTPError(err error) error {
 		return httpx.NewError(fiber.StatusNotFound, "LOCATION_NOT_FOUND", "location was not found", err)
 	case errors.Is(err, ErrLotNotFound):
 		return httpx.NewError(fiber.StatusNotFound, "LOT_NOT_FOUND", "lot was not found for this product", err)
+	case errors.Is(err, ErrLotExpiryRequired):
+		return httpx.NewError(fiber.StatusUnprocessableEntity, "LOT_EXPIRY_REQUIRED", "lot number and expiration date are required for lot-tracked products", err)
 	case errors.Is(err, ErrMovementNotFound):
 		return httpx.NewError(fiber.StatusNotFound, "MOVEMENT_NOT_FOUND", "movement was not found", err)
 	case errors.Is(err, ErrInsufficientStock):

@@ -28,6 +28,7 @@ export interface Lot {
   lot_number: string
   expiration_date: string | null
   created_at: string
+  available_quantity?: string
 }
 
 export interface ReceiveInput {
