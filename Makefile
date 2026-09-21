@@ -1,4 +1,4 @@
-.PHONY: backend-format backend-test backend-vet frontend-install frontend-dev frontend-test frontend-typecheck frontend-build migrate-up migrate-down seed-admin up down
+.PHONY: backend-format backend-test backend-vet frontend-install frontend-dev frontend-test frontend-typecheck frontend-build migrate-up migrate-down seed-admin seed-demo up down
 
 backend-format:
 	cd backend && gofmt -w $$(find . -name '*.go' -type f)
@@ -31,7 +31,10 @@ migrate-down:
 	docker compose run --rm migrate -path=/migrations -database='postgres://bwims:bwims@postgres:5432/bwims?sslmode=disable' down 1
 
 seed-admin: migrate-up
-	docker compose run --rm seed
+	docker compose run --build --rm -e SEED_DEMO_DATA=false seed
+
+seed-demo: migrate-up
+	docker compose run --build --rm seed
 
 up:
 	docker compose up --build

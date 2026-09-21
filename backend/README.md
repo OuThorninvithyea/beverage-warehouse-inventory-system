@@ -42,6 +42,20 @@ Override `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`, and `SEED_ADMIN_NAME`
 before running the command when shared credentials are inappropriate. The
 seeder refuses to run outside `APP_ENV=development`.
 
+Load the full demo dataset — role users, two warehouses, locations, a beverage
+catalog with valid barcodes, lots with staggered expiry dates, 27 stock
+movements, FIFO cost layers and the balances they imply:
+
+```bash
+make seed-demo
+```
+
+The demo accounts share the password `DemoPass123!` (`SEED_DEMO_PASSWORD`), and
+`SEED_DEMO_DATA=false` skips the dataset. Fixtures are in `cmd/seed/demo_data.go`
+and the derived ledger is in `cmd/seed/ledger.go`; both are documented in
+[`docs/demo-data.md`](../docs/demo-data.md). Barcodes for scanner testing are
+listed in [`docs/barcode-test-data.md`](../docs/barcode-test-data.md).
+
 Run the API directly from the backend directory when PostgreSQL is already
 available:
 
