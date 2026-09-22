@@ -4,6 +4,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 
 import type { Product } from '@/api/catalog'
 import BarcodePrintModal from '@/components/BarcodePrintModal.vue'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import BarcodeScannerModal from '@/components/BarcodeScannerModal.vue'
 import ProductFormDialog from '@/components/ProductFormDialog.vue'
 import { Badge } from '@/components/ui/badge'
@@ -45,6 +46,8 @@ const productFormVisible = ref(false)
 const selectedProduct = ref<Product | null>(null)
 const barcodeScannerVisible = ref(false)
 const barcodePrintVisible = ref(false)
+const pendingProduct = ref<Product | null>(null)
+const confirmVisible = ref(false)
 
 function openPrintLabel(product: Product) {
   selectedProduct.value = product
@@ -78,10 +81,17 @@ function openEditProduct(product: Product) {
   productFormVisible.value = true
 }
 
-async function deactivateProduct(product: Product) {
-  if (confirm(`Are you sure you want to deactivate "${product.name}"?`)) {
-    await catalogStore.removeProduct(product.id)
-  }
+function deactivateProduct(product: Product) {
+  pendingProduct.value = product
+  confirmVisible.value = true
+}
+
+async function confirmDeactivateProduct() {
+  const product = pendingProduct.value
+  confirmVisible.value = false
+  if (!product) return
+  await catalogStore.removeProduct(product.id)
+  pendingProduct.value = null
 }
 
 function onBarcodeScanned(code: string) {
@@ -260,5 +270,13 @@ function getCategoryName(catId: string | null): string {
     <BarcodeScannerModal v-model:visible="barcodeScannerVisible" @select="onBarcodeScanned" />
 
     <BarcodePrintModal v-model:visible="barcodePrintVisible" :product="selectedProduct" />
+
+    <ConfirmDialog
+      v-model:open="confirmVisible"
+      title="Deactivate this product?"
+      :description="`${pendingProduct?.name ?? ''} will stop appearing in lookups and new movements. Existing stock and history are kept.`"
+      confirm-label="Deactivate"
+      @confirm="confirmDeactivateProduct"
+    />
   </div>
 </template>

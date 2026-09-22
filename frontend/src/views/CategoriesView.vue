@@ -4,6 +4,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 
 import type { Category } from '@/api/catalog'
 import CategoryFormDialog from '@/components/CategoryFormDialog.vue'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -26,6 +27,8 @@ const catalogStore = useCatalogStore()
 const searchQuery = ref('')
 const categoryFormVisible = ref(false)
 const selectedCategory = ref<Category | null>(null)
+const pendingCategory = ref<Category | null>(null)
+const confirmVisible = ref(false)
 
 const canManageCatalog = computed(() => {
   return auth.user?.role === 'admin' || auth.user?.role === 'warehouse_manager'
@@ -49,10 +52,17 @@ function openEditCategory(category: Category) {
   categoryFormVisible.value = true
 }
 
-async function deactivateCategory(category: Category) {
-  if (confirm(`Are you sure you want to deactivate "${category.name}"?`)) {
-    await catalogStore.removeCategory(category.id)
-  }
+function deactivateCategory(category: Category) {
+  pendingCategory.value = category
+  confirmVisible.value = true
+}
+
+async function confirmDeactivateCategory() {
+  const category = pendingCategory.value
+  confirmVisible.value = false
+  if (!category) return
+  await catalogStore.removeCategory(category.id)
+  pendingCategory.value = null
 }
 
 function getParentCategoryName(parentId: string | null): string {
@@ -162,6 +172,14 @@ function getParentCategoryName(parentId: string | null): string {
       :category="selectedCategory"
       :categories="catalogStore.categories"
       @saved="catalogStore.fetchCategories(searchQuery)"
+    />
+
+    <ConfirmDialog
+      v-model:open="confirmVisible"
+      title="Deactivate this category?"
+      :description="`${pendingCategory?.name ?? ''} will be hidden from the catalog. Products keep their history and the category can be reactivated later.`"
+      confirm-label="Deactivate"
+      @confirm="confirmDeactivateCategory"
     />
   </div>
 </template>

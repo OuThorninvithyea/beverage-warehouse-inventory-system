@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { KeyRound, Pencil, Search, UserMinus, UserPlus } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
+import { toast } from 'vue-sonner'
 
 import type { User, UserRole } from '@/api/users'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import PasswordResetDialog from '@/components/PasswordResetDialog.vue'
 import UserFormDialog from '@/components/UserFormDialog.vue'
 import { Badge } from '@/components/ui/badge'
@@ -32,6 +34,9 @@ import { useWarehousesStore } from '@/stores/warehouses'
 const auth = useAuthStore()
 const usersStore = useUsersStore()
 const warehouseStore = useWarehousesStore()
+
+const pendingUser = ref<User | null>(null)
+const confirmVisible = ref(false)
 
 const searchQuery = ref('')
 const roleFilter = ref<'all' | UserRole>('all')
@@ -75,14 +80,21 @@ function openResetPassword(user: User) {
   resetPasswordVisible.value = true
 }
 
-async function deactivateUser(user: User) {
+function deactivateUser(user: User) {
   if (user.id === auth.user?.id) {
-    alert('You cannot deactivate your own account.')
+    toast.error('You cannot deactivate your own account.')
     return
   }
-  if (confirm(`Are you sure you want to deactivate "${user.full_name}"?`)) {
-    await usersStore.removeUser(user.id)
-  }
+  pendingUser.value = user
+  confirmVisible.value = true
+}
+
+async function confirmDeactivateUser() {
+  const user = pendingUser.value
+  confirmVisible.value = false
+  if (!user) return
+  await usersStore.removeUser(user.id)
+  pendingUser.value = null
 }
 
 function getRoleClass(role: UserRole): string {
@@ -245,6 +257,14 @@ function getWarehouseName(warehouseId: string | null): string {
       v-model:visible="resetPasswordVisible"
       :user="selectedUser"
       @success="usersStore.fetchUsers({ search: searchQuery, role: selectedRole })"
+    />
+
+    <ConfirmDialog
+      v-model:open="confirmVisible"
+      title="Deactivate this user?"
+      :description="`${pendingUser?.full_name ?? ''} will lose access immediately and their refresh tokens are revoked. The account can be reactivated later.`"
+      confirm-label="Deactivate"
+      @confirm="confirmDeactivateUser"
     />
   </div>
 </template>
