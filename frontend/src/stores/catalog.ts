@@ -31,16 +31,24 @@ export const useCatalogStore = defineStore('catalog', () => {
   const nextCursor = ref<string | null>(null)
   const hasMore = ref(false)
 
-  async function fetchProducts(search?: string, categoryId?: string, is_active?: boolean) {
+  // Returns the next cursor so a caller can page; null ends the list.
+  async function fetchProducts(
+    search?: string,
+    categoryId?: string,
+    is_active?: boolean,
+    after?: string,
+  ): Promise<string | null> {
     loading.value = true
     error.value = null
     try {
-      const page = await listProducts({ search, category_id: categoryId, is_active })
+      const page = await listProducts({ search, category_id: categoryId, is_active, after })
       products.value = page.items
       nextCursor.value = page.page.next_cursor
       hasMore.value = page.page.has_more
+      return page.page.has_more ? page.page.next_cursor : null
     } catch (e: any) {
       error.value = e.message || 'Failed to fetch products'
+      return null
     } finally {
       loading.value = false
     }

@@ -34,6 +34,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { exportToCSV } from '@/lib/export'
+import CursorPager from '@/components/CursorPager.vue'
+import { useCursorPages } from '@/lib/cursor-pages'
 import { useAuthStore } from '@/stores/auth'
 import { useCatalogStore } from '@/stores/catalog'
 import { useInventoryStore } from '@/stores/inventory'
@@ -147,7 +149,7 @@ onMounted(async () => {
     await warehouseStore.fetchLocations(selectedWarehouseId.value)
   }
 
-  await fetchBalances()
+  await pager.reset()
 })
 
 watch(selectedWarehouseId, async (newWhId) => {
@@ -155,21 +157,25 @@ watch(selectedWarehouseId, async (newWhId) => {
   if (newWhId) {
     await warehouseStore.fetchLocations(newWhId)
   }
-  await fetchBalances()
+  await pager.reset()
 })
 
 watch([selectedLocationId, selectedProductId], () => {
-  void fetchBalances()
+  void pager.reset()
 })
 
-async function fetchBalances() {
-  await inventoryStore.fetchBalances({
+async function fetchBalances(after?: string): Promise<string | null> {
+  const nextCursor = await inventoryStore.fetchBalances({
     warehouse_id: selectedWarehouseId.value,
     location_id: selectedLocationId.value,
     product_id: selectedProductId.value,
+    after,
   })
   await loadLotsForVisibleBalances()
+  return nextCursor
 }
+
+const pager = useCursorPages(fetchBalances)
 
 function isExpiringSoon(expirationDateStr?: string | null): boolean {
   if (!expirationDateStr) return false
@@ -339,6 +345,16 @@ function isLowStock(qtyStr: string): boolean {
             </TableBody>
           </Table>
         </div>
+
+          <CursorPager
+            :page-number="pager.pageNumber"
+            :can-go-back="pager.canGoBack"
+            :can-go-forward="pager.canGoForward"
+            :busy="pager.busy || inventoryStore.loading"
+            :item-count="inventoryStore.balances.length"
+            @previous="pager.previous()"
+            @next="pager.next()"
+          />
       </CardContent>
     </Card>
 
