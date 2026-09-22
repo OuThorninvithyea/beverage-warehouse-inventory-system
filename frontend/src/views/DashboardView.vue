@@ -2,10 +2,7 @@
 import {
   ArrowLeftRight,
   ArrowRight,
-  CalendarClock,
   Download,
-  PackageCheck,
-  PackageSearch,
   Upload,
 } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
@@ -36,6 +33,9 @@ import { useAuthStore } from '@/stores/auth'
 import { useCatalogStore } from '@/stores/catalog'
 import { useInventoryStore } from '@/stores/inventory'
 import { useWarehousesStore } from '@/stores/warehouses'
+import lowStockSticker from '@/assets/sticker-low-stock.png'
+import nearExpirySticker from '@/assets/sticker-near-expiry.png'
+import totalSkusSticker from '@/assets/sticker-total-skus.png'
 
 const auth = useAuthStore()
 const catalogStore = useCatalogStore()
@@ -141,7 +141,7 @@ onMounted(async () => {
             <strong class="text-3xl font-semibold">{{ totalSkus }}</strong>
             <span class="text-xs text-muted-foreground">Active catalog items</span>
           </div>
-          <div class="grid size-11 place-items-center rounded-xl bg-blue-50 text-blue-700"><PackageSearch class="size-5" /></div>
+          <img :src="totalSkusSticker" alt="" class="size-[100px] shrink-0 object-contain drop-shadow-sm" />
         </CardContent>
       </Card>
       <Card>
@@ -151,7 +151,7 @@ onMounted(async () => {
             <strong class="text-3xl font-semibold">{{ lowStockCount }}</strong>
             <span class="text-xs text-muted-foreground">Balances below 10 units</span>
           </div>
-          <div class="grid size-11 place-items-center rounded-xl bg-amber-50 text-amber-700"><PackageCheck class="size-5" /></div>
+          <img :src="lowStockSticker" alt="" class="size-[100px] shrink-0 object-contain drop-shadow-sm" />
         </CardContent>
       </Card>
       <Card>
@@ -161,7 +161,7 @@ onMounted(async () => {
             <strong class="text-3xl font-semibold">{{ nearExpiryLots }}</strong>
             <span class="text-xs text-muted-foreground">Expiring within 30 days</span>
           </div>
-          <div class="grid size-11 place-items-center rounded-xl bg-cyan-50 text-cyan-700"><CalendarClock class="size-5" /></div>
+          <img :src="nearExpirySticker" alt="" class="size-[100px] shrink-0 object-contain drop-shadow-sm" />
         </CardContent>
       </Card>
     </div>

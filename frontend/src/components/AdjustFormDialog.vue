@@ -5,6 +5,7 @@ import { computed, ref, watch } from 'vue'
 import type { Product } from '@/api/catalog'
 import type { AdjustInput, Lot } from '@/api/inventory'
 import type { Location } from '@/api/warehouses'
+import InventoryOperationSummary, { type SummaryRow } from '@/components/InventoryOperationSummary.vue'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -48,8 +49,21 @@ const notes = ref('')
 
 const errorMessage = ref('')
 const availableLots = ref<Lot[]>([])
+const step = ref<'details' | 'review' | 'success'>('details')
+const pendingPayload = ref<AdjustInput | null>(null)
+const successRows = ref<SummaryRow[]>([])
 
 const selectedProduct = computed(() => props.products.find((p) => p.id === productId.value))
+const selectedLocation = computed(() => props.locations.find((location) => location.id === locationId.value))
+const selectedLot = computed(() => availableLots.value.find((lot) => lot.id === lotId.value))
+const reviewRows = computed<SummaryRow[]>(() => [
+  { label: 'Product', value: `${selectedProduct.value?.name ?? '—'} (${selectedProduct.value?.sku ?? '—'})`, strong: true },
+  { label: 'Location', value: selectedLocation.value?.code ?? '—', strong: true },
+  { label: 'Direction', value: direction.value === 'increase' ? 'Increase stock' : 'Decrease stock', strong: true },
+  { label: 'Quantity', value: `${quantity.value} ${selectedProduct.value?.unit ?? 'units'}`, strong: true },
+  { label: 'Lot', value: selectedLot.value?.lot_number ?? 'No specific lot', mono: Boolean(selectedLot.value) },
+  { label: 'Audit reason', value: notes.value.trim() || '—' },
+])
 
 watch(
   () => productId.value,
@@ -67,6 +81,9 @@ watch(
   (isVis) => {
     if (!isVis) return
     errorMessage.value = ''
+    step.value = 'details'
+    pendingPayload.value = null
+    successRows.value = []
     locationId.value = props.locations[0]?.id || ''
     productId.value = ''
     lotId.value = 'none'
@@ -77,28 +94,28 @@ watch(
   },
 )
 
-async function submitAdjust() {
+function buildPayload(): AdjustInput | null {
   errorMessage.value = ''
   const qty = Number(quantity.value)
 
   if (!locationId.value) {
     errorMessage.value = 'Location is required'
-    return
+    return null
   }
   if (!productId.value) {
     errorMessage.value = 'Product is required'
-    return
+    return null
   }
   if (!Number.isFinite(qty) || qty <= 0) {
     errorMessage.value = 'Adjustment quantity must be greater than 0'
-    return
+    return null
   }
   if (!notes.value.trim()) {
     errorMessage.value = 'Reason note is required for cycle count adjustments'
-    return
+    return null
   }
 
-  const payload: AdjustInput = {
+  return {
     location_id: locationId.value,
     product_id: productId.value,
     direction: direction.value,
@@ -106,30 +123,59 @@ async function submitAdjust() {
     lot_id: lotId.value === 'none' ? null : lotId.value,
     notes: notes.value.trim(),
   }
+}
+
+function reviewAdjust() {
+  const payload = buildPayload()
+  if (!payload) return
+  pendingPayload.value = payload
+  step.value = 'review'
+}
+
+async function submitAdjust() {
+  if (!pendingPayload.value) return
+  errorMessage.value = ''
 
   try {
-    await inventoryStore.doAdjust(payload)
+    const result = await inventoryStore.doAdjust(pendingPayload.value)
+    successRows.value = [
+      { label: 'Product', value: selectedProduct.value?.name ?? '—', strong: true },
+      { label: 'Location', value: selectedLocation.value?.code ?? '—' },
+      { label: 'Adjustment', value: `${pendingPayload.value.direction === 'increase' ? '+' : '−'}${pendingPayload.value.quantity} ${selectedProduct.value?.unit ?? 'units'}`, strong: true },
+      { label: 'Affected lot', value: selectedLot.value?.lot_number ?? 'No specific lot', mono: Boolean(selectedLot.value) },
+      { label: 'New available balance', value: result.balance.available_quantity, strong: true },
+      { label: 'Audit reason', value: pendingPayload.value.notes },
+      { label: 'Movement ID', value: result.movement.id, mono: true },
+    ]
     emit('submitted')
-    closeDialog()
+    step.value = 'success'
   } catch (err: unknown) {
     errorMessage.value = err instanceof Error ? err.message : 'Stock adjustment failed'
   }
 }
 
 function closeDialog() {
+  if (inventoryStore.loading) return
   emit('update:visible', false)
+}
+
+function handleOpenChange(value: boolean) {
+  if (!value && inventoryStore.loading) return
+  emit('update:visible', value)
 }
 </script>
 
 <template>
-  <Dialog :open="visible" @update:open="(value: boolean) => emit('update:visible', value)">
+  <Dialog :open="visible" @update:open="handleOpenChange">
     <DialogContent class="sm:max-w-xl">
       <DialogHeader>
-        <DialogTitle>Cycle Count Stock Adjustment</DialogTitle>
-        <DialogDescription>Correct counted stock with a mandatory audit reason.</DialogDescription>
+        <DialogTitle>{{ step === 'details' ? 'Cycle Count Stock Adjustment' : step === 'review' ? 'Review Adjustment' : 'Stock Adjusted' }}</DialogTitle>
+        <DialogDescription>
+          {{ step === 'details' ? 'Enter the counted stock correction and audit reason.' : step === 'review' ? 'Step 2 of 2 — verify the adjustment before committing it.' : 'The balance and permanent audit record were updated.' }}
+        </DialogDescription>
       </DialogHeader>
 
-      <form class="grid gap-4" @submit.prevent="submitAdjust">
+      <form v-if="step === 'details'" class="grid gap-4" @submit.prevent="reviewAdjust">
         <p
           v-if="errorMessage"
           class="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
@@ -214,16 +260,37 @@ function closeDialog() {
         </div>
       </form>
 
+      <div v-else-if="step === 'review'" class="grid gap-4">
+        <p v-if="errorMessage" role="alert" class="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          {{ errorMessage }}
+        </p>
+        <InventoryOperationSummary :rows="reviewRows" />
+      </div>
+
+      <InventoryOperationSummary v-else :rows="successRows" mode="success" message="The cycle-count correction was recorded successfully." />
+
       <DialogFooter>
-        <Button variant="outline" @click="closeDialog">Cancel</Button>
+        <Button v-if="step === 'details'" type="button" variant="outline" @click="closeDialog">Cancel</Button>
         <Button
+          v-if="step === 'details'"
+          type="button"
+          :variant="direction === 'increase' ? 'default' : 'destructive'"
+          @click="reviewAdjust"
+        >
+          Review Adjustment
+        </Button>
+        <Button v-if="step === 'review'" type="button" variant="outline" :disabled="inventoryStore.loading" @click="step = 'details'">Back</Button>
+        <Button
+          v-if="step === 'review'"
+          type="button"
           :disabled="inventoryStore.loading"
           :variant="direction === 'increase' ? 'default' : 'destructive'"
           @click="submitAdjust"
         >
           <Check class="size-4" />
-          Commit Adjustment
+          {{ inventoryStore.loading ? 'Committing…' : 'Confirm Adjustment' }}
         </Button>
+        <Button v-if="step === 'success'" type="button" @click="closeDialog">Done</Button>
       </DialogFooter>
     </DialogContent>
   </Dialog>

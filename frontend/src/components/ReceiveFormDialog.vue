@@ -6,6 +6,7 @@ import type { Product } from '@/api/catalog'
 import type { ReceiveInput } from '@/api/inventory'
 import type { Location } from '@/api/warehouses'
 import BarcodeScannerModal from '@/components/BarcodeScannerModal.vue'
+import InventoryOperationSummary, { type SummaryRow } from '@/components/InventoryOperationSummary.vue'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -54,14 +55,31 @@ const notes = ref('')
 
 const errorMessage = ref('')
 const scannerVisible = ref(false)
+const step = ref<'details' | 'review' | 'success'>('details')
+const pendingPayload = ref<ReceiveInput | null>(null)
+const successRows = ref<SummaryRow[]>([])
 
 const selectedProduct = computed(() => props.products.find((p) => p.id === productId.value))
+const selectedLocation = computed(() => props.locations.find((location) => location.id === locationId.value))
+const reviewRows = computed<SummaryRow[]>(() => [
+  { label: 'Product', value: `${selectedProduct.value?.name ?? '—'} (${selectedProduct.value?.sku ?? '—'})`, strong: true },
+  { label: 'Target location', value: selectedLocation.value?.code ?? '—', strong: true },
+  { label: 'Quantity', value: `${quantity.value} ${selectedProduct.value?.unit ?? 'units'}`, strong: true },
+  { label: 'Unit cost', value: `$${Number(unitCost.value || 0).toFixed(2)}` },
+  { label: 'Lot', value: lotNumber.value.trim() || 'Non-lot inventory', mono: Boolean(lotNumber.value.trim()) },
+  { label: 'Expiration', value: expirationDate.value || 'Not applicable' },
+  { label: 'Reference', value: reference.value.trim() || 'Not provided' },
+  { label: 'Notes', value: notes.value.trim() || 'None' },
+])
 
 watch(
   () => props.visible,
   (isVis) => {
     if (!isVis) return
     errorMessage.value = ''
+    step.value = 'details'
+    pendingPayload.value = null
+    successRows.value = []
     locationId.value = props.locations[0]?.id || ''
     productId.value = ''
     quantity.value = '1'
@@ -82,37 +100,37 @@ async function onBarcodeScanned(code: string) {
   }
 }
 
-async function submitReceive() {
+function buildPayload(): ReceiveInput | null {
   errorMessage.value = ''
   const qty = Number(quantity.value)
   const cost = Number(unitCost.value)
 
   if (!locationId.value) {
     errorMessage.value = 'Target location is required'
-    return
+    return null
   }
   if (!productId.value) {
     errorMessage.value = 'Product is required'
-    return
+    return null
   }
   if (!Number.isFinite(qty) || qty <= 0) {
     errorMessage.value = 'Quantity must be greater than 0'
-    return
+    return null
   }
   if (!Number.isFinite(cost) || cost < 0) {
     errorMessage.value = 'Unit cost must be 0 or greater'
-    return
+    return null
   }
   if (selectedProduct.value?.is_lot_tracked && !lotNumber.value.trim()) {
     errorMessage.value = 'Lot number is required for lot-tracked products'
-    return
+    return null
   }
   if (selectedProduct.value?.is_lot_tracked && !expirationDate.value) {
     errorMessage.value = 'Expiration date is required for lot-tracked products'
-    return
+    return null
   }
 
-  const payload: ReceiveInput = {
+  return {
     location_id: locationId.value,
     product_id: productId.value,
     quantity: qty.toString(),
@@ -122,30 +140,59 @@ async function submitReceive() {
     reference: reference.value.trim() || null,
     notes: notes.value.trim() || null,
   }
+}
+
+function reviewReceive() {
+  const payload = buildPayload()
+  if (!payload) return
+  pendingPayload.value = payload
+  step.value = 'review'
+}
+
+async function submitReceive() {
+  if (!pendingPayload.value) return
+  errorMessage.value = ''
 
   try {
-    await inventoryStore.doReceive(payload)
+    const result = await inventoryStore.doReceive(pendingPayload.value)
+    successRows.value = [
+      { label: 'Product', value: selectedProduct.value?.name ?? '—', strong: true },
+      { label: 'Location', value: selectedLocation.value?.code ?? '—' },
+      { label: 'Quantity received', value: `${pendingPayload.value.quantity} ${selectedProduct.value?.unit ?? 'units'}`, strong: true },
+      { label: 'Affected lot', value: pendingPayload.value.lot_number || 'Non-lot inventory', mono: Boolean(pendingPayload.value.lot_number) },
+      { label: 'New available balance', value: result.balance.available_quantity, strong: true },
+      { label: 'Reference', value: result.movement.reference || 'Not provided' },
+      { label: 'Movement ID', value: result.movement.id, mono: true },
+    ]
     emit('submitted')
-    closeDialog()
+    step.value = 'success'
   } catch (err: unknown) {
     errorMessage.value = err instanceof Error ? err.message : 'Failed to receive stock'
   }
 }
 
 function closeDialog() {
+  if (inventoryStore.loading) return
   emit('update:visible', false)
+}
+
+function handleOpenChange(value: boolean) {
+  if (!value && inventoryStore.loading) return
+  emit('update:visible', value)
 }
 </script>
 
 <template>
-  <Dialog :open="visible" @update:open="(value: boolean) => emit('update:visible', value)">
+  <Dialog :open="visible" @update:open="handleOpenChange">
     <DialogContent class="sm:max-w-2xl">
       <DialogHeader>
-        <DialogTitle>Receive Inventory</DialogTitle>
-        <DialogDescription>Inbound stock with mandatory lot and expiry tracking for applicable products.</DialogDescription>
+        <DialogTitle>{{ step === 'details' ? 'Receive Inventory' : step === 'review' ? 'Review Receive' : 'Stock Received' }}</DialogTitle>
+        <DialogDescription>
+          {{ step === 'details' ? 'Enter inbound stock details.' : step === 'review' ? 'Step 2 of 2 — verify the transaction before confirming.' : 'The inventory balance and audit trail were updated.' }}
+        </DialogDescription>
       </DialogHeader>
 
-      <form class="grid gap-4" @submit.prevent="submitReceive">
+      <form v-if="step === 'details'" class="grid gap-4" @submit.prevent="reviewReceive">
         <p
           v-if="errorMessage"
           class="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
@@ -237,12 +284,26 @@ function closeDialog() {
         </div>
       </form>
 
+      <div v-else-if="step === 'review'" class="grid gap-4">
+        <p v-if="errorMessage" role="alert" class="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          {{ errorMessage }}
+        </p>
+        <InventoryOperationSummary :rows="reviewRows" />
+      </div>
+
+      <InventoryOperationSummary v-else :rows="successRows" mode="success" message="Inbound stock is now available at the selected location." />
+
       <DialogFooter>
-        <Button variant="outline" @click="closeDialog">Cancel</Button>
-        <Button :disabled="inventoryStore.loading" @click="submitReceive">
-          <Download class="size-4" />
-          Receive Stock
+        <Button v-if="step === 'details'" type="button" variant="outline" @click="closeDialog">Cancel</Button>
+        <Button v-if="step === 'details'" type="button" @click="reviewReceive">
+          Review Receive
         </Button>
+        <Button v-if="step === 'review'" type="button" variant="outline" :disabled="inventoryStore.loading" @click="step = 'details'">Back</Button>
+        <Button v-if="step === 'review'" type="button" :disabled="inventoryStore.loading" @click="submitReceive">
+          <Download class="size-4" />
+          {{ inventoryStore.loading ? 'Receiving…' : 'Confirm Receive' }}
+        </Button>
+        <Button v-if="step === 'success'" type="button" @click="closeDialog">Done</Button>
       </DialogFooter>
     </DialogContent>
   </Dialog>

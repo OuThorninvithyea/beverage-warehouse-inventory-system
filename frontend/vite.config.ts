@@ -15,9 +15,9 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 6001,
     proxy: {
-      '/api': 'http://localhost:8080',
-      '/health': 'http://localhost:8080',
-      '/ready': 'http://localhost:8080',
+      '/api': 'http://localhost:8081',
+      '/health': 'http://localhost:8081',
+      '/ready': 'http://localhost:8081',
     },
   },
   test: {

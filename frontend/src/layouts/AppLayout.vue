@@ -46,6 +46,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useCatalogStore } from '@/stores/catalog'
 import { useInventoryStore } from '@/stores/inventory'
 import { useWarehousesStore } from '@/stores/warehouses'
+import bwimsLogo from '@/assets/bwims-logo.png'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -227,8 +228,7 @@ function onMovementSuccess(msg: string) {
     <!-- Mobile top bar -->
     <div class="hidden items-center justify-between border-b bg-sidebar px-4 py-3 text-sidebar-foreground max-[900px]:flex">
       <div class="flex items-center gap-3">
-        <span class="grid size-8 place-items-center rounded-lg bg-brand-amber text-xs font-extrabold text-brand-navy">BW</span>
-        <strong class="text-sm font-semibold">BWIMS</strong>
+        <img :src="bwimsLogo" alt="" class="size-9 object-contain" />
       </div>
       <Button variant="ghost" size="icon" aria-label="Toggle navigation" @click="mobileMenuOpen = !mobileMenuOpen">
         <Menu class="size-5" />
@@ -241,11 +241,8 @@ function onMovementSuccess(msg: string) {
       :class="{ 'max-[900px]:hidden': !mobileMenuOpen }"
     >
       <div class="flex items-center gap-3 px-2 pt-2">
-        <span class="grid size-10 place-items-center rounded-xl bg-brand-amber text-base font-extrabold text-brand-navy shadow-sm">
-          BW
-        </span>
+        <img :src="bwimsLogo" alt="" class="size-12 object-contain" />
         <div class="grid leading-tight">
-          <strong class="text-sm font-semibold tracking-tight">BWIMS</strong>
           <small class="text-xs text-muted-foreground">Beverage Warehouse Control</small>
         </div>
       </div>

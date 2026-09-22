@@ -5,6 +5,7 @@ import { computed, ref, watch } from 'vue'
 import type { Product } from '@/api/catalog'
 import type { Lot, TransferInput } from '@/api/inventory'
 import type { Location } from '@/api/warehouses'
+import InventoryOperationSummary, { type SummaryRow } from '@/components/InventoryOperationSummary.vue'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -49,8 +50,23 @@ const notes = ref('')
 
 const errorMessage = ref('')
 const availableLots = ref<Lot[]>([])
+const step = ref<'details' | 'review' | 'success'>('details')
+const pendingPayload = ref<TransferInput | null>(null)
+const successRows = ref<SummaryRow[]>([])
 
 const selectedProduct = computed(() => props.products.find((p) => p.id === productId.value))
+const sourceLocation = computed(() => props.locations.find((location) => location.id === fromLocationId.value))
+const destinationLocation = computed(() => props.locations.find((location) => location.id === toLocationId.value))
+const selectedLot = computed(() => availableLots.value.find((lot) => lot.id === lotId.value))
+const reviewRows = computed<SummaryRow[]>(() => [
+  { label: 'Product', value: `${selectedProduct.value?.name ?? '—'} (${selectedProduct.value?.sku ?? '—'})`, strong: true },
+  { label: 'From location', value: sourceLocation.value?.code ?? '—', strong: true },
+  { label: 'To location', value: destinationLocation.value?.code ?? '—', strong: true },
+  { label: 'Quantity', value: `${quantity.value} ${selectedProduct.value?.unit ?? 'units'}`, strong: true },
+  { label: 'Lot', value: selectedLot.value?.lot_number ?? 'Non-lot inventory', mono: Boolean(selectedLot.value) },
+  { label: 'Reference', value: reference.value.trim() || 'Not provided' },
+  { label: 'Notes', value: notes.value.trim() || 'None' },
+])
 
 const destinationLocations = computed(() =>
   props.locations.filter((loc) => loc.id !== fromLocationId.value),
@@ -72,6 +88,9 @@ watch(
   (isVis) => {
     if (!isVis) return
     errorMessage.value = ''
+    step.value = 'details'
+    pendingPayload.value = null
+    successRows.value = []
     productId.value = ''
     fromLocationId.value = props.locations[0]?.id || ''
     toLocationId.value = props.locations[1]?.id || ''
@@ -83,36 +102,36 @@ watch(
   },
 )
 
-async function submitTransfer() {
+function buildPayload(): TransferInput | null {
   errorMessage.value = ''
   const qty = Number(quantity.value)
 
   if (!productId.value) {
     errorMessage.value = 'Product is required'
-    return
+    return null
   }
   if (!fromLocationId.value) {
     errorMessage.value = 'Source location is required'
-    return
+    return null
   }
   if (!toLocationId.value) {
     errorMessage.value = 'Destination location is required'
-    return
+    return null
   }
   if (fromLocationId.value === toLocationId.value) {
     errorMessage.value = 'Source and Destination locations must be different'
-    return
+    return null
   }
   if (!Number.isFinite(qty) || qty <= 0) {
     errorMessage.value = 'Transfer quantity must be greater than 0'
-    return
+    return null
   }
   if (selectedProduct.value?.is_lot_tracked && !lotId.value) {
     errorMessage.value = 'Lot selection is required for lot-tracked products'
-    return
+    return null
   }
 
-  const payload: TransferInput = {
+  return {
     product_id: productId.value,
     from_location_id: fromLocationId.value,
     to_location_id: toLocationId.value,
@@ -121,30 +140,60 @@ async function submitTransfer() {
     reference: reference.value.trim() || null,
     notes: notes.value.trim() || null,
   }
+}
+
+function reviewTransfer() {
+  const payload = buildPayload()
+  if (!payload) return
+  pendingPayload.value = payload
+  step.value = 'review'
+}
+
+async function submitTransfer() {
+  if (!pendingPayload.value) return
+  errorMessage.value = ''
 
   try {
-    await inventoryStore.doTransfer(payload)
+    const result = await inventoryStore.doTransfer(pendingPayload.value)
+    successRows.value = [
+      { label: 'Product', value: selectedProduct.value?.name ?? '—', strong: true },
+      { label: 'Route', value: `${sourceLocation.value?.code ?? '—'} → ${destinationLocation.value?.code ?? '—'}`, strong: true },
+      { label: 'Quantity transferred', value: `${pendingPayload.value.quantity} ${selectedProduct.value?.unit ?? 'units'}`, strong: true },
+      { label: 'Affected lot', value: selectedLot.value?.lot_number ?? 'Non-lot inventory', mono: Boolean(selectedLot.value) },
+      { label: 'Source balance', value: result.source_balance.available_quantity },
+      { label: 'Destination balance', value: result.destination_balance.available_quantity },
+      { label: 'Reference', value: result.movement.reference || 'Not provided' },
+      { label: 'Movement ID', value: result.movement.id, mono: true },
+    ]
     emit('submitted')
-    closeDialog()
+    step.value = 'success'
   } catch (err: unknown) {
     errorMessage.value = err instanceof Error ? err.message : 'Stock transfer failed'
   }
 }
 
 function closeDialog() {
+  if (inventoryStore.loading) return
   emit('update:visible', false)
+}
+
+function handleOpenChange(value: boolean) {
+  if (!value && inventoryStore.loading) return
+  emit('update:visible', value)
 }
 </script>
 
 <template>
-  <Dialog :open="visible" @update:open="(value: boolean) => emit('update:visible', value)">
+  <Dialog :open="visible" @update:open="handleOpenChange">
     <DialogContent class="sm:max-w-2xl">
       <DialogHeader>
-        <DialogTitle>Transfer Stock Between Locations</DialogTitle>
-        <DialogDescription>Move stock while preserving lot and audit history.</DialogDescription>
+        <DialogTitle>{{ step === 'details' ? 'Transfer Stock Between Locations' : step === 'review' ? 'Review Transfer' : 'Stock Transferred' }}</DialogTitle>
+        <DialogDescription>
+          {{ step === 'details' ? 'Enter the stock movement details.' : step === 'review' ? 'Step 2 of 2 — verify both locations before confirming.' : 'Both location balances and the audit trail were updated.' }}
+        </DialogDescription>
       </DialogHeader>
 
-      <form class="grid gap-4" @submit.prevent="submitTransfer">
+      <form v-if="step === 'details'" class="grid gap-4" @submit.prevent="reviewTransfer">
         <p
           v-if="errorMessage"
           class="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
@@ -230,12 +279,24 @@ function closeDialog() {
         </div>
       </form>
 
+      <div v-else-if="step === 'review'" class="grid gap-4">
+        <p v-if="errorMessage" role="alert" class="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          {{ errorMessage }}
+        </p>
+        <InventoryOperationSummary :rows="reviewRows" />
+      </div>
+
+      <InventoryOperationSummary v-else :rows="successRows" mode="success" message="Stock is now available at the destination location." />
+
       <DialogFooter>
-        <Button variant="outline" @click="closeDialog">Cancel</Button>
-        <Button :disabled="inventoryStore.loading" @click="submitTransfer">
+        <Button v-if="step === 'details'" type="button" variant="outline" @click="closeDialog">Cancel</Button>
+        <Button v-if="step === 'details'" type="button" @click="reviewTransfer">Review Transfer</Button>
+        <Button v-if="step === 'review'" type="button" variant="outline" :disabled="inventoryStore.loading" @click="step = 'details'">Back</Button>
+        <Button v-if="step === 'review'" type="button" :disabled="inventoryStore.loading" @click="submitTransfer">
           <ArrowLeftRight class="size-4" />
-          Execute Transfer
+          {{ inventoryStore.loading ? 'Transferring…' : 'Confirm Transfer' }}
         </Button>
+        <Button v-if="step === 'success'" type="button" @click="closeDialog">Done</Button>
       </DialogFooter>
     </DialogContent>
   </Dialog>
