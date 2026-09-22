@@ -4,6 +4,10 @@ This register connects the approved proposal to the Week 6–15 Gantt,
 implementation issues, tests, and evidence. Status means implementation status,
 not GitHub issue status.
 
+FR-22 and FR-27 are intentionally absent: the proposal's numbering skips them.
+The reporting requirements (FR-23 to FR-26, FR-28) were previously tracked only
+in the final report; they are listed here now so the two documents agree.
+
 ## Functional requirements
 
 | Requirement | Proposal outcome | Gantt work | GitHub / evidence | Verification | Status |
@@ -29,6 +33,11 @@ not GitHub issue status.
 | FR-19 | Expired-lot picking policy | 3.2 | Week 9-10 inventory module | Boundary-date and audit-record tests | Implemented (policy revised) |
 | FR-20 | Barcode label generation | 4.1 | Week 11 barcode phase | Image response tests | Planned |
 | FR-21 | Phone-camera barcode scanning | 1.4, 4.1 | `/barcode-test` | Real device/browser evidence | Implementation ready |
+| FR-23 | Inventory valuation report | 4.2, 5.1 | `GET /api/v1/reports/valuation` | Service, handler and PostgreSQL integration tests against known costs | Implemented |
+| FR-24 | Stock movement summary | 4.2, 5.1 | `GET /api/v1/reports/movement-summary` | Window-boundary and per-type aggregation tests | Implemented |
+| FR-25 | Product velocity | 4.2, 5.1 | `GET /api/v1/reports/velocity` | Ranking, window and daily-average tests | Implemented |
+| FR-26 | CSV export | 5.1 | `frontend/src/lib/export.ts` | Client-side export unit tests | Partial — exports the current view; no server-side export endpoint |
+| FR-28 | Dashboard aggregation | 4.2, 5.1 | `GET /api/v1/reports/dashboard` | Totals, expiry buckets, movement-window and warehouse-scoping tests | Implemented |
 
 ## Non-functional requirements
 
