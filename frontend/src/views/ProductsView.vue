@@ -5,6 +5,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import type { Product } from '@/api/catalog'
 import BarcodePrintModal from '@/components/BarcodePrintModal.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import CursorPager from '@/components/CursorPager.vue'
 import BarcodeScannerModal from '@/components/BarcodeScannerModal.vue'
 import ProductFormDialog from '@/components/ProductFormDialog.vue'
 import { Badge } from '@/components/ui/badge'
@@ -27,6 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { useCursorPages } from '@/lib/cursor-pages'
 import { useAuthStore } from '@/stores/auth'
 import { useCatalogStore } from '@/stores/catalog'
 
@@ -60,15 +62,22 @@ const canManageCatalog = computed(() => {
 
 const columnCount = computed(() => 7)
 
+const pager = useCursorPages((after) =>
+  catalogStore.fetchProducts(
+    searchQuery.value,
+    selectedCategoryId.value,
+    activeFilter.value,
+    after,
+  ),
+)
+
 onMounted(async () => {
-  await Promise.all([
-    catalogStore.fetchCategories(),
-    catalogStore.fetchProducts(searchQuery.value, selectedCategoryId.value, activeFilter.value),
-  ])
+  await Promise.all([catalogStore.fetchCategories(), pager.reset()])
 })
 
+// Any filter change invalidates the cursor history, so paging restarts.
 watch([searchQuery, selectedCategoryId, activeFilter], () => {
-  void catalogStore.fetchProducts(searchQuery.value, selectedCategoryId.value, activeFilter.value)
+  void pager.reset()
 })
 
 function openAddProduct() {
@@ -257,6 +266,16 @@ function getCategoryName(catId: string | null): string {
             </TableBody>
           </Table>
         </div>
+
+          <CursorPager
+            :page-number="pager.pageNumber"
+            :can-go-back="pager.canGoBack"
+            :can-go-forward="pager.canGoForward"
+            :busy="pager.busy || catalogStore.loading"
+            :item-count="catalogStore.products.length"
+            @previous="pager.previous()"
+            @next="pager.next()"
+          />
       </CardContent>
     </Card>
 
@@ -264,7 +283,7 @@ function getCategoryName(catId: string | null): string {
       v-model:visible="productFormVisible"
       :product="selectedProduct"
       :categories="catalogStore.categories"
-      @saved="catalogStore.fetchProducts(searchQuery, selectedCategoryId, activeFilter)"
+      @saved="pager.reset()"
     />
 
     <BarcodeScannerModal v-model:visible="barcodeScannerVisible" @select="onBarcodeScanned" />

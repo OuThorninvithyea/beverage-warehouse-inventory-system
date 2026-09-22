@@ -3,6 +3,7 @@ import { ref } from 'vue'
 
 import {
   type AdjustInput,
+  type BalanceListFilter,
   type ExpiryAlert,
   type ExpiryAlertFilter,
   type Lot,
@@ -32,7 +33,7 @@ export const useInventoryStore = defineStore('inventory', () => {
   const hasMore = ref(false)
   const nextCursor = ref<string | null>(null)
 
-  async function fetchBalances(filter: { warehouse_id?: string; location_id?: string; product_id?: string } = {}) {
+  async function fetchBalances(filter: BalanceListFilter = {}): Promise<string | null> {
     loading.value = true
     error.value = null
     try {
@@ -40,14 +41,16 @@ export const useInventoryStore = defineStore('inventory', () => {
       balances.value = page.items
       nextCursor.value = page.page.next_cursor
       hasMore.value = page.page.has_more
+      return page.page.has_more ? page.page.next_cursor : null
     } catch (e: any) {
       error.value = e.message || 'Failed to fetch inventory balances'
+      return null
     } finally {
       loading.value = false
     }
   }
 
-  async function fetchMovements(filter: MovementListFilter = {}) {
+  async function fetchMovements(filter: MovementListFilter = {}): Promise<string | null> {
     loading.value = true
     error.value = null
     try {
@@ -55,8 +58,10 @@ export const useInventoryStore = defineStore('inventory', () => {
       movements.value = page.items
       nextCursor.value = page.page.next_cursor
       hasMore.value = page.page.has_more
+      return page.page.has_more ? page.page.next_cursor : null
     } catch (e: any) {
       error.value = e.message || 'Failed to fetch stock movements'
+      return null
     } finally {
       loading.value = false
     }

@@ -34,6 +34,8 @@ import {
 } from '@/components/ui/table'
 import { exportToCSV } from '@/lib/export'
 import { useAuthStore } from '@/stores/auth'
+import CursorPager from '@/components/CursorPager.vue'
+import { useCursorPages } from '@/lib/cursor-pages'
 import { useCatalogStore } from '@/stores/catalog'
 import { useInventoryStore } from '@/stores/inventory'
 import { useUsersStore } from '@/stores/users'
@@ -118,23 +120,29 @@ const canTransferOrAdjust = computed(() => {
   return auth.user?.role === 'admin' || auth.user?.role === 'warehouse_manager'
 })
 
+const pager = useCursorPages((after) =>
+  inventoryStore.fetchMovements({
+    movement_type: movementTypeFilter.value,
+    product_id: selectedProductId.value,
+    after,
+  }),
+)
+
 onMounted(async () => {
   await warehouseStore.fetchWarehouses()
   await Promise.all([
     warehouseStore.fetchAllLocations(),
     catalogStore.fetchProducts(),
-    inventoryStore.fetchMovements(),
+    pager.reset(),
   ])
   if (auth.user?.role === 'admin') {
     void usersStore.fetchUsers()
   }
 })
 
+// A filter change invalidates the cursor history, so paging restarts.
 watch([movementTypeFilter, selectedProductId], () => {
-  void inventoryStore.fetchMovements({
-    movement_type: movementTypeFilter.value,
-    product_id: selectedProductId.value,
-  })
+  void pager.reset()
 })
 
 function getMovementClass(type: string): string {
@@ -313,6 +321,16 @@ function formatDate(dateStr: string): string {
             </TableBody>
           </Table>
         </div>
+
+          <CursorPager
+            :page-number="pager.pageNumber"
+            :can-go-back="pager.canGoBack"
+            :can-go-forward="pager.canGoForward"
+            :busy="pager.busy || inventoryStore.loading"
+            :item-count="inventoryStore.movements.length"
+            @previous="pager.previous()"
+            @next="pager.next()"
+          />
       </CardContent>
     </Card>
 
@@ -320,28 +338,28 @@ function formatDate(dateStr: string): string {
       v-model:visible="receiveVisible"
       :locations="warehouseStore.locations"
       :products="catalogStore.products"
-      @submitted="inventoryStore.fetchMovements()"
+      @submitted="pager.reset()"
     />
 
     <PickFormDialog
       v-model:visible="pickVisible"
       :locations="warehouseStore.locations"
       :products="catalogStore.products"
-      @submitted="inventoryStore.fetchMovements()"
+      @submitted="pager.reset()"
     />
 
     <TransferFormDialog
       v-model:visible="transferVisible"
       :locations="warehouseStore.locations"
       :products="catalogStore.products"
-      @submitted="inventoryStore.fetchMovements()"
+      @submitted="pager.reset()"
     />
 
     <AdjustFormDialog
       v-model:visible="adjustVisible"
       :locations="warehouseStore.locations"
       :products="catalogStore.products"
-      @submitted="inventoryStore.fetchMovements()"
+      @submitted="pager.reset()"
     />
   </div>
 </template>
