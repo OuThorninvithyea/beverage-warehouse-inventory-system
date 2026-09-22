@@ -636,6 +636,92 @@ matches every other module:
 | 422 | `VALIDATION_ERROR` | Required business data missing/invalid |
 | 500 | `INVENTORY_OPERATION_FAILED` | Unexpected failure, including cost/balance ledger drift |
 
+## Reporting endpoints
+
+Reports are aggregates rather than paginated lists, so they take a window and
+a row limit instead of a cursor. They are restricted to `admin` and
+`warehouse_manager` (plan.md section 3); `picker` and `viewer` receive `403`.
+Non-admins are pinned to their assigned warehouse and receive `FORBIDDEN` if
+they request another one.
+
+| Method | Route | Result |
+| --- | --- | --- |
+| `GET` | `/api/v1/reports/dashboard` | Warehouse KPIs in a single aggregate (FR-28) |
+| `GET` | `/api/v1/reports/valuation` | Stock value per product per warehouse, from the FIFO cost layers (FR-23) |
+| `GET` | `/api/v1/reports/movement-summary` | Movement counts and quantities by day and type (FR-24) |
+| `GET` | `/api/v1/reports/velocity` | Products ranked by picked quantity (FR-25) |
+
+Shared query parameters:
+
+| Query | Default | Meaning |
+| --- | --- | --- |
+| `days` | `30` | Window in days, `1` to `365` |
+| `limit` | `50` | Rows returned, `1` to `500`. Ignored by the dashboard |
+| `warehouse_id` | caller's warehouse | Admins may pass any warehouse or omit it for a group-wide view |
+
+### Dashboard
+
+One query instead of the client aggregating paginated lists, which
+under-reports as soon as the data outgrows a page.
+
+```json
+{
+  "success": true,
+  "data": {
+    "generated_at": "2026-09-22T02:00:08Z",
+    "active_products": 41, "active_warehouses": 3, "active_locations": 15,
+    "total_quantity": "14148.000", "reserved_quantity": "54.000",
+    "available_quantity": "14094.000", "stock_value": "325489.2000",
+    "lots_on_hand": 40, "expired_lots": 3, "expiring_soon_lots": 4,
+    "movements_by_type": {"receive": 8, "pick": 19, "transfer": 4, "adjust": 6},
+    "movement_window_days": 30
+  }
+}
+```
+
+`movements_by_type` always contains all four keys, including zeros, so a chart
+does not change shape in a quiet week. `expiring_soon_lots` uses the same
+30-day horizon as the expiry alerts.
+
+### Valuation
+
+`stock_value` and every row come from `cost_layers.remaining_quantity *
+unit_cost`, so the figure reflects what was actually paid for the units still
+on hand rather than a list price. `total_value` covers the whole scope even
+when `limit` truncates the rows, so a shortened table cannot understate the
+total.
+
+```json
+{
+  "success": true,
+  "data": {
+    "generated_at": "2026-09-22T02:00:08Z",
+    "total_value": "325489.2000",
+    "rows": [
+      {
+        "warehouse_id": "<uuid>", "warehouse_code": "PP-CENTRAL",
+        "product_id": "<uuid>", "sku": "BEE-LAGER-330",
+        "product_name": "Riverside Lager Can 330 ml",
+        "remaining_quantity": "594.000", "average_unit_cost": "37.5000",
+        "total_value": "22275.0000"
+      }
+    ]
+  }
+}
+```
+
+### Movement summary
+
+Rows are one per day per movement type, newest first, with `totals` summing
+the window. Useful directly as chart input.
+
+### Velocity
+
+Ranks products by outbound quantity. Only picks count: a transfer relocates
+stock without consuming it, so including transfers would inflate throughput.
+`daily_average` is the picked quantity divided by the window.
+
+
 ## Initial HTTP status policy
 
 | HTTP status | Usage |
