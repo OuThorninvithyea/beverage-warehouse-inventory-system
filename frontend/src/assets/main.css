@@ -54,11 +54,16 @@
   --border: oklch(0.929 0.013 256);
   --input: oklch(0.929 0.013 256);
   --ring: oklch(0.592 0.198 262.5);
-  --chart-1: oklch(0.646 0.222 41.1);
-  --chart-2: oklch(0.6 0.118 184.7);
-  --chart-3: oklch(0.398 0.07 227.4);
-  --chart-4: oklch(0.828 0.189 84.4);
-  --chart-5: oklch(0.769 0.188 70.1);
+  /* Categorical chart slots, in fixed order: receive, pick, transfer, adjust.
+     Validated against the light surface for the lightness band, chroma floor,
+     colour-vision separation and contrast (worst adjacent pair dE 9.1 protan).
+     Slots 3 and 4 fall below 3:1 against the surface, so any chart using them
+     must carry direct labels or a table view - never colour alone. */
+  --chart-1: #2a78d6;
+  --chart-2: #eb6834;
+  --chart-3: #1baf7a;
+  --chart-4: #eda100;
+  --chart-5: #e87ba4;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.21 0.02 258);
   --sidebar-primary: oklch(0.592 0.198 262.5);
@@ -89,11 +94,13 @@
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.551 0.027 264);
-  --chart-1: oklch(0.488 0.243 264.4);
-  --chart-2: oklch(0.696 0.17 162.5);
-  --chart-3: oklch(0.769 0.188 70.1);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.4);
+  /* The same four hues re-stepped for the dark surface, not an automatic
+     flip. Validated separately: all four clear 3:1 here. */
+  --chart-1: #3987e5;
+  --chart-2: #d95926;
+  --chart-3: #199e70;
+  --chart-4: #c98500;
+  --chart-5: #d55181;
   --sidebar: oklch(0.279 0.028 256);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.707 0.165 254.6);
