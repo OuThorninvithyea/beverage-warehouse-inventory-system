@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { Printer } from 'lucide-vue-next'
+import { Printer, TriangleAlert } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 
+import { buildBarcodeSymbol } from '@/lib/barcode-render'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -47,6 +48,11 @@ const itemSubtitle = computed(() => {
   return ''
 })
 
+// The symbol is generated from the digits, so a printed label is actually
+// scannable. A value with a bad check digit has no legitimate symbol, so the
+// label shows a warning instead of bars a scanner would reject.
+const symbol = computed(() => buildBarcodeSymbol(itemCode.value, 2, 44))
+
 function triggerPrint() {
   window.print()
 }
@@ -90,14 +96,33 @@ function closeDialog() {
               {{ itemTitle }}
             </span>
 
-            <div class="my-1.5 flex h-10 items-center justify-center gap-[2px]">
-              <div
-                v-for="(bar, i) in 32"
-                :key="i"
-                class="h-full bg-slate-900"
-                :style="{ width: i % 3 === 0 ? '3px' : '1.5px' }"
+            <svg
+              v-if="symbol"
+              class="my-1.5"
+              :width="symbol.width"
+              :height="symbol.height"
+              :viewBox="`0 0 ${symbol.width} ${symbol.height}`"
+              role="img"
+              :aria-label="`Barcode ${symbol.value}`"
+            >
+              <rect :width="symbol.width" :height="symbol.height" fill="#ffffff" />
+              <rect
+                v-for="(bar, barIndex) in symbol.bars"
+                :key="barIndex"
+                :x="bar.x"
+                y="0"
+                :width="bar.width"
+                :height="symbol.height"
+                fill="#0f172a"
               />
-            </div>
+            </svg>
+
+            <span
+              v-else
+              class="my-1.5 flex items-center gap-1 text-[9px] font-semibold text-amber-700"
+            >
+              <TriangleAlert class="size-3" /> Not a scannable EAN-13 / UPC-A value
+            </span>
 
             <span class="font-mono text-xs font-extrabold tracking-widest text-slate-900">{{ itemCode }}</span>
             <span class="text-[9px] font-medium text-slate-500">BWIMS Distributor Tag</span>
