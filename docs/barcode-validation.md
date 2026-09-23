@@ -55,6 +55,28 @@ Most USB scanners use keyboard-wedge mode:
 Configure the scanner for EAN-13/UPC-A and an Enter suffix. Test that ordinary
 typing still works and that one scan produces one lookup.
 
+## Secure-context requirement
+
+`navigator.mediaDevices` is **absent**, not merely blocked, outside a secure
+context. A build served over plain HTTP on any host other than `localhost`
+therefore fails on the first scanner call with
+`Cannot read properties of undefined (reading 'getUserMedia')`. This is a
+browser rule, not an application fault, and it bites as soon as the app is
+deployed to a container reached by IP address.
+
+The app now detects this before calling the scanner and explains it in place,
+naming the offending origin, rather than surfacing the raw TypeError. Manual
+entry and USB keyboard-wedge scanning keep working, because neither touches the
+camera API.
+
+Three ways to get a working camera against a deployed instance:
+
+| Approach | Use when |
+| --- | --- |
+| Terminate TLS in front of the app (Caddy, nginx + Let's Encrypt, Cloudflare Tunnel) | The proper fix, and the one to use for the FR-21 evidence |
+| Reach it through an SSH tunnel: `ssh -L 6002:localhost:80 user@host`, then open `http://localhost:6002` | Quick desktop testing; `localhost` counts as secure even over HTTP |
+| Chrome's `chrome://flags/#unsafely-treat-insecure-origin-as-secure`, adding the origin | Throwaway testing only; must be set on each device, including the phone |
+
 ## Test values
 
 Seeded barcodes, invalid values and a printable sheet are in

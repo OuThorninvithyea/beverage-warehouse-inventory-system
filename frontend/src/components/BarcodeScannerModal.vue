@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { validateBarcode } from '@/lib/barcode'
+import { checkCameraSupport } from '@/lib/camera'
 
 const props = defineProps<{
   visible: boolean
@@ -64,6 +65,15 @@ async function loadCameras() {
 }
 
 async function startScanner() {
+  // Check before touching ZXing: without a secure context navigator.mediaDevices
+  // is absent, and the library fails with an unreadable TypeError.
+  const support = checkCameraSupport()
+  if (!support.supported) {
+    cameraError.value = support.message
+    scanning.value = false
+    return
+  }
+
   stopScanner()
   capturedValue.value = ''
   cameraError.value = ''
