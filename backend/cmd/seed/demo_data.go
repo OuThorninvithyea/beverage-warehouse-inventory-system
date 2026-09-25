@@ -169,8 +169,28 @@ var demoUsers = []demoUser{
 	{email: userPickerBB, fullName: "Demo Picker Battambang", role: "picker", warehouse: warehouseBattambang},
 	{email: userViewer, fullName: "Demo Viewer", role: "viewer"},
 	{email: "auditor@bwims.local", fullName: "Demo Auditor", role: "viewer", warehouse: warehousePhnomPenh},
+
+	// Floor staff, enough to push the user list past its 20-row page and to
+	// give movement history more than a handful of distinct actors.
+	{email: "sokha.picker@bwims.local", fullName: "Sokha Pich", role: "picker", warehouse: warehousePhnomPenh},
+	{email: "dara.picker@bwims.local", fullName: "Dara Chan", role: "picker", warehouse: warehousePhnomPenh},
+	{email: "veasna.picker@bwims.local", fullName: "Veasna Kim", role: "picker", warehouse: warehousePhnomPenh},
+	{email: "bopha.picker@bwims.local", fullName: "Bopha Sok", role: "picker", warehouse: warehouseSiemReap},
+	{email: "rithy.picker@bwims.local", fullName: "Rithy Noun", role: "picker", warehouse: warehouseSiemReap},
+	{email: "chanda.picker@bwims.local", fullName: "Chanda Meas", role: "picker", warehouse: warehouseBattambang},
+	{email: "samnang.mgr@bwims.local", fullName: "Samnang Ouk", role: "warehouse_manager", warehouse: warehousePhnomPenh},
+	{email: "kanya.mgr@bwims.local", fullName: "Kanya Hor", role: "warehouse_manager", warehouse: warehouseSiemReap},
+	{email: "phirun.viewer@bwims.local", fullName: "Phirun Ly", role: "viewer", warehouse: warehousePhnomPenh},
+	{email: "sreypov.viewer@bwims.local", fullName: "Sreypov Tan", role: "viewer", warehouse: warehouseSiemReap},
+	{email: "makara.viewer@bwims.local", fullName: "Makara Chea", role: "viewer", warehouse: warehouseBattambang},
+	{email: "finance.viewer@bwims.local", fullName: "Finance Reviewer", role: "viewer"},
+	{email: "night.admin@bwims.local", fullName: "Night Shift Administrator", role: "admin"},
+
+	// Deactivated accounts, so the inactive filter and reactivation have data.
 	{email: "former.picker@bwims.local", fullName: "Former Picker (deactivated)", role: "picker", warehouse: warehousePhnomPenh, inactive: true},
 	{email: "former.manager@bwims.local", fullName: "Former Manager (deactivated)", role: "warehouse_manager", warehouse: warehouseSiemReap, inactive: true},
+	{email: "former.viewer@bwims.local", fullName: "Former Viewer (deactivated)", role: "viewer", warehouse: warehouseBattambang, inactive: true},
+	{email: "resigned.picker@bwims.local", fullName: "Resigned Picker (deactivated)", role: "picker", warehouse: warehousePhnomPenh, inactive: true},
 }
 
 var demoCategories = []demoCategory{
@@ -186,7 +206,25 @@ var demoCategories = []demoCategory{
 	{name: "Packaging"},
 	{name: "Crates and Pallets", parent: "Packaging"},
 	{name: "Cleaning Supplies"},
+
+	// Deeper catalog tree: enough categories to page, and a third level so the
+	// hierarchy is more than one deep.
+	{name: "Cola", parent: "Carbonated Soft Drinks"},
+	{name: "Lemon and Lime", parent: "Carbonated Soft Drinks"},
+	{name: "Mixers", parent: "Carbonated Soft Drinks"},
+	{name: "Still Water", parent: "Water"},
+	{name: "Sparkling Water", parent: "Water"},
+	{name: "Citrus Juice", parent: "Juice"},
+	{name: "Tropical Juice", parent: "Juice"},
+	{name: "Lager", parent: "Beer"},
+	{name: "Stout and Dark", parent: "Beer"},
+	{name: "Iced Coffee", parent: "Tea and Coffee"},
+	{name: "Iced Tea", parent: "Tea and Coffee"},
+	{name: "Bottles and Cans", parent: "Packaging"},
+	{name: "Shrink Wrap", parent: "Packaging"},
+
 	{name: "Seasonal Promotions", inactive: true},
+	{name: "Discontinued Lines", inactive: true},
 }
 
 // 42 products: more than two default pages, covering every catalog edge case.
@@ -319,4 +357,8 @@ var demoReservations = map[ledgerKey]string{
 	{location: "PP-CENTRAL/A-01-01", sku: "BEV-COLA-330", lot: "L-COLA-2601"}:   "24",
 	{location: "PP-CENTRAL/COLD-01", sku: "DRY-MILK-200", lot: "L-MILK-2607"}:   "18",
 	{location: "PP-CENTRAL/A-02-01", sku: "TEA-GREEN-500", lot: "L-GREEN-2609"}: "12",
+	{location: "PP-CENTRAL/A-01-01", sku: "BEV-COLA-330", lot: "L-COLA-2512"}:   "30",
+	{location: "PP-CENTRAL/COLD-01", sku: "JUI-ORNG-1000", lot: "L-ORNG-2606"}:  "24",
+	{location: "SR-DEPOT/A-01-01", sku: "BEV-COLA-330", lot: "L-COLA-2601"}:     "18",
+	{location: "PP-CENTRAL/COLD-02", sku: "DRY-YOG-180", lot: "L-YOG-EXPIRED"}:  "6",
 }

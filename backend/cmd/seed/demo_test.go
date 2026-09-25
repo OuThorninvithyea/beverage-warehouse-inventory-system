@@ -53,8 +53,11 @@ func TestDemoDataExceedsOneDefaultPage(t *testing.T) {
 	if len(demoProducts) <= defaultPageSize {
 		t.Errorf("len(demoProducts) = %d, want more than one %d-row page", len(demoProducts), defaultPageSize)
 	}
-	if len(demoUsers) <= defaultPageSize/2 {
-		t.Errorf("len(demoUsers) = %d, want enough users to fill the user list", len(demoUsers))
+	if len(demoUsers) <= defaultPageSize {
+		t.Errorf("len(demoUsers) = %d, want more than one %d-row page", len(demoUsers), defaultPageSize)
+	}
+	if len(demoCategories) <= defaultPageSize {
+		t.Errorf("len(demoCategories) = %d, want more than one %d-row page", len(demoCategories), defaultPageSize)
 	}
 	if movements := demoMovements(); len(movements) <= defaultPageSize*2 {
 		t.Errorf("len(demoMovements()) = %d, want at least two full pages of history", len(movements))
@@ -383,6 +386,25 @@ func TestDemoLedgerCoversTheKeyScenarios(t *testing.T) {
 	}
 	if multiLocation < 5 {
 		t.Errorf("only %d products are stocked in more than one location, want at least 5", multiLocation)
+	}
+}
+
+// The dashboard and velocity reports default to a 30-day window, so the
+// seeded history has to contain recent activity or those screens look dead.
+func TestDemoHistoryReachesTheLast30Days(t *testing.T) {
+	var recentPicks, distinctPickers = 0, map[string]bool{}
+	for _, movement := range demoMovements() {
+		if movement.kind == "pick" && movement.daysAgo <= 30 {
+			recentPicks++
+			distinctPickers[movement.actor] = true
+		}
+	}
+	if recentPicks < 30 {
+		t.Errorf("recent picks = %d, want at least 30 inside the 30-day window", recentPicks)
+	}
+	if len(distinctPickers) < 4 {
+		t.Errorf("distinct pickers in the window = %d, want at least 4 so the actor filter is useful",
+			len(distinctPickers))
 	}
 }
 
