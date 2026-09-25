@@ -35,15 +35,34 @@ var (
 	ambientLocationsBB = []string{"BB-HUB/A-01-01"}
 )
 
-func warehouseActors(warehouse string) (manager string, picker string) {
-	switch warehouse {
-	case warehouseSiemReap:
-		return userManagerSR, userPickerSR
-	case warehouseBattambang:
-		return userManagerBB, userPickerBB
-	default:
-		return userManagerPP, userPickerPP
+// Floor staff per warehouse. Picks rotate through them so movement history
+// has more than one name against it and the actor filter is worth using.
+var pickersByWarehouse = map[string][]string{
+	warehousePhnomPenh:  {userPickerPP, userPickerPP2, "sokha.picker@bwims.local", "dara.picker@bwims.local", "veasna.picker@bwims.local"},
+	warehouseSiemReap:   {userPickerSR, "bopha.picker@bwims.local", "rithy.picker@bwims.local"},
+	warehouseBattambang: {userPickerBB, "chanda.picker@bwims.local"},
+}
+
+var managersByWarehouse = map[string][]string{
+	warehousePhnomPenh:  {userManagerPP, "samnang.mgr@bwims.local"},
+	warehouseSiemReap:   {userManagerSR, "kanya.mgr@bwims.local"},
+	warehouseBattambang: {userManagerBB},
+}
+
+func warehouseManager(warehouse string) string {
+	return actorAt(managersByWarehouse, warehouse, 0)
+}
+
+// actorAt spreads work deterministically across a warehouse's staff.
+func actorAt(staff map[string][]string, warehouse string, index int) string {
+	people, ok := staff[warehouse]
+	if !ok || len(people) == 0 {
+		return userManagerPP
 	}
+	if index < 0 {
+		index = -index
+	}
+	return people[index%len(people)]
 }
 
 // homeLocations picks where a product is stocked. Every product gets a
@@ -150,7 +169,7 @@ func demoMovements() []demoMovement {
 			if err != nil {
 				continue
 			}
-			manager, picker := warehouseActors(warehouse)
+			manager := warehouseManager(warehouse)
 
 			receivedDaysAgo := 130 - (index*3+locationIndex*11)%110
 			quantity := 120 + (index*24+locationIndex*36)%300
@@ -169,7 +188,29 @@ func demoMovements() []demoMovement {
 				movements = append(movements, demoMovement{
 					kind: "pick", sku: product.sku, lot: lot, from: location,
 					quantity: fmt.Sprintf("%d", picked),
-					daysAgo:  pickDaysAgo, reference: nextReference("PCK"), actor: picker,
+					daysAgo:  pickDaysAgo, reference: nextReference("PCK"),
+					actor: actorAt(pickersByWarehouse, warehouse, index+locationIndex),
+				})
+			}
+
+			// Recent outbound activity, spread over the last three weeks, so the
+			// dashboard charts and the velocity report cover the default 30-day
+			// window rather than tailing off weeks ago. Kept small so it cannot
+			// outrun what was received.
+			for wave := 0; wave < 3; wave++ {
+				recentDaysAgo := 1 + (index*5+locationIndex*3+wave*7)%21
+				if recentDaysAgo >= receivedDaysAgo {
+					continue
+				}
+				portion := quantity / 12
+				if portion < 1 {
+					continue
+				}
+				movements = append(movements, demoMovement{
+					kind: "pick", sku: product.sku, lot: lot, from: location,
+					quantity: fmt.Sprintf("%d", portion),
+					daysAgo:  recentDaysAgo, reference: nextReference("PCK"),
+					actor: actorAt(pickersByWarehouse, warehouse, index+wave),
 				})
 			}
 
