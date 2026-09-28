@@ -44,11 +44,10 @@ above links to a validation document with actual command output and dates.
 
 ### Frontend
 
-Not started. Login page and application shell exist from Week 7; no
-screens exist for warehouses, catalog, users, or inventory — despite all
-of those having working backend APIs since Weeks 8–10. `docs/figma-ai-prompts.md`
-contains ready-to-use design prompts for all 12 planned screens, generated
-2026-08-18, not yet run through a design tool.
+Delivered. All planned screens exist on shadcn-vue and are wired to the
+live API: dashboard, products, categories, warehouses and locations,
+inventory, movement history, expiry alerts, users, and the barcode test
+route. See `docs/gantt-status-week15.md` for the reconciled status.
 
 ### Documentation
 

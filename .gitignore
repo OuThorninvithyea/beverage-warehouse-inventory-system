@@ -36,3 +36,5 @@ node_modules/
 /Software Project Proposal Format.pdf
 
 .superpowers/
+# AI planning output (plans and specs) stays local, never in the repo
+docs/superpowers/
