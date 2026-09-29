@@ -32,7 +32,8 @@ var (
 	chilledLocationsPP = []string{"PP-CENTRAL/COLD-01", "PP-CENTRAL/COLD-02"}
 	ambientLocationsSR = []string{"SR-DEPOT/A-01-01", "SR-DEPOT/A-01-02"}
 	chilledLocationsSR = []string{"SR-DEPOT/COLD-01"}
-	ambientLocationsBB = []string{"BB-HUB/A-01-01"}
+	ambientLocationsBB = []string{"BB-HUB/A-01-01", "BB-HUB/A-01-02"}
+	chilledLocationsBB = []string{"BB-HUB/COLD-01"}
 )
 
 // Floor staff per warehouse. Picks rotate through them so movement history
@@ -65,9 +66,9 @@ func actorAt(staff map[string][]string, warehouse string, index int) string {
 	return people[index%len(people)]
 }
 
-// homeLocations picks where a product is stocked. Every product gets a
-// Phnom Penh location; some also get Siem Reap or Battambang so warehouse
-// filters and cross-warehouse transfers have data.
+// homeLocations picks where a product is stocked. Every product is stocked in
+// every active warehouse, so a transfer from any branch to any other can be
+// tested with any product.
 func homeLocations(index int, sku string) []string {
 	chilled := needsChilled(sku)
 
@@ -88,18 +89,30 @@ func homeLocations(index int, sku string) []string {
 			locations = append(locations, secondary)
 		}
 	}
-	// Every fourth product also lives in Siem Reap, every seventh in Battambang.
-	if index%4 == 0 {
-		if chilled {
-			locations = append(locations, chilledLocationsSR[0])
-		} else {
-			locations = append(locations, ambientLocationsSR[index%len(ambientLocationsSR)])
+	return append(locations, branchLocations(index, sku)...)
+}
+
+// branchLocations is where a product sits in Siem Reap and Battambang.
+func branchLocations(index int, sku string) []string {
+	if needsChilled(sku) {
+		return []string{chilledLocationsSR[0], chilledLocationsBB[0]}
+	}
+	return []string{
+		ambientLocationsSR[index%len(ambientLocationsSR)],
+		ambientLocationsBB[index%len(ambientLocationsBB)],
+	}
+}
+
+// branchLot is the lot a curated product is stocked from in the branches: the
+// longest-dated one, so branch stock is never already expired.
+func branchLot(lots []demoLot) demoLot {
+	best := lots[0]
+	for _, lot := range lots[1:] {
+		if lot.expiresInDays > best.expiresInDays {
+			best = lot
 		}
 	}
-	if index%7 == 0 && !chilled {
-		locations = append(locations, ambientLocationsBB[0])
-	}
-	return locations
+	return best
 }
 
 func curatedLotsBySKU() map[string][]demoLot {
@@ -153,8 +166,23 @@ func demoMovements() []demoMovement {
 		if product.inactive {
 			continue
 		}
-		// Curated products already have their own movements.
-		if len(existing[product.sku]) > 0 {
+		// Curated products already have their own movements in Phnom Penh;
+		// they only need stock in the branches.
+		if curated := existing[product.sku]; len(curated) > 0 {
+			lot := branchLot(curated)
+			for locationIndex, location := range branchLocations(index, product.sku) {
+				warehouse, err := warehouseOf(location)
+				if err != nil {
+					continue
+				}
+				movements = append(movements, demoMovement{
+					kind: "receive", sku: product.sku, lot: lot.number, to: location,
+					quantity:  fmt.Sprintf("%d", 60+(index*12+locationIndex*24)%120),
+					unitCost:  fmt.Sprintf("%.2f", 4.5+float64((index*7)%38)),
+					daysAgo:   min(lot.receivedDaysAgo, 5+(index+locationIndex*3)%9),
+					reference: nextReference("RCV"), actor: warehouseManager(warehouse),
+				})
+			}
 			continue
 		}
 

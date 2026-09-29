@@ -151,9 +151,12 @@ var demoLocations = []demoLocation{
 	{warehouse: warehouseSiemReap, code: "A-01-02", zone: "AMBIENT", aisle: "A", rack: "01", shelf: "02", barcode: ean13("200200010102")},
 	{warehouse: warehouseSiemReap, code: "COLD-01", zone: "CHILLED", aisle: "C", rack: "01", shelf: "01", barcode: ean13("200200010301")},
 
-	// Battambang: a small hub, useful for an almost-empty warehouse.
+	// Battambang: a smaller hub, still stocking the full range so transfers
+	// out of it can be tested.
 	{warehouse: warehouseBattambang, code: "RECV-DOCK", zone: "RECEIVING", barcode: ean13("200300019001"), notPickable: true},
 	{warehouse: warehouseBattambang, code: "A-01-01", zone: "AMBIENT", aisle: "A", rack: "01", shelf: "01", barcode: ean13("200300010101")},
+	{warehouse: warehouseBattambang, code: "A-01-02", zone: "AMBIENT", aisle: "A", rack: "01", shelf: "02", barcode: ean13("200300010102")},
+	{warehouse: warehouseBattambang, code: "COLD-01", zone: "CHILLED", aisle: "C", rack: "01", shelf: "01", barcode: ean13("200300010301")},
 
 	// A location in the closed warehouse, so deactivation is visible.
 	{warehouse: warehouseRetired, code: "A-01-01", zone: "AMBIENT", aisle: "A", rack: "01", shelf: "01", barcode: ean13("200400010101"), inactive: true},
@@ -304,6 +307,7 @@ var curatedLots = []demoLot{
 	{sku: "JUI-ORNG-1000", number: "L-ORNG-EXPIRED", expiresInDays: -5, receivedDaysAgo: 95},
 	{sku: "DRY-YOG-180", number: "L-YOG-EXPIRED", expiresInDays: -12, receivedDaysAgo: 60},
 	{sku: "JUI-COCO-330", number: "L-COCO-EXPIRED", expiresInDays: -2, receivedDaysAgo: 70},
+	{sku: "JUI-COCO-330", number: "L-COCO-2611", expiresInDays: 150, receivedDaysAgo: 9},
 
 	// Expiring inside a week, then a month.
 	{sku: "DRY-MILK-200", number: "L-MILK-2607", expiresInDays: 7, receivedDaysAgo: 14},
@@ -331,6 +335,7 @@ var curatedMovements = []demoMovement{
 	{kind: "receive", sku: "JUI-LYCHEE-250", lot: "L-LYCHEE-2608", to: "PP-CENTRAL/A-01-02", quantity: "144", unitCost: "10.90", daysAgo: 18, reference: "SEED-RCV-1009", actor: userManagerPP},
 	{kind: "receive", sku: "DRY-MILK-200", lot: "L-MILK-2607", to: "PP-CENTRAL/COLD-01", quantity: "240", unitCost: "11.40", daysAgo: 14, reference: "SEED-RCV-1010", actor: userManagerPP},
 	{kind: "receive", sku: "JUI-ORNG-1000", lot: "L-ORNG-2606", to: "PP-CENTRAL/COLD-01", quantity: "180", unitCost: "14.95", daysAgo: 10, reference: "SEED-RCV-1011", actor: userManagerPP},
+	{kind: "receive", sku: "JUI-COCO-330", lot: "L-COCO-2611", to: "PP-CENTRAL/COLD-02", quantity: "120", unitCost: "11.95", daysAgo: 9, reference: "SEED-RCV-1012", actor: userManagerPP},
 
 	// FEFO: the earlier-expiring cola lot is drawn first.
 	{kind: "pick", sku: "BEV-COLA-330", lot: "L-COLA-2512", from: "PP-CENTRAL/A-01-01", quantity: "60", daysAgo: 12, reference: "SEED-PCK-2001", notes: "FEFO drew the earliest expiring cola lot", actor: userPickerPP},

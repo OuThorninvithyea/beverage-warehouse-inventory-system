@@ -408,6 +408,36 @@ func TestDemoHistoryReachesTheLast30Days(t *testing.T) {
 	}
 }
 
+// Transfers between branches are tested by hand from any warehouse, so every
+// active warehouse must hold stock of every active product.
+func TestEveryWarehouseStocksEveryActiveProduct(t *testing.T) {
+	plan, err := buildLedger(demoMovements(), seedReferenceTime)
+	if err != nil {
+		t.Fatalf("buildLedger error = %v", err)
+	}
+	stocked := map[string]bool{}
+	for key, quantity := range plan.balances {
+		if !quantity.IsPositive() {
+			continue
+		}
+		warehouse, err := warehouseOf(key.location)
+		if err != nil {
+			t.Fatal(err)
+		}
+		stocked[warehouse+"|"+key.sku] = true
+	}
+	for _, warehouse := range demoWarehouses {
+		if warehouse.inactive {
+			continue
+		}
+		for _, product := range demoProducts {
+			if !product.inactive && !stocked[warehouse.code+"|"+product.sku] {
+				t.Errorf("%s holds no %s", warehouse.code, product.sku)
+			}
+		}
+	}
+}
+
 func TestBuildLedgerRejectsAnOverdraw(t *testing.T) {
 	movements := []demoMovement{
 		{kind: "receive", sku: "BEV-COLA-330", lot: "L-COLA-2512", to: "PP-CENTRAL/A-01-01",

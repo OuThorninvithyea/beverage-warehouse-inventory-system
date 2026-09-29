@@ -71,10 +71,18 @@ name, so knowing this table saves a lot of `INSUFFICIENT_STOCK` confusion.
 | PP-CENTRAL | A-02-01 | 11 |
 | PP-CENTRAL | B-01-01 | 11 |
 | PP-CENTRAL | COLD-01 | 6 |
-| PP-CENTRAL | COLD-02 | 3 |
-| SR-DEPOT | A-01-01 | 9 |
-| SR-DEPOT | COLD-01 | 1 |
-| BB-HUB | A-01-01 | 3 |
+| PP-CENTRAL | COLD-02 | 4 |
+| SR-DEPOT | A-01-01 | 17 |
+| SR-DEPOT | A-01-02 | 15 |
+| SR-DEPOT | COLD-01 | 9 |
+| BB-HUB | A-01-01 | 17 |
+| BB-HUB | A-01-02 | 15 |
+| BB-HUB | COLD-01 | 9 |
+
+Every active product is stocked in all three active warehouses, so a transfer
+from any branch to any other (for example Battambang to Siem Reap) can be
+tested with any product. Transfers between warehouses need the admin role:
+a warehouse manager can only move stock inside their own warehouse.
 
 Receiving, shipping and quarantine locations are deliberately left empty and
 non-pickable, and `PP-CENTRAL/OLD-01` and the whole `KP-CLOSED` warehouse are
@@ -88,8 +96,8 @@ inactive.
 - **Products that are not lot tracked**, so balances with a NULL `lot_id` exist
 - **A lot with no expiration date** (`SPI-RUM-700`)
 - **Reserved quantities** on three balances, so available differs from on hand
-- **Multi-location stock** for 23 products, which is what makes transfers and
-  location-scoped picks testable
+- **Multi-warehouse stock** for every active product, which is what makes
+  transfers and location-scoped picks testable
 - **Both barcode formats**: EAN-13 throughout, UPC-A on the two imported SKUs
 
 ## Expiry and FEFO scenarios
