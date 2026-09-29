@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { useLocationStock } from '@/lib/location-stock'
 import { useCatalogStore } from '@/stores/catalog'
 import { useInventoryStore } from '@/stores/inventory'
 
@@ -55,14 +56,22 @@ const notes = ref('')
 const errorMessage = ref('')
 const scannerVisible = ref(false)
 
-const selectedProduct = computed(() => props.products.find((p) => p.id === productId.value))
+// Receiving fills empty shelves, so every active product qualifies. The
+// catalog store's list is paginated to 20, so load the full catalog instead.
+// No location stock is needed here, so the composable is given no location.
+const stock = useLocationStock(ref(''))
+const activeLocations = computed(() => props.locations.filter((loc) => loc.is_active))
+const selectedProduct = computed(() =>
+  stock.allProducts.value.find((p) => p.id === productId.value),
+)
 
 watch(
   () => props.visible,
-  (isVis) => {
+  async (isVis) => {
     if (!isVis) return
     errorMessage.value = ''
-    locationId.value = props.locations[0]?.id || ''
+    void stock.loadCatalog()
+    locationId.value = activeLocations.value[0]?.id || ''
     productId.value = ''
     quantity.value = '1'
     unitCost.value = '0'
@@ -161,7 +170,7 @@ function closeDialog() {
                 <SelectValue placeholder="Select location" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem v-for="loc in locations" :key="loc.id" :value="loc.id">
+                <SelectItem v-for="loc in activeLocations" :key="loc.id" :value="loc.id">
                   {{ loc.code }}
                 </SelectItem>
               </SelectContent>
@@ -176,7 +185,7 @@ function closeDialog() {
                   <SelectValue placeholder="Select product" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem v-for="product in products" :key="product.id" :value="product.id">
+                  <SelectItem v-for="product in stock.allProducts.value" :key="product.id" :value="product.id">
                     {{ product.name }}
                   </SelectItem>
                 </SelectContent>

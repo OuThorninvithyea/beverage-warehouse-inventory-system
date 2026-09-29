@@ -3,7 +3,7 @@ import { Camera, Clock, Upload } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
 
 import type { Product } from '@/api/catalog'
-import type { Lot, PickInput } from '@/api/inventory'
+import type { PickInput } from '@/api/inventory'
 import type { Location } from '@/api/warehouses'
 import BarcodeScannerModal from '@/components/BarcodeScannerModal.vue'
 import { Badge } from '@/components/ui/badge'
@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { formatQuantity, useLocationStock, type StockedLot } from '@/lib/location-stock'
 import { useCatalogStore } from '@/stores/catalog'
 import { useInventoryStore } from '@/stores/inventory'
 
@@ -52,9 +53,27 @@ const notes = ref('')
 
 const errorMessage = ref('')
 const scannerVisible = ref(false)
-const availableLots = ref<Lot[]>([])
+const availableLots = ref<StockedLot[]>([])
 
-const selectedProduct = computed(() => props.products.find((p) => p.id === productId.value))
+// Only what is actually on the chosen shelf can be picked, so the product and
+// lot lists come from that location's stock rather than the whole catalog.
+const stock = useLocationStock(locationId)
+const activeLocations = computed(() => props.locations.filter((loc) => loc.is_active))
+const locationCode = computed(
+  () => props.locations.find((loc) => loc.id === locationId.value)?.code ?? 'this location',
+)
+
+const selectedProduct = computed<Product | undefined>(
+  () => stock.stockedProducts.value.find((row) => row.product.id === productId.value)?.product,
+)
+const maxAvailable = computed(() =>
+  stock.availableFor(productId.value, lotId.value === 'auto' ? null : lotId.value),
+)
+
+// A product chosen for one location may not exist on the next shelf.
+watch(locationId, () => {
+  productId.value = ''
+})
 
 watch(
   () => productId.value,
@@ -62,33 +81,40 @@ watch(
     lotId.value = 'auto'
     availableLots.value = []
     if (newProdId) {
-      availableLots.value = await inventoryStore.fetchLots(newProdId)
+      availableLots.value = await stock.lotsFor(newProdId)
     }
   },
 )
 
 watch(
   () => props.visible,
-  (isVis) => {
+  async (isVis) => {
     if (!isVis) return
     errorMessage.value = ''
-    locationId.value = props.locations[0]?.id || ''
     productId.value = ''
     lotId.value = 'auto'
     quantity.value = '1'
     reference.value = ''
     notes.value = ''
     availableLots.value = []
+    await stock.loadCatalog()
+    const first = activeLocations.value[0]?.id || ''
+    if (locationId.value === first) await stock.reload()
+    else locationId.value = first
   },
 )
 
 async function onBarcodeScanned(code: string) {
   const found = await catalogStore.lookupBarcode(code)
-  if (found) {
-    productId.value = found.id
-  } else {
+  if (!found) {
     errorMessage.value = `No product found for barcode "${code}"`
+    return
   }
+  if (stock.availableFor(found.id) <= 0) {
+    errorMessage.value = `${found.name} has no available stock in ${locationCode.value}`
+    return
+  }
+  productId.value = found.id
 }
 
 async function submitPick() {
@@ -105,6 +131,10 @@ async function submitPick() {
   }
   if (!Number.isFinite(qty) || qty <= 0) {
     errorMessage.value = 'Pick quantity must be greater than 0'
+    return
+  }
+  if (qty > maxAvailable.value) {
+    errorMessage.value = `Only ${formatQuantity(maxAvailable.value)} available in ${locationCode.value}`
     return
   }
 
@@ -155,7 +185,7 @@ function closeDialog() {
                 <SelectValue placeholder="Select location" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem v-for="loc in locations" :key="loc.id" :value="loc.id">
+                <SelectItem v-for="loc in activeLocations" :key="loc.id" :value="loc.id">
                   {{ loc.code }}
                 </SelectItem>
               </SelectContent>
@@ -165,13 +195,15 @@ function closeDialog() {
           <div class="grid gap-2">
             <Label for="pick-product">Product *</Label>
             <div class="flex gap-2">
-              <Select v-model="productId">
+              <Select v-model="productId" :disabled="stock.loading.value || stock.stockedProducts.value.length === 0">
                 <SelectTrigger id="pick-product" class="flex-1">
-                  <SelectValue placeholder="Select product" />
+                  <SelectValue
+                    :placeholder="stock.loading.value ? 'Loading stock…' : stock.stockedProducts.value.length === 0 ? 'No stock here' : 'Select product'"
+                  />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem v-for="product in products" :key="product.id" :value="product.id">
-                    {{ product.name }}
+                  <SelectItem v-for="row in stock.stockedProducts.value" :key="row.product.id" :value="row.product.id">
+                    {{ row.product.name }} · {{ formatQuantity(row.available) }} available
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -181,6 +213,13 @@ function closeDialog() {
             </div>
           </div>
         </div>
+
+        <p
+          v-if="locationId && !stock.loading.value && stock.stockedProducts.value.length === 0"
+          class="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700"
+        >
+          {{ locationCode }} has no available stock. Choose another location.
+        </p>
 
         <div v-if="selectedProduct" class="flex items-center justify-between rounded-lg border bg-muted/40 p-3 text-xs">
           <div class="grid gap-0.5">
@@ -201,12 +240,12 @@ function closeDialog() {
           </div>
           <div class="grid max-h-[110px] gap-1 overflow-y-auto pr-1">
             <div
-              v-for="lot in availableLots"
-              :key="lot.id"
+              v-for="row in availableLots"
+              :key="row.lot.id"
               class="flex items-center justify-between rounded border bg-background p-1.5"
             >
-              <span>Lot: <strong>{{ lot.lot_number }}</strong></span>
-              <span class="font-medium text-amber-700">Expires: {{ lot.expiration_date || 'N/A' }}</span>
+              <span>Lot: <strong>{{ row.lot.lot_number }}</strong> · {{ formatQuantity(row.available) }} here</span>
+              <span class="font-medium text-amber-700">Expires: {{ row.lot.expiration_date || 'N/A' }}</span>
             </div>
           </div>
         </div>
@@ -214,7 +253,19 @@ function closeDialog() {
         <div class="grid grid-cols-2 gap-4 max-[520px]:grid-cols-1">
           <div class="grid gap-2">
             <Label for="pick-qty">Pick Quantity *</Label>
-            <Input id="pick-qty" v-model="quantity" type="number" min="0.001" step="0.001" placeholder="e.g. 10" required />
+            <Input
+              id="pick-qty"
+              v-model="quantity"
+              type="number"
+              min="0.001"
+              :max="maxAvailable || undefined"
+              step="0.001"
+              placeholder="e.g. 10"
+              required
+            />
+            <small v-if="productId" class="text-xs text-muted-foreground">
+              Up to {{ formatQuantity(maxAvailable) }} available
+            </small>
           </div>
 
           <div class="grid gap-2">
@@ -225,8 +276,8 @@ function closeDialog() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="auto">Auto FEFO (Recommended)</SelectItem>
-                <SelectItem v-for="lot in availableLots" :key="lot.id" :value="lot.id">
-                  {{ lot.lot_number }}
+                <SelectItem v-for="row in availableLots" :key="row.lot.id" :value="row.lot.id">
+                  {{ row.lot.lot_number }} · {{ formatQuantity(row.available) }}
                 </SelectItem>
               </SelectContent>
             </Select>

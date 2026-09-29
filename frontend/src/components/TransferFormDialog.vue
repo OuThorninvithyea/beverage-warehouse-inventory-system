@@ -3,7 +3,7 @@ import { ArrowLeftRight } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
 
 import type { Product } from '@/api/catalog'
-import type { Lot, TransferInput } from '@/api/inventory'
+import type { TransferInput } from '@/api/inventory'
 import type { Location } from '@/api/warehouses'
 import { Button } from '@/components/ui/button'
 import {
@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { formatQuantity, useLocationStock, type StockedLot } from '@/lib/location-stock'
 import { useInventoryStore } from '@/stores/inventory'
 
 const props = defineProps<{
@@ -48,13 +49,32 @@ const reference = ref('')
 const notes = ref('')
 
 const errorMessage = ref('')
-const availableLots = ref<Lot[]>([])
+const availableLots = ref<StockedLot[]>([])
 
-const selectedProduct = computed(() => props.products.find((p) => p.id === productId.value))
+// A transfer moves stock that is already on the source shelf, so the product
+// and lot lists come from that location's stock rather than the catalog.
+const stock = useLocationStock(fromLocationId)
+const activeLocations = computed(() => props.locations.filter((loc) => loc.is_active))
+const sourceCode = computed(
+  () => props.locations.find((loc) => loc.id === fromLocationId.value)?.code ?? 'the source location',
+)
+
+const selectedProduct = computed<Product | undefined>(
+  () => stock.stockedProducts.value.find((row) => row.product.id === productId.value)?.product,
+)
+const maxAvailable = computed(() => stock.availableFor(productId.value, lotId.value || null))
 
 const destinationLocations = computed(() =>
-  props.locations.filter((loc) => loc.id !== fromLocationId.value),
+  activeLocations.value.filter((loc) => loc.id !== fromLocationId.value),
 )
+
+// Whatever was chosen for the old source may not exist on the new one.
+watch(fromLocationId, () => {
+  productId.value = ''
+  if (toLocationId.value === fromLocationId.value) {
+    toLocationId.value = destinationLocations.value[0]?.id || ''
+  }
+})
 
 watch(
   () => productId.value,
@@ -62,24 +82,29 @@ watch(
     lotId.value = ''
     availableLots.value = []
     if (newProdId) {
-      availableLots.value = await inventoryStore.fetchLots(newProdId)
+      availableLots.value = await stock.lotsFor(newProdId)
+      // With a single lot on the shelf there is nothing to choose.
+      if (availableLots.value.length === 1) lotId.value = availableLots.value[0].lot.id
     }
   },
 )
 
 watch(
   () => props.visible,
-  (isVis) => {
+  async (isVis) => {
     if (!isVis) return
     errorMessage.value = ''
     productId.value = ''
-    fromLocationId.value = props.locations[0]?.id || ''
-    toLocationId.value = props.locations[1]?.id || ''
     lotId.value = ''
     quantity.value = '1'
     reference.value = ''
     notes.value = ''
     availableLots.value = []
+    await stock.loadCatalog()
+    const first = activeLocations.value[0]?.id || ''
+    if (fromLocationId.value === first) await stock.reload()
+    else fromLocationId.value = first
+    toLocationId.value = destinationLocations.value[0]?.id || ''
   },
 )
 
@@ -109,6 +134,10 @@ async function submitTransfer() {
   }
   if (selectedProduct.value?.is_lot_tracked && !lotId.value) {
     errorMessage.value = 'Lot selection is required for lot-tracked products'
+    return
+  }
+  if (qty > maxAvailable.value) {
+    errorMessage.value = `Only ${formatQuantity(maxAvailable.value)} available in ${sourceCode.value}`
     return
   }
 
@@ -152,20 +181,6 @@ function closeDialog() {
           {{ errorMessage }}
         </p>
 
-        <div class="grid gap-2">
-          <Label for="trf-product">Product *</Label>
-          <Select v-model="productId">
-            <SelectTrigger id="trf-product" class="w-full">
-              <SelectValue placeholder="Select product to transfer" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem v-for="product in products" :key="product.id" :value="product.id">
-                {{ product.name }}
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
         <div class="grid grid-cols-2 gap-4 max-[520px]:grid-cols-1">
           <div class="grid gap-2">
             <Label for="trf-from">From Location (Source) *</Label>
@@ -174,7 +189,7 @@ function closeDialog() {
                 <SelectValue placeholder="Select source location" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem v-for="loc in locations" :key="loc.id" :value="loc.id">
+                <SelectItem v-for="loc in activeLocations" :key="loc.id" :value="loc.id">
                   {{ loc.code }}
                 </SelectItem>
               </SelectContent>
@@ -196,10 +211,44 @@ function closeDialog() {
           </div>
         </div>
 
+        <div class="grid gap-2">
+          <Label for="trf-product">Product *</Label>
+          <Select v-model="productId" :disabled="stock.loading.value || stock.stockedProducts.value.length === 0">
+            <SelectTrigger id="trf-product" class="w-full">
+              <SelectValue
+                :placeholder="stock.loading.value ? 'Loading stock…' : stock.stockedProducts.value.length === 0 ? 'No stock at the source' : 'Select product to transfer'"
+              />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem v-for="row in stock.stockedProducts.value" :key="row.product.id" :value="row.product.id">
+                {{ row.product.name }} · {{ formatQuantity(row.available) }} available
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          <p
+            v-if="fromLocationId && !stock.loading.value && stock.stockedProducts.value.length === 0"
+            class="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700"
+          >
+            {{ sourceCode }} has no available stock. Choose another source location.
+          </p>
+        </div>
+
         <div class="grid grid-cols-2 gap-4 max-[520px]:grid-cols-1">
           <div class="grid gap-2">
             <Label for="trf-qty">Transfer Quantity *</Label>
-            <Input id="trf-qty" v-model="quantity" type="number" min="0.001" step="0.001" placeholder="e.g. 5" required />
+            <Input
+              id="trf-qty"
+              v-model="quantity"
+              type="number"
+              min="0.001"
+              :max="maxAvailable || undefined"
+              step="0.001"
+              placeholder="e.g. 5"
+              required
+            />
+            <small v-if="productId" class="text-xs text-muted-foreground">
+              Up to {{ formatQuantity(maxAvailable) }} available
+            </small>
           </div>
 
           <div v-if="selectedProduct?.is_lot_tracked" class="grid gap-2">
@@ -209,8 +258,8 @@ function closeDialog() {
                 <SelectValue placeholder="Select lot" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem v-for="lot in availableLots" :key="lot.id" :value="lot.id">
-                  {{ lot.lot_number }}
+                <SelectItem v-for="row in availableLots" :key="row.lot.id" :value="row.lot.id">
+                  {{ row.lot.lot_number }} · {{ formatQuantity(row.available) }} · exp {{ row.lot.expiration_date || 'N/A' }}
                 </SelectItem>
               </SelectContent>
             </Select>
