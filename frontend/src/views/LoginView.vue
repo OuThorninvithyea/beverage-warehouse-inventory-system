@@ -4,6 +4,7 @@ import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { ApiClientError } from '@/api/client'
+import BrandMark from '@/components/BrandMark.vue'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -70,9 +71,7 @@ async function signInAsDemo(emailAddress: string, accountPassword: string) {
 
     <div class="relative w-full max-w-[420px]">
       <div class="mb-6 flex items-center gap-3">
-        <span class="grid size-11 place-items-center rounded-xl bg-brand-amber text-lg font-extrabold text-brand-navy shadow-lg">
-          BW
-        </span>
+        <BrandMark class="size-11 shadow-lg" />
         <div class="grid leading-tight">
           <strong class="text-base font-semibold tracking-tight text-white">BWIMS</strong>
           <small class="text-xs text-white/60">Beverage Warehouse Control</small>
