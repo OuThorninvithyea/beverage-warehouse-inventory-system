@@ -18,6 +18,7 @@ import BaseChart from '@/components/BaseChart.vue'
 import PickFormDialog from '@/components/PickFormDialog.vue'
 import ReceiveFormDialog from '@/components/ReceiveFormDialog.vue'
 import TransferFormDialog from '@/components/TransferFormDialog.vue'
+import WarehouseScopeCard from '@/components/WarehouseScopeCard.vue'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -79,6 +80,14 @@ const canReadReports = computed(() =>
   ['admin', 'warehouse_manager'].includes(auth.user?.role ?? ''),
 )
 const isAdmin = computed(() => auth.user?.role === 'admin')
+
+// The warehouse this dashboard is about: the admin's pick, or the warehouse
+// everyone else is assigned to. Null means an admin looking at all of them.
+const currentWarehouse = computed(() => {
+  const id = isAdmin.value ? warehouseId.value : auth.user?.warehouse_id
+  if (!id || id === 'all') return null
+  return warehouseStore.warehouses.find((warehouse) => warehouse.id === id) ?? null
+})
 
 const dashboard = computed(() => reportsStore.dashboard)
 
@@ -242,7 +251,10 @@ watch([windowDays, warehouseId], load)
         <h1 class="text-2xl font-semibold tracking-tight">
           Good morning, {{ auth.user?.full_name }}
         </h1>
-        <p class="text-sm text-muted-foreground">
+        <p v-if="currentWarehouse" class="text-sm text-muted-foreground">
+          Keep stock moving safely in {{ currentWarehouse.name }}.
+        </p>
+        <p v-else class="text-sm text-muted-foreground">
           Keep stock moving safely across
           {{ dashboard?.active_warehouses ?? warehouseStore.warehouses.length }} warehouse(s).
         </p>
@@ -258,7 +270,7 @@ watch([windowDays, warehouseId], load)
           </SelectContent>
         </Select>
         <Select v-if="isAdmin" v-model="warehouseId">
-          <SelectTrigger class="w-[200px]"><SelectValue /></SelectTrigger>
+          <SelectTrigger class="w-[260px]"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All warehouses</SelectItem>
             <SelectItem
@@ -266,12 +278,21 @@ watch([windowDays, warehouseId], load)
               :key="warehouse.id"
               :value="warehouse.id"
             >
-              {{ warehouse.code }}
+              {{ warehouse.code }} · {{ warehouse.name }}
             </SelectItem>
           </SelectContent>
         </Select>
       </div>
     </div>
+
+    <WarehouseScopeCard
+      v-if="currentWarehouse || isAdmin"
+      :warehouse="currentWarehouse"
+      :warehouses="warehouseStore.warehouses"
+      :locations="warehouseStore.locations"
+      :can-switch="isAdmin"
+      @select="warehouseId = $event"
+    />
 
     <p
       v-if="reportsStore.error"

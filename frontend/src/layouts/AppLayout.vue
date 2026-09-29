@@ -9,6 +9,7 @@ import {
   Database,
   LayoutGrid,
   LogOut,
+  MapPin,
   Menu,
   Moon,
   Plus,
@@ -43,6 +44,7 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { Toaster } from '@/components/ui/sonner'
 import type { Lot } from '@/api/inventory'
+import { getWarehouse, type Warehouse } from '@/api/warehouses'
 import { useAuthStore } from '@/stores/auth'
 import { useCatalogStore } from '@/stores/catalog'
 import { useInventoryStore } from '@/stores/inventory'
@@ -65,6 +67,19 @@ const adjustVisible = ref(false)
 const scannerVisible = ref(false)
 
 const isAdmin = computed(() => auth.user?.role === 'admin')
+
+// Which warehouse the signed-in user works in, shown in the top bar on every
+// page. Loaded on its own so a search on the Warehouses page cannot hide it.
+const assignedWarehouse = ref<Warehouse | null>(null)
+async function loadAssignedWarehouse() {
+  const id = auth.user?.warehouse_id
+  if (!id) return
+  try {
+    assignedWarehouse.value = await getWarehouse(id)
+  } catch {
+    assignedWarehouse.value = null
+  }
+}
 const isManager = computed(
   () => auth.user?.role === 'admin' || auth.user?.role === 'warehouse_manager',
 )
@@ -156,6 +171,7 @@ const activeAlerts = computed(() => {
 })
 
 onMounted(() => {
+  void loadAssignedWarehouse()
   const storedTheme = localStorage.getItem('bwims_theme')
   if (storedTheme === 'dark') {
     isDarkMode.value = true
@@ -289,9 +305,29 @@ function onMovementSuccess(msg: string) {
     <!-- Main -->
     <div class="relative flex min-w-0 flex-col">
       <header class="sticky top-0 z-30 flex min-h-[68px] items-center justify-between gap-4 border-b bg-background/85 px-6 py-3 backdrop-blur max-[520px]:px-4">
-        <div class="grid gap-0.5">
-          <small class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Beverage Distributor</small>
-          <strong class="text-sm font-semibold max-[520px]:text-xs">Inventory Management System</strong>
+        <div class="flex min-w-0 items-center gap-4">
+          <div class="grid gap-0.5 max-[760px]:hidden">
+            <small class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Beverage Distributor</small>
+            <strong class="text-sm font-semibold">Inventory Management System</strong>
+          </div>
+          <!-- Where the user is working: their warehouse, or every warehouse for admins. -->
+          <div
+            v-if="isAdmin || assignedWarehouse"
+            class="flex min-w-0 items-center gap-2 rounded-lg border bg-card px-3 py-1.5"
+            :title="assignedWarehouse?.address ?? undefined"
+          >
+            <MapPin class="size-4 shrink-0 text-primary" />
+            <span class="grid min-w-0 leading-tight">
+              <small class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                {{ isAdmin ? 'Access' : 'Your warehouse' }}
+              </small>
+              <strong v-if="assignedWarehouse" class="truncate text-sm font-semibold">
+                {{ assignedWarehouse.name }}
+                <span class="font-mono text-xs font-normal text-muted-foreground">{{ assignedWarehouse.code }}</span>
+              </strong>
+              <strong v-else class="truncate text-sm font-semibold">All warehouses</strong>
+            </span>
+          </div>
         </div>
 
         <div class="flex items-center gap-2">
