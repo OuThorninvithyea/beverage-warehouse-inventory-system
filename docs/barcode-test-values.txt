@@ -74,17 +74,22 @@ SEEDED LOCATIONS  -- valid, and found in the database
 2002000103017  SR-DEPOT    COLD-01    Chilled rack
 2003000190014  BB-HUB      RECV-DOCK  Receiving, not pickable
 2003000101010  BB-HUB      A-01-01    Ambient rack
+2003000101027  BB-HUB      A-01-02    Ambient rack
+2003000103014  BB-HUB      COLD-01    Chilled rack
 2004000101017  KP-CLOSED   A-01-01    INACTIVE, in the closed warehouse
 
 
 REAL RETAIL BARCODES  -- on actual cans, NOT in the database
 -------------------------------------------------------------
-Scanning these proves the camera path works on a real package. The lookup
-will return PRODUCT_NOT_FOUND, which is correct: they are not seeded.
+Scanning these proves the camera path works on a real package. They are not
+seeded, so the Receive form says "not in the catalog yet" and, for a manager
+or admin, offers "Create product". The new-product form then fills in the
+name, SKU and category from Open Food Facts (needs internet access).
 
 5449000000996   Coca-Cola 330 ml can
-5449000014528   Coca-Cola Zero 330 ml can
+5000112637922   Coca-Cola 330 ml can (UK)
 9002490100070   Red Bull 250 ml can
+8850999220000   Singha Soda Water
 4006381333931   ZXing reference value (long-standing decoder test value)
 
 
@@ -114,5 +119,9 @@ NOTES
   and a Go test re-validates every one against the API's own validator.
 - A wrong-check-digit value cannot be drawn as a legitimate EAN-13 barcode,
   so the rejection cases are type-in only.
+- HOW SCANNING WORKS IN THE FORMS: Receive, Pick, Transfer and Adjust each
+  have one Scan button. A shelf label (200...) fills the location; a carton
+  (884... or a real retail code) fills the product. In Transfer the first
+  shelf scanned is the source and the second the destination.
 - Browsers block camera access over plain HTTP except on localhost. Use the
   laptop webcam on localhost, or serve over HTTPS to scan with a phone.

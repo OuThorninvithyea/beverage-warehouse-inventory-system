@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { Camera, Download } from 'lucide-vue-next'
+import { Download, PackagePlus } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
 
-import type { Product } from '@/api/catalog'
+import { listCategories, type Category, type Product } from '@/api/catalog'
 import type { ReceiveInput } from '@/api/inventory'
 import type { Location } from '@/api/warehouses'
-import BarcodeScannerModal from '@/components/BarcodeScannerModal.vue'
 import { Badge } from '@/components/ui/badge'
+import LocationSelect from '@/components/LocationSelect.vue'
+import ProductFormDialog from '@/components/ProductFormDialog.vue'
+import ScanBar from '@/components/ScanBar.vue'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -26,8 +28,10 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { useLocationLabels } from '@/lib/location-label'
 import { useLocationStock } from '@/lib/location-stock'
-import { useCatalogStore } from '@/stores/catalog'
+import { resolveScan, type ScanFeedback } from '@/lib/scan'
+import { useAuthStore } from '@/stores/auth'
 import { useInventoryStore } from '@/stores/inventory'
 
 const props = defineProps<{
@@ -42,7 +46,8 @@ const emit = defineEmits<{
 }>()
 
 const inventoryStore = useInventoryStore()
-const catalogStore = useCatalogStore()
+const auth = useAuthStore()
+const labels = useLocationLabels()
 
 const locationId = ref('')
 const productId = ref('')
@@ -54,7 +59,16 @@ const reference = ref('')
 const notes = ref('')
 
 const errorMessage = ref('')
-const scannerVisible = ref(false)
+const scanFeedback = ref<ScanFeedback | null>(null)
+// A carton the catalog does not know yet, offered for creation.
+const unknownBarcode = ref('')
+const productFormVisible = ref(false)
+const categories = ref<Category[]>([])
+
+// Only managers and admins may add products; a picker is told who to ask.
+const canCreateProducts = computed(() =>
+  ['admin', 'warehouse_manager'].includes(auth.user?.role ?? ''),
+)
 
 // Receiving fills empty shelves, so every active product qualifies. The
 // catalog store's list is paginated to 20, so load the full catalog instead.
@@ -70,6 +84,8 @@ watch(
   async (isVis) => {
     if (!isVis) return
     errorMessage.value = ''
+    scanFeedback.value = null
+    unknownBarcode.value = ''
     void stock.loadCatalog()
     locationId.value = activeLocations.value[0]?.id || ''
     productId.value = ''
@@ -82,13 +98,61 @@ watch(
   },
 )
 
-async function onBarcodeScanned(code: string) {
-  const found = await catalogStore.lookupBarcode(code)
-  if (found) {
-    productId.value = found.id
-  } else {
-    errorMessage.value = `No product found for barcode "${code}"`
+// Scan the shelf, then the carton. An unknown carton can be created here and
+// received straight away.
+async function onScan(code: string) {
+  unknownBarcode.value = ''
+  try {
+    const result = await resolveScan(code, props.locations)
+    if (result.kind === 'location') {
+      const { location } = result
+      if (!location.is_active) {
+        scanFeedback.value = { tone: 'warning', text: `${labels.label(location)} is inactive.` }
+        return
+      }
+      locationId.value = location.id
+      scanFeedback.value = { tone: 'success', text: `Receiving into ${labels.label(location)}. Now scan the carton.` }
+      return
+    }
+    if (result.kind === 'product') {
+      productId.value = result.product.id
+      scanFeedback.value = { tone: 'success', text: `${result.product.name} selected.` }
+      return
+    }
+    unknownBarcode.value = result.code
+    scanFeedback.value = {
+      tone: 'warning',
+      text: canCreateProducts.value
+        ? `${result.code} is not in the catalog yet.`
+        : `${result.code} is not in the catalog yet. Ask a manager to add it.`,
+    }
+  } catch (err: unknown) {
+    scanFeedback.value = { tone: 'warning', text: err instanceof Error ? err.message : 'Scan lookup failed' }
   }
+}
+
+/** Every active category, so the new product can be filed under any of them. */
+async function loadCategories() {
+  const rows: Category[] = []
+  let after: string | undefined
+  do {
+    const page = await listCategories({ is_active: true, limit: 100, after })
+    rows.push(...page.items)
+    after = page.page.has_more ? (page.page.next_cursor ?? undefined) : undefined
+  } while (after)
+  categories.value = rows.sort((a, b) => a.name.localeCompare(b.name))
+}
+
+async function openProductForm() {
+  if (categories.value.length === 0) await loadCategories().catch(() => undefined)
+  productFormVisible.value = true
+}
+
+async function onProductCreated(product: Product) {
+  await stock.loadCatalog()
+  productId.value = product.id
+  unknownBarcode.value = ''
+  scanFeedback.value = { tone: 'success', text: `${product.name} added to the catalog and selected.` }
 }
 
 async function submitReceive() {
@@ -162,38 +226,45 @@ function closeDialog() {
           {{ errorMessage }}
         </p>
 
+        <ScanBar :feedback="scanFeedback" hint="Scan the shelf label, then the carton." @scan="onScan">
+          <template #action>
+            <Button
+              v-if="unknownBarcode && canCreateProducts"
+              type="button"
+              size="sm"
+              variant="secondary"
+              class="ml-auto h-7"
+              @click="openProductForm"
+            >
+              <PackagePlus class="size-4" />
+              Create product
+            </Button>
+          </template>
+        </ScanBar>
+
         <div class="grid grid-cols-2 gap-4 max-[520px]:grid-cols-1">
           <div class="grid gap-2">
             <Label for="rcv-location">Target Location *</Label>
-            <Select v-model="locationId">
-              <SelectTrigger id="rcv-location" class="w-full">
-                <SelectValue placeholder="Select location" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem v-for="loc in activeLocations" :key="loc.id" :value="loc.id">
-                  {{ loc.code }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
+            <LocationSelect
+              id="rcv-location"
+              v-model="locationId"
+              :locations="activeLocations"
+              placeholder="Select location"
+            />
           </div>
 
           <div class="grid gap-2">
             <Label for="rcv-product">Product *</Label>
-            <div class="flex gap-2">
-              <Select v-model="productId">
-                <SelectTrigger id="rcv-product" class="flex-1">
-                  <SelectValue placeholder="Select product" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem v-for="product in stock.allProducts.value" :key="product.id" :value="product.id">
-                    {{ product.name }}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-              <Button type="button" variant="outline" size="icon" title="Scan barcode" @click="scannerVisible = true">
-                <Camera class="size-4" />
-              </Button>
-            </div>
+            <Select v-model="productId">
+              <SelectTrigger id="rcv-product" class="w-full">
+                <SelectValue placeholder="Select product" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="product in stock.allProducts.value" :key="product.id" :value="product.id">
+                  {{ product.name }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
@@ -256,5 +327,10 @@ function closeDialog() {
     </DialogContent>
   </Dialog>
 
-  <BarcodeScannerModal v-model:visible="scannerVisible" @select="onBarcodeScanned" />
+  <ProductFormDialog
+    v-model:visible="productFormVisible"
+    :categories="categories"
+    :prefill-barcode="unknownBarcode"
+    @saved="onProductCreated"
+  />
 </template>

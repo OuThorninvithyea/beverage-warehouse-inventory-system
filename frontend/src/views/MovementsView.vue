@@ -40,11 +40,13 @@ import { useCatalogStore } from '@/stores/catalog'
 import { useInventoryStore } from '@/stores/inventory'
 import { useUsersStore } from '@/stores/users'
 import { useWarehousesStore } from '@/stores/warehouses'
+import { useLocationLabels } from '@/lib/location-label'
 
 const auth = useAuthStore()
 const inventoryStore = useInventoryStore()
 const catalogStore = useCatalogStore()
 const warehouseStore = useWarehousesStore()
+const locationLabels = useLocationLabels()
 const usersStore = useUsersStore()
 
 type MovementType = 'receive' | 'pick' | 'transfer' | 'adjust'
@@ -91,8 +93,8 @@ const enrichedMovements = computed<EnrichedMovement[]>(() => {
       reference: m.reference,
       product_name: product?.name ?? 'Product',
       product_sku: product?.sku ?? '—',
-      from_location_code: fromLocation?.code ?? null,
-      to_location_code: toLocation?.code ?? null,
+      from_location_code: fromLocation ? locationLabels.label(fromLocation) : null,
+      to_location_code: toLocation ? locationLabels.label(toLocation) : null,
       performer_name: performer?.full_name ?? (m.performed_by ? 'Unknown Operator' : 'System Operator'),
     }
   })

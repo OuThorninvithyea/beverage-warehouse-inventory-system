@@ -76,11 +76,14 @@
   <body>
     <h1>BWIMS barcode test sheet</h1>
     <p class="lead">
-      Print this page at 100% scale (no "fit to page") and scan it from the
-      barcode test route. Every value here is also written to the database by
-      the development seeder, so a scan resolves to a real product or location.
-      The bars are generated in the browser from the digits below them, so the
-      printed code and the expected value can never drift apart.
+      Print this page at 100% scale (no "fit to page"), or open it on a second
+      screen. In the Receive, Pick, Transfer or Adjust form press Scan, then
+      scan a shelf label (section 1) followed by a product (section 2). In
+      Transfer the first shelf is the source and the second the destination.
+      Section 3 holds real retail products that are not in the catalog: in
+      Receive, a manager or admin gets "Create product" with the details filled
+      in from Open Food Facts. Sections 1 and 2 match the development seeder,
+      and the bars are drawn from the digits below them, so they cannot drift.
     </p>
 
     <div id="sheet"></div>
@@ -142,36 +145,78 @@
 
       const sections = [
         {
-          title: 'Seeded products',
+          title: '1. Shelf labels (scan first: fills the location)',
           codes: [
-            { value: '8841000001015', label: 'Angkor Cola Can 330 ml', meta: 'BEV-COLA-330 · EAN-13' },
-            { value: '8841000001022', label: 'Angkor Cola PET 1.5 L', meta: 'BEV-COLA-1500 · EAN-13' },
-            { value: '8841000001039', label: 'Mekong Lemon Soda Can 330 ml', meta: 'BEV-LEMON-330 · EAN-13' },
-            { value: '8841000002012', label: 'Kulen Still Water 500 ml', meta: 'WTR-STILL-500 · EAN-13' },
-            { value: '8841000002029', label: 'Kulen Sparkling Water 750 ml', meta: 'WTR-SPARK-750 · EAN-13' },
-            { value: '8841000003019', label: 'Tonle Orange Juice 1 L', meta: 'JUI-ORNG-1000 · EAN-13' },
-            { value: '8841000003026', label: 'Tonle Mango Nectar 250 ml', meta: 'JUI-MANGO-250 · EAN-13' },
-            { value: '8841000004016', label: 'Bayon Boost Energy 250 ml', meta: 'ENG-BOOST-250 · EAN-13' },
-            { value: '8841000005013', label: 'Riverside Lager Can 330 ml', meta: 'BEE-LAGER-330 · EAN-13' },
-            { value: '8841000005020', label: 'Riverside Stout Can 330 ml', meta: 'BEE-STOUT-330 · EAN-13' },
-            { value: '8841000006010', label: 'Phnom Coffee Latte Can 240 ml', meta: 'COF-LATTE-240 · EAN-13' },
-            { value: '8841000006027', label: 'Siem Dairy Milk 200 ml', meta: 'DRY-MILK-200 · EAN-13' },
-            { value: '8841000007017', label: 'Returnable Crate 24 Slot', meta: 'PKG-CRATE-24 · EAN-13' },
-            { value: '049000012347', label: 'Imported Cola Can 355 ml', meta: 'IMP-COLA-355 · UPC-A' },
-            { value: '012000012341', label: 'Imported Root Beer Can 355 ml', meta: 'IMP-ROOT-355 · UPC-A' },
+            { value: '2001000101016', label: 'A-01-01 (Phnom Penh)', meta: 'PP-CENTRAL · Ambient rack' },
+            { value: '2001000101023', label: 'A-01-02 (Phnom Penh)', meta: 'PP-CENTRAL · Ambient rack' },
+            { value: '2001000102013', label: 'A-02-01 (Phnom Penh)', meta: 'PP-CENTRAL · Ambient rack' },
+            { value: '2001000103010', label: 'B-01-01 (Phnom Penh)', meta: 'PP-CENTRAL · Ambient rack' },
+            { value: '2001000104017', label: 'COLD-01 (Phnom Penh)', meta: 'PP-CENTRAL · Chilled rack' },
+            { value: '2001000104024', label: 'COLD-02 (Phnom Penh)', meta: 'PP-CENTRAL · Chilled rack' },
+            { value: '2001000190027', label: 'QUAR-01 (Phnom Penh)', meta: 'PP-CENTRAL · Quarantine · not pickable' },
+            { value: '2001000190010', label: 'RECV-DOCK (Phnom Penh)', meta: 'PP-CENTRAL · Receiving · not pickable' },
+            { value: '2001000190034', label: 'SHIP-DOCK (Phnom Penh)', meta: 'PP-CENTRAL · Shipping · not pickable' },
+            { value: '2002000101013', label: 'A-01-01 (Siem Reap)', meta: 'SR-DEPOT · Ambient rack' },
+            { value: '2002000101020', label: 'A-01-02 (Siem Reap)', meta: 'SR-DEPOT · Ambient rack' },
+            { value: '2002000103017', label: 'COLD-01 (Siem Reap)', meta: 'SR-DEPOT · Chilled rack' },
+            { value: '2002000190017', label: 'RECV-DOCK (Siem Reap)', meta: 'SR-DEPOT · Receiving · not pickable' },
+            { value: '2003000101010', label: 'A-01-01 (Battambang)', meta: 'BB-HUB · Ambient rack' },
+            { value: '2003000101027', label: 'A-01-02 (Battambang)', meta: 'BB-HUB · Ambient rack' },
+            { value: '2003000103014', label: 'COLD-01 (Battambang)', meta: 'BB-HUB · Chilled rack' },
+            { value: '2003000190014', label: 'RECV-DOCK (Battambang)', meta: 'BB-HUB · Receiving · not pickable' },
           ],
         },
         {
-          title: 'Seeded locations',
+          title: '2. Products in the catalog (scan second: fills the product)',
           codes: [
-            { value: '2001000190010', label: 'PP-CENTRAL / RECV-DOCK', meta: 'Receiving · not pickable' },
-            { value: '2001000190027', label: 'PP-CENTRAL / QUAR-01', meta: 'Quarantine · not pickable' },
-            { value: '2001000101016', label: 'PP-CENTRAL / A-01-01', meta: 'Ambient rack' },
-            { value: '2001000101023', label: 'PP-CENTRAL / A-01-02', meta: 'Ambient rack' },
-            { value: '2001000102013', label: 'PP-CENTRAL / COLD-01', meta: 'Chilled rack' },
-            { value: '2002000190017', label: 'SR-DEPOT / RECV-DOCK', meta: 'Receiving · not pickable' },
-            { value: '2002000101013', label: 'SR-DEPOT / A-01-01', meta: 'Ambient rack' },
-            { value: '2002000101020', label: 'SR-DEPOT / A-01-02', meta: 'Ambient rack' },
+            { value: '8841000001015', label: 'Angkor Cola Can 330 ml', meta: 'BEV-COLA-330 · EAN-13' },
+            { value: '8841000001022', label: 'Angkor Cola PET 1.5 L', meta: 'BEV-COLA-1500 · EAN-13' },
+            { value: '8841000001039', label: 'Angkor Cola Zero Can 330 ml', meta: 'BEV-COLA-DIET-330 · EAN-13' },
+            { value: '8841000001046', label: 'Mekong Lemon Soda Can 330 ml', meta: 'BEV-LEMON-330 · EAN-13' },
+            { value: '8841000001053', label: 'Mekong Orange Soda Can 330 ml', meta: 'BEV-ORANGE-330 · EAN-13' },
+            { value: '8841000001060', label: 'Bassac Ginger Ale Can 330 ml', meta: 'BEV-GINGER-330 · EAN-13' },
+            { value: '8841000001077', label: 'Bassac Tonic Water 200 ml', meta: 'BEV-TONIC-200 · EAN-13' },
+            { value: '8841000001084', label: 'Bassac Soda Water PET 1.5 L', meta: 'BEV-SODA-1500 · EAN-13' },
+            { value: '8841000002012', label: 'Kulen Still Water 500 ml', meta: 'WTR-STILL-500 · EAN-13' },
+            { value: '8841000002029', label: 'Kulen Still Water 1.5 L', meta: 'WTR-STILL-1500 · EAN-13' },
+            { value: '8841000002036', label: 'Kulen Sparkling Water 750 ml', meta: 'WTR-SPARK-750 · EAN-13' },
+            { value: '8841000002043', label: 'Bokor Mineral Water 330 ml', meta: 'WTR-MINERAL-330 · EAN-13' },
+            { value: '8841000002050', label: 'Kulen Water Gallon 19 L', meta: 'WTR-GALLON-19 · EAN-13' },
+            { value: '8841000003019', label: 'Tonle Orange Juice 1 L', meta: 'JUI-ORNG-1000 · EAN-13' },
+            { value: '8841000003026', label: 'Tonle Mango Nectar 250 ml', meta: 'JUI-MANGO-250 · EAN-13' },
+            { value: '8841000003033', label: 'Tonle Apple Juice 1 L', meta: 'JUI-APPLE-1000 · EAN-13' },
+            { value: '8841000003040', label: 'Kampot Coconut Water 330 ml', meta: 'JUI-COCO-330 · EAN-13' },
+            { value: '8841000003057', label: 'Tonle Lychee Nectar 250 ml', meta: 'JUI-LYCHEE-250 · EAN-13' },
+            { value: '8841000004016', label: 'Bayon Boost Energy 250 ml', meta: 'ENG-BOOST-250 · EAN-13' },
+            { value: '8841000004023', label: 'Bayon Boost Sugar Free 250 ml', meta: 'ENG-BOOST-SF-250 · EAN-13' },
+            { value: '8841000004030', label: 'Bayon Sport Isotonic 500 ml', meta: 'ENG-SPORT-500 · EAN-13' },
+            { value: '8841000005013', label: 'Riverside Lager Can 330 ml', meta: 'BEE-LAGER-330 · EAN-13' },
+            { value: '8841000005020', label: 'Riverside Lager Bottle 640 ml', meta: 'BEE-LAGER-640 · EAN-13' },
+            { value: '8841000005037', label: 'Riverside Stout Can 330 ml', meta: 'BEE-STOUT-330 · EAN-13' },
+            { value: '8841000005044', label: 'Riverside IPA Can 330 ml', meta: 'BEE-IPA-330 · EAN-13' },
+            { value: '8841000005051', label: 'Riverside Light Can 330 ml', meta: 'BEE-LIGHT-330 · EAN-13' },
+            { value: '8841000006010', label: 'Imported Red Wine 750 ml', meta: 'WIN-RED-750 · EAN-13' },
+            { value: '8841000006027', label: 'Imported White Wine 750 ml', meta: 'WIN-WHITE-750 · EAN-13' },
+            { value: '8841000006034', label: 'Kampong Rum 700 ml', meta: 'SPI-RUM-700 · EAN-13' },
+            { value: '8841000007017', label: 'Phnom Coffee Latte Can 240 ml', meta: 'COF-LATTE-240 · EAN-13' },
+            { value: '8841000007024', label: 'Phnom Coffee Black Can 240 ml', meta: 'COF-BLACK-240 · EAN-13' },
+            { value: '8841000007031', label: 'Angkor Green Tea 500 ml', meta: 'TEA-GREEN-500 · EAN-13' },
+            { value: '8841000007048', label: 'Angkor Lemon Tea 500 ml', meta: 'TEA-LEMON-500 · EAN-13' },
+            { value: '8841000008014', label: 'Siem Dairy Milk 200 ml', meta: 'DRY-MILK-200 · EAN-13' },
+            { value: '8841000008021', label: 'Siem Dairy Drinking Yoghurt 180 ml', meta: 'DRY-YOG-180 · EAN-13' },
+            { value: '8841000009011', label: 'Returnable Crate 24 Slot', meta: 'PKG-CRATE-24 · EAN-13' },
+            { value: '8841000009028', label: 'Line Sanitizer 5 L', meta: 'CLN-SANITIZER-5L · EAN-13' },
+            { value: '012000012341', label: 'Imported Root Beer Can 355 ml', meta: 'IMP-ROOT-355 · UPC-A' },
+            { value: '049000012347', label: 'Imported Cola Can 355 ml', meta: 'IMP-COLA-355 · UPC-A' },
+          ],
+        },
+        {
+          title: '3. Real products NOT in the catalog (Receive offers "Create product")',
+          codes: [
+            { value: '5449000000996', label: 'Coca-Cola Original 330 ml', meta: 'Open Food Facts: found · Colas' },
+            { value: '5000112637922', label: 'Coca-Cola 330 ml (UK)', meta: 'Open Food Facts: found · Colas' },
+            { value: '9002490100070', label: 'Red Bull 250 ml', meta: 'Open Food Facts: found · Energy drinks' },
+            { value: '8850999220000', label: 'Singha Soda Water', meta: 'Open Food Facts: found · no size listed' },
           ],
         },
       ];

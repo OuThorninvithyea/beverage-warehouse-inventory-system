@@ -40,11 +40,13 @@ import { useAuthStore } from '@/stores/auth'
 import { useCatalogStore } from '@/stores/catalog'
 import { useInventoryStore } from '@/stores/inventory'
 import { useWarehousesStore } from '@/stores/warehouses'
+import { useLocationLabels } from '@/lib/location-label'
 
 const auth = useAuthStore()
 const inventoryStore = useInventoryStore()
 const catalogStore = useCatalogStore()
 const warehouseStore = useWarehousesStore()
+const locationLabels = useLocationLabels()
 
 const selectedWarehouseId = ref<string>()
 const locationFilter = ref<string>('all')
@@ -94,7 +96,7 @@ const enrichedBalances = computed<EnrichedBalance[]>(() => {
       quantity: b.quantity,
       reserved_quantity: b.reserved_quantity,
       available_quantity: b.available_quantity,
-      location_code: location?.code ?? b.location_id.substring(0, 8),
+      location_code: location ? locationLabels.label(location) : b.location_id.substring(0, 8),
       product_name: product?.name ?? 'Product',
       product_sku: product?.sku ?? '—',
       lot_number: lot?.lot_number ?? null,

@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { ArrowLeftRight } from 'lucide-vue-next'
+import { ArrowLeftRight, ArrowRight } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
 
 import type { Product } from '@/api/catalog'
 import type { TransferInput } from '@/api/inventory'
 import type { Location } from '@/api/warehouses'
+import LocationSelect from '@/components/LocationSelect.vue'
+import ScanBar from '@/components/ScanBar.vue'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -24,7 +27,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { useLocationLabels } from '@/lib/location-label'
 import { formatQuantity, useLocationStock, type StockedLot } from '@/lib/location-stock'
+import { resolveScan, type ScanFeedback } from '@/lib/scan'
 import { useInventoryStore } from '@/stores/inventory'
 
 const props = defineProps<{
@@ -49,14 +54,28 @@ const reference = ref('')
 const notes = ref('')
 
 const errorMessage = ref('')
+const scanFeedback = ref<ScanFeedback | null>(null)
+// The first shelf scanned is the source, the next one the destination.
+const nextShelf = ref<'from' | 'to'>('from')
 const availableLots = ref<StockedLot[]>([])
 
 // A transfer moves stock that is already on the source shelf, so the product
 // and lot lists come from that location's stock rather than the catalog.
 const stock = useLocationStock(fromLocationId)
 const activeLocations = computed(() => props.locations.filter((loc) => loc.is_active))
-const sourceCode = computed(
-  () => props.locations.find((loc) => loc.id === fromLocationId.value)?.code ?? 'the source location',
+const labels = useLocationLabels()
+const sourceLocation = computed(() => props.locations.find((loc) => loc.id === fromLocationId.value))
+const destinationLocation = computed(() =>
+  props.locations.find((loc) => loc.id === toLocationId.value),
+)
+const sourceCode = computed(() => labels.label(sourceLocation.value) || 'the source location')
+// Stock leaving for another branch is worth calling out: it changes which
+// warehouse owns the stock and its cost.
+const crossesWarehouses = computed(
+  () =>
+    !!sourceLocation.value &&
+    !!destinationLocation.value &&
+    sourceLocation.value.warehouse_id !== destinationLocation.value.warehouse_id,
 )
 
 const selectedProduct = computed<Product | undefined>(
@@ -94,6 +113,8 @@ watch(
   async (isVis) => {
     if (!isVis) return
     errorMessage.value = ''
+    scanFeedback.value = null
+    nextShelf.value = 'from'
     productId.value = ''
     lotId.value = ''
     quantity.value = '1'
@@ -107,6 +128,51 @@ watch(
     toLocationId.value = destinationLocations.value[0]?.id || ''
   },
 )
+
+async function onScan(code: string) {
+  try {
+    const result = await resolveScan(code, props.locations)
+    if (result.kind === 'location') {
+      const { location } = result
+      const name = labels.label(location)
+      if (!location.is_active) {
+        scanFeedback.value = { tone: 'warning', text: `${name} is inactive.` }
+        return
+      }
+      if (nextShelf.value === 'from') {
+        fromLocationId.value = location.id
+        nextShelf.value = 'to'
+        scanFeedback.value = { tone: 'success', text: `From ${name}. Now scan the destination shelf.` }
+        return
+      }
+      if (location.id === fromLocationId.value) {
+        scanFeedback.value = { tone: 'warning', text: `${name} is already the source. Scan a different shelf.` }
+        return
+      }
+      toLocationId.value = location.id
+      nextShelf.value = 'from'
+      scanFeedback.value = { tone: 'success', text: `To ${name}. Now scan the carton.` }
+      return
+    }
+    if (result.kind === 'unknown') {
+      scanFeedback.value = { tone: 'warning', text: `${result.code} is not a shelf or product in the system.` }
+      return
+    }
+    const { product } = result
+    if (stock.loading.value) await stock.reload()
+    if (stock.availableFor(product.id) <= 0) {
+      scanFeedback.value = { tone: 'warning', text: `${sourceCode.value} has no ${product.name} available.` }
+      return
+    }
+    productId.value = product.id
+    scanFeedback.value = {
+      tone: 'success',
+      text: `${product.name} · ${formatQuantity(stock.availableFor(product.id))} available to move.`,
+    }
+  } catch (err: unknown) {
+    scanFeedback.value = { tone: 'warning', text: err instanceof Error ? err.message : 'Scan lookup failed' }
+  }
+}
 
 async function submitTransfer() {
   errorMessage.value = ''
@@ -181,34 +247,43 @@ function closeDialog() {
           {{ errorMessage }}
         </p>
 
+        <ScanBar
+          :feedback="scanFeedback"
+          hint="Scan the source shelf, the destination shelf, then the carton."
+          @scan="onScan"
+        />
+
         <div class="grid grid-cols-2 gap-4 max-[520px]:grid-cols-1">
           <div class="grid gap-2">
             <Label for="trf-from">From Location (Source) *</Label>
-            <Select v-model="fromLocationId">
-              <SelectTrigger id="trf-from" class="w-full">
-                <SelectValue placeholder="Select source location" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem v-for="loc in activeLocations" :key="loc.id" :value="loc.id">
-                  {{ loc.code }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
+            <LocationSelect
+              id="trf-from"
+              v-model="fromLocationId"
+              :locations="activeLocations"
+              placeholder="Select source location"
+            />
           </div>
 
           <div class="grid gap-2">
             <Label for="trf-to">To Location (Destination) *</Label>
-            <Select v-model="toLocationId">
-              <SelectTrigger id="trf-to" class="w-full">
-                <SelectValue placeholder="Select destination location" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem v-for="loc in destinationLocations" :key="loc.id" :value="loc.id">
-                  {{ loc.code }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
+            <LocationSelect
+              id="trf-to"
+              v-model="toLocationId"
+              :locations="destinationLocations"
+              placeholder="Select destination location"
+            />
           </div>
+        </div>
+
+        <div
+          v-if="sourceLocation && destinationLocation"
+          class="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-md border bg-muted/40 px-3 py-2 text-sm"
+        >
+          <span class="font-medium">{{ labels.label(sourceLocation) }}</span>
+          <ArrowRight class="size-4 text-muted-foreground" />
+          <span class="font-medium">{{ labels.label(destinationLocation) }}</span>
+          <Badge v-if="crossesWarehouses" variant="secondary" class="ml-auto">Between warehouses</Badge>
+          <Badge v-else variant="outline" class="ml-auto">Same warehouse</Badge>
         </div>
 
         <div class="grid gap-2">

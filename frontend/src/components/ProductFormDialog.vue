@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Camera, Check } from 'lucide-vue-next'
+import { Camera, Check, LoaderCircle } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
 
 import type { Category, Product, ProductInput } from '@/api/catalog'
@@ -24,12 +24,16 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { validateBarcode } from '@/lib/barcode'
+import { lookupExternalProduct, suggestProduct } from '@/lib/product-lookup'
+import { resolveScan } from '@/lib/scan'
 import { useCatalogStore } from '@/stores/catalog'
 
 const props = defineProps<{
   visible: boolean
   product?: Product | null
   categories: Category[]
+  /** A new product's scanned barcode: filled in and looked up on open. */
+  prefillBarcode?: string
 }>()
 
 const emit = defineEmits<{
@@ -49,6 +53,16 @@ const isActive = ref(true)
 
 const errorMessage = ref('')
 const scannerVisible = ref(false)
+
+type LookupState =
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'found'; brand: string | null }
+  | { status: 'not-found' }
+  | { status: 'duplicate'; product: Product }
+const lookup = ref<LookupState>({ status: 'idle' })
+// A slower lookup for an earlier barcode must not fill the form.
+let lookupRequest = 0
 
 const unitOptions = ['case', 'bottle', 'can', 'pack', 'pallet', 'keg']
 
@@ -80,11 +94,48 @@ watch(
       isLotTracked.value = true
       isActive.value = true
     }
+    lookup.value = { status: 'idle' }
+    if (!props.product && props.prefillBarcode) void fillFromBarcode(props.prefillBarcode)
   },
 )
 
+/**
+ * For a new product: refuse a barcode the catalog already has, otherwise
+ * suggest name, SKU and category from Open Food Facts. Only empty fields are
+ * filled, so nothing the user typed is overwritten.
+ */
+async function fillFromBarcode(code: string) {
+  barcode.value = code.trim()
+  if (isEditMode.value || !barcode.value) return
+  const request = ++lookupRequest
+  lookup.value = { status: 'loading' }
+
+  try {
+    const existing = await resolveScan(barcode.value, [])
+    if (request !== lookupRequest) return
+    if (existing.kind === 'product') {
+      lookup.value = { status: 'duplicate', product: existing.product }
+      return
+    }
+  } catch {
+    // The server enforces unique barcodes on save; carry on with the lookup.
+  }
+
+  const found = await lookupExternalProduct(barcode.value)
+  if (request !== lookupRequest) return
+  if (!found) {
+    lookup.value = { status: 'not-found' }
+    return
+  }
+  const suggestion = suggestProduct(found, props.categories)
+  if (!name.value.trim()) name.value = suggestion.name
+  if (!sku.value.trim()) sku.value = suggestion.sku
+  if (categoryId.value === 'none' && suggestion.categoryId) categoryId.value = suggestion.categoryId
+  lookup.value = { status: 'found', brand: suggestion.brand }
+}
+
 function onBarcodeScanned(scannedCode: string) {
-  barcode.value = scannedCode
+  void fillFromBarcode(scannedCode)
 }
 
 async function saveProduct() {
@@ -99,6 +150,10 @@ async function saveProduct() {
   }
   if (!unit.value.trim()) {
     errorMessage.value = 'Unit of measure is required'
+    return
+  }
+  if (lookup.value.status === 'duplicate' && lookup.value.product.barcode === barcode.value.trim()) {
+    errorMessage.value = `This barcode already belongs to ${lookup.value.product.name}`
     return
   }
   if (barcode.value.trim() && barcodeValidation.value && !barcodeValidation.value.valid) {
@@ -206,6 +261,19 @@ function closeDialog() {
             :class="barcodeValidation.valid ? 'text-emerald-600' : 'text-amber-600'"
           >
             {{ barcodeValidation.message }}
+          </small>
+          <small v-if="lookup.status === 'loading'" class="flex items-center gap-1 text-xs text-muted-foreground">
+            <LoaderCircle class="size-3 animate-spin" /> Looking up this barcode…
+          </small>
+          <small v-else-if="lookup.status === 'found'" class="text-xs text-emerald-600">
+            Details filled from Open Food Facts<template v-if="lookup.brand"> ({{ lookup.brand }})</template>.
+            Check them before saving.
+          </small>
+          <small v-else-if="lookup.status === 'not-found'" class="text-xs text-muted-foreground">
+            Not found in Open Food Facts. Enter the details by hand.
+          </small>
+          <small v-else-if="lookup.status === 'duplicate'" class="text-xs text-destructive">
+            Already in the catalog as {{ lookup.product.name }} ({{ lookup.product.sku }}).
           </small>
         </div>
 

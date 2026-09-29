@@ -5,6 +5,8 @@ import { computed, ref, watch } from 'vue'
 import type { Product } from '@/api/catalog'
 import { listLots, type AdjustInput } from '@/api/inventory'
 import type { Location } from '@/api/warehouses'
+import LocationSelect from '@/components/LocationSelect.vue'
+import ScanBar from '@/components/ScanBar.vue'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -24,7 +26,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { useLocationLabels } from '@/lib/location-label'
 import { formatQuantity, useLocationStock, type StockedLot } from '@/lib/location-stock'
+import { resolveScan, type ScanFeedback } from '@/lib/scan'
 import { useInventoryStore } from '@/stores/inventory'
 
 const props = defineProps<{
@@ -48,6 +52,8 @@ const quantity = ref<string>('1')
 const notes = ref('')
 
 const errorMessage = ref('')
+const scanFeedback = ref<ScanFeedback | null>(null)
+const labels = useLocationLabels()
 const availableLots = ref<StockedLot[]>([])
 
 // Decreasing removes stock that must already be on this shelf, so it offers
@@ -57,7 +63,7 @@ const stock = useLocationStock(locationId)
 const activeLocations = computed(() => props.locations.filter((loc) => loc.is_active))
 const isDecrease = computed(() => direction.value === 'decrease')
 const locationCode = computed(
-  () => props.locations.find((loc) => loc.id === locationId.value)?.code ?? 'this location',
+  () => labels.label(props.locations.find((loc) => loc.id === locationId.value)) || 'this location',
 )
 
 const productOptions = computed(() =>
@@ -94,6 +100,7 @@ watch(
   async (isVis) => {
     if (!isVis) return
     errorMessage.value = ''
+    scanFeedback.value = null
     productId.value = ''
     lotId.value = 'none'
     direction.value = 'increase'
@@ -106,6 +113,41 @@ watch(
     else locationId.value = first
   },
 )
+
+// Scan the shelf being counted, then the carton.
+async function onScan(code: string) {
+  try {
+    const result = await resolveScan(code, props.locations)
+    if (result.kind === 'location') {
+      const { location } = result
+      if (!location.is_active) {
+        scanFeedback.value = { tone: 'warning', text: `${labels.label(location)} is inactive.` }
+        return
+      }
+      locationId.value = location.id
+      scanFeedback.value = { tone: 'success', text: `Counting ${labels.label(location)}. Now scan the carton.` }
+      return
+    }
+    if (result.kind === 'unknown') {
+      scanFeedback.value = { tone: 'warning', text: `${result.code} is not a shelf or product in the system.` }
+      return
+    }
+    const { product } = result
+    if (stock.loading.value) await stock.reload()
+    if (isDecrease.value && stock.availableFor(product.id) <= 0) {
+      scanFeedback.value = { tone: 'warning', text: `${locationCode.value} has no ${product.name} to decrease.` }
+      return
+    }
+    productId.value = product.id
+    const here = stock.availableFor(product.id)
+    scanFeedback.value = {
+      tone: 'success',
+      text: here > 0 ? `${product.name} · ${formatQuantity(here)} here.` : `${product.name} · none here yet.`,
+    }
+  } catch (err: unknown) {
+    scanFeedback.value = { tone: 'warning', text: err instanceof Error ? err.message : 'Scan lookup failed' }
+  }
+}
 
 async function submitAdjust() {
   errorMessage.value = ''
@@ -171,19 +213,17 @@ function closeDialog() {
           {{ errorMessage }}
         </p>
 
+        <ScanBar :feedback="scanFeedback" hint="Scan the shelf label, then the carton." @scan="onScan" />
+
         <div class="grid grid-cols-2 gap-4 max-[520px]:grid-cols-1">
           <div class="grid gap-2">
             <Label for="adj-location">Location *</Label>
-            <Select v-model="locationId">
-              <SelectTrigger id="adj-location" class="w-full">
-                <SelectValue placeholder="Select location" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem v-for="loc in activeLocations" :key="loc.id" :value="loc.id">
-                  {{ loc.code }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
+            <LocationSelect
+              id="adj-location"
+              v-model="locationId"
+              :locations="activeLocations"
+              placeholder="Select location"
+            />
           </div>
 
           <div class="grid gap-2">

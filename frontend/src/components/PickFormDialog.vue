@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { Camera, Clock, Upload } from 'lucide-vue-next'
+import { Clock, Upload } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
 
 import type { Product } from '@/api/catalog'
 import type { PickInput } from '@/api/inventory'
 import type { Location } from '@/api/warehouses'
-import BarcodeScannerModal from '@/components/BarcodeScannerModal.vue'
 import { Badge } from '@/components/ui/badge'
+import LocationSelect from '@/components/LocationSelect.vue'
+import ScanBar from '@/components/ScanBar.vue'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -26,8 +27,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { useLocationLabels } from '@/lib/location-label'
 import { formatQuantity, useLocationStock, type StockedLot } from '@/lib/location-stock'
-import { useCatalogStore } from '@/stores/catalog'
+import { resolveScan, type ScanFeedback } from '@/lib/scan'
 import { useInventoryStore } from '@/stores/inventory'
 
 const props = defineProps<{
@@ -42,7 +44,6 @@ const emit = defineEmits<{
 }>()
 
 const inventoryStore = useInventoryStore()
-const catalogStore = useCatalogStore()
 
 const locationId = ref('')
 const productId = ref('')
@@ -52,7 +53,8 @@ const reference = ref('')
 const notes = ref('')
 
 const errorMessage = ref('')
-const scannerVisible = ref(false)
+const scanFeedback = ref<ScanFeedback | null>(null)
+const labels = useLocationLabels()
 const availableLots = ref<StockedLot[]>([])
 
 // Only what is actually on the chosen shelf can be picked, so the product and
@@ -60,7 +62,7 @@ const availableLots = ref<StockedLot[]>([])
 const stock = useLocationStock(locationId)
 const activeLocations = computed(() => props.locations.filter((loc) => loc.is_active))
 const locationCode = computed(
-  () => props.locations.find((loc) => loc.id === locationId.value)?.code ?? 'this location',
+  () => labels.label(props.locations.find((loc) => loc.id === locationId.value)) || 'this location',
 )
 
 const selectedProduct = computed<Product | undefined>(
@@ -91,6 +93,7 @@ watch(
   async (isVis) => {
     if (!isVis) return
     errorMessage.value = ''
+    scanFeedback.value = null
     productId.value = ''
     lotId.value = 'auto'
     quantity.value = '1'
@@ -104,17 +107,38 @@ watch(
   },
 )
 
-async function onBarcodeScanned(code: string) {
-  const found = await catalogStore.lookupBarcode(code)
-  if (!found) {
-    errorMessage.value = `No product found for barcode "${code}"`
-    return
+// Scan the shelf first, then the carton.
+async function onScan(code: string) {
+  try {
+    const result = await resolveScan(code, props.locations)
+    if (result.kind === 'location') {
+      const { location } = result
+      if (!location.is_active) {
+        scanFeedback.value = { tone: 'warning', text: `${labels.label(location)} is inactive.` }
+        return
+      }
+      locationId.value = location.id
+      scanFeedback.value = { tone: 'success', text: `Picking from ${labels.label(location)}. Now scan the carton.` }
+      return
+    }
+    if (result.kind === 'unknown') {
+      scanFeedback.value = { tone: 'warning', text: `${result.code} is not a shelf or product in the system.` }
+      return
+    }
+    const { product } = result
+    if (stock.loading.value) await stock.reload()
+    if (stock.availableFor(product.id) <= 0) {
+      scanFeedback.value = { tone: 'warning', text: `${locationCode.value} has no ${product.name} available.` }
+      return
+    }
+    productId.value = product.id
+    scanFeedback.value = {
+      tone: 'success',
+      text: `${product.name} · ${formatQuantity(stock.availableFor(product.id))} available here.`,
+    }
+  } catch (err: unknown) {
+    scanFeedback.value = { tone: 'warning', text: err instanceof Error ? err.message : 'Scan lookup failed' }
   }
-  if (stock.availableFor(found.id) <= 0) {
-    errorMessage.value = `${found.name} has no available stock in ${locationCode.value}`
-    return
-  }
-  productId.value = found.id
 }
 
 async function submitPick() {
@@ -177,40 +201,33 @@ function closeDialog() {
           {{ errorMessage }}
         </p>
 
+        <ScanBar :feedback="scanFeedback" hint="Scan the shelf label, then the carton." @scan="onScan" />
+
         <div class="grid grid-cols-2 gap-4 max-[520px]:grid-cols-1">
           <div class="grid gap-2">
             <Label for="pick-location">Source Location *</Label>
-            <Select v-model="locationId">
-              <SelectTrigger id="pick-location" class="w-full">
-                <SelectValue placeholder="Select location" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem v-for="loc in activeLocations" :key="loc.id" :value="loc.id">
-                  {{ loc.code }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
+            <LocationSelect
+              id="pick-location"
+              v-model="locationId"
+              :locations="activeLocations"
+              placeholder="Select location"
+            />
           </div>
 
           <div class="grid gap-2">
             <Label for="pick-product">Product *</Label>
-            <div class="flex gap-2">
-              <Select v-model="productId" :disabled="stock.loading.value || stock.stockedProducts.value.length === 0">
-                <SelectTrigger id="pick-product" class="flex-1">
-                  <SelectValue
-                    :placeholder="stock.loading.value ? 'Loading stock…' : stock.stockedProducts.value.length === 0 ? 'No stock here' : 'Select product'"
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem v-for="row in stock.stockedProducts.value" :key="row.product.id" :value="row.product.id">
-                    {{ row.product.name }} · {{ formatQuantity(row.available) }} available
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-              <Button type="button" variant="outline" size="icon" title="Scan barcode" @click="scannerVisible = true">
-                <Camera class="size-4" />
-              </Button>
-            </div>
+            <Select v-model="productId" :disabled="stock.loading.value || stock.stockedProducts.value.length === 0">
+              <SelectTrigger id="pick-product" class="w-full">
+                <SelectValue
+                  :placeholder="stock.loading.value ? 'Loading stock…' : stock.stockedProducts.value.length === 0 ? 'No stock here' : 'Select product'"
+                />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="row in stock.stockedProducts.value" :key="row.product.id" :value="row.product.id">
+                  {{ row.product.name }} · {{ formatQuantity(row.available) }} available
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
@@ -307,5 +324,4 @@ function closeDialog() {
     </DialogContent>
   </Dialog>
 
-  <BarcodeScannerModal v-model:visible="scannerVisible" @select="onBarcodeScanned" />
 </template>
